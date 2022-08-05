@@ -28,7 +28,6 @@ namespace transport_catalogue::io {
         using StopsContainer = std::unordered_map<std::string_view, Coordinates>;
 
     public:
-        // using StopRequest = std::pair<std::string_view, Coordinates>;
         using RouteRequest = std::tuple<std::string_view, std::vector<std::string_view>, bool>;
 
         struct DistanceBetween {

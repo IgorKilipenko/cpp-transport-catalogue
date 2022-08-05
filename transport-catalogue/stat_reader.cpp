@@ -18,7 +18,7 @@ namespace transport_catalogue::io {
         } else {
             auto info = catalog_db_.GetBusInfo(bus);
             std::cout << info.total_stops << " stops on route, "sv << info.unique_stops << " unique stops, "sv << std::setprecision(6)
-                      << info.route_length << " route length, "sv << info.route_curvature << " curvature"sv <<  std::endl;
+                      << info.route_length << " route length, "sv << info.route_curvature << " curvature"sv << std::endl;
         }
     }
 

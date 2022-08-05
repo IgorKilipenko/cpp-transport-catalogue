@@ -55,9 +55,9 @@ namespace transport_catalogue::data {
     class Hasher {
     public:
         size_t operator()(const std::pair<const Stop*, const Stop*>& stops) const {
-            // return pointer_hasher_(stops.first) + pointer_hasher_(stops.second) * INDEX;
             return this->operator()({stops.first, stops.second});
         }
+        
         template <typename T>
         size_t operator()(std::initializer_list<const T*> items) const {
             size_t hash = 0;

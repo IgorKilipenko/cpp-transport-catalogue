@@ -6,7 +6,7 @@
 
 int main() {
     using namespace transport_catalogue;
-    
+
     TransportCatalogue catalog;
     const io::Reader reader(*catalog.GetDatabaseForWrite(), std::cin);
     const io::StatReader stat_reader(*catalog.GetDatabaseForWrite(), reader);

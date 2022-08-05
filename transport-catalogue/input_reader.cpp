@@ -78,10 +78,6 @@ namespace transport_catalogue::io {
         if (parser_.IsStopRequest(raw_req.command)) {
             auto stop = parser_.ParseStop(raw_req);
             catalog_db_.AddStop(Stop{static_cast<std::string>(stop.name), std::move(stop.coordinates)});
-            /*std::for_each(stop.measured_distancies.begin(), stop.measured_distancies.end(), [&out_distances](const auto& dist_btw) {
-                //catalog_db_.AddMasuredDistance(dist_btw.from_stop, dist_btw.to_stop, dist_btw.distance);
-                out_distances.push_back(dist_btw);
-            });*/
             std::move(stop.measured_distancies.begin(), stop.measured_distancies.end(), std::back_inserter(out_distances));
 
         } else if (parser_.IsRouteRequest(raw_req.command)) {
