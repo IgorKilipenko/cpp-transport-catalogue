@@ -3,7 +3,6 @@
     UseTab: Never, 
     IndentWidth: 4, 
     TabWidth: 4, 
-    #BreakBeforeBraces: Allman, 
     AllowShortIfStatementsOnASingleLine: false, 
     IndentCaseLabels: false, 
     ColumnLimit: 150,  
@@ -17,5 +16,4 @@
     AlignTrailingComments: true,
     AlwaysBreakTemplateDeclarations: Yes,
     MaxEmptyLinesToKeep: 1,
-    #IndentRequiresClause: true,
 }
