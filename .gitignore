@@ -33,6 +33,5 @@
 
 build
 .vscode/**
-.clang-format
 CMakeLists.txt
 .cache
