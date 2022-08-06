@@ -105,12 +105,6 @@ namespace transport_catalogue::io {
 
     class Reader {
     public:
-        struct Request {
-            enum class RequestType { ADD, REMOVE };
-            RequestType type = RequestType::ADD;
-            Stop value;
-        };
-
         Reader(TransportCatalogue::Database& db, std::istream& in_stream = std::cin) : in_stream_{in_stream}, catalog_db_{db} {}
 
         template <typename TOut = std::string>
