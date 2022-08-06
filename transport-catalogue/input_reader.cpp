@@ -18,6 +18,7 @@ namespace transport_catalogue::io::detail {
         }
         return 0;
     }
+
     size_t TrimEnd(std::string_view& str, const char ch) {
         size_t idx = str.find_last_not_of(ch);
         if (idx != str.npos) {
@@ -26,10 +27,12 @@ namespace transport_catalogue::io::detail {
         }
         return 0;
     }
+
     void Trim(std::string_view& str, const char ch) {
         TrimStart(str, ch);
         TrimEnd(str, ch);
     }
+
     std::vector<std::string_view> SplitIntoWords(const std::string_view str, const char ch, size_t max_count) {
         if (str.empty()) {
             return {};
@@ -86,7 +89,7 @@ namespace transport_catalogue::io {
         }
     }
 
-    void Reader::PorccessAddRequests(size_t n) const {
+    void Reader::PorccessRequests(size_t n) const {
         auto lines = ReadLines(n);
         std::vector<Parser::RawRequest> requests;
         requests.reserve(n);
@@ -108,12 +111,12 @@ namespace transport_catalogue::io {
             });
 
         std::for_each(std::make_move_iterator(distances.begin()), std::make_move_iterator(distances.end()), [this](const auto& distance_btw) {
-            catalog_db_.AddMasuredDistance(distance_btw.from_stop, distance_btw.to_stop, distance_btw.distance);
+            catalog_db_.SetMeasuredDistance(distance_btw.from_stop, distance_btw.to_stop, distance_btw.distance);
         });
     }
 
     void Reader::PorccessRequests() const {
-        PorccessAddRequests(Read<size_t>());
+        PorccessRequests(Read<size_t>());
     }
 }
 

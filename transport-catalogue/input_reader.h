@@ -122,7 +122,7 @@ namespace transport_catalogue::io {
 
         void ExecuteRequest(const Parser::RawRequest& raw_req, std::vector<Parser::DistanceBetween>& out_distances) const;
 
-        void PorccessAddRequests(size_t n) const;
+        void PorccessRequests(size_t n) const;
 
         void PorccessRequests() const;
 
