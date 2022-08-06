@@ -51,28 +51,25 @@ TreeNode<T>* begin(TreeNode<T>* node) noexcept {
 
 template <typename T>
 TreeNode<T>* next(TreeNode<T>* node) noexcept {
-    if (!node) {
+    if (node == nullptr) {
         return nullptr;
     }
     if (node->right) {
         return begin(node->right.get());
-    }
-    TreeNode<T>* result = node;
-    while (result && result->parent) {
-        if (result->parent->left.get() == result) {
-            result = result->parent;
-            break;
+    } else {
+        auto parent = node->parent;
+        while (parent != nullptr && node == parent->right.get()) {
+            node = parent;
+            parent = parent->parent;
         }
-        if (result->parent->right.get() == result) {
-            result = result->parent->parent ? result->parent : nullptr;
-        }
+        node = parent;
     }
-    return result;
+    return node;
 }
 
 // функция создаёт новый узел с заданным значением и потомками
 inline TreeNodePtr<int> N(int val, TreeNodePtr<int>&& left = {}, TreeNodePtr<int>&& right = {}) {
-    auto res =  std::make_unique<TreeNode<int>>(std::move(val), std::move(left), std::move(right)); //new TreeNode<int>{val, nullptr, left, right};
+    auto res = std::make_unique<TreeNode<int>>(std::move(val), std::move(left), std::move(right));  // new TreeNode<int>{val, nullptr, left, right};
     if (res->left) {
         res->left->parent = res.get();
     }
