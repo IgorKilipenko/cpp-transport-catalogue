@@ -105,12 +105,6 @@ namespace transport_catalogue::io {
 
     class Reader {
     public:
-        struct Request {
-            enum class RequestType { ADD, REMOVE };
-            RequestType type = RequestType::ADD;
-            Stop value;
-        };
-
         Reader(TransportCatalogue::Database& db, std::istream& in_stream = std::cin) : in_stream_{in_stream}, catalog_db_{db} {}
 
         template <typename TOut = std::string>
@@ -122,9 +116,9 @@ namespace transport_catalogue::io {
 
         void ExecuteRequest(const Parser::RawRequest& raw_req, std::vector<Parser::DistanceBetween>& out_distances) const;
 
-        void PorccessAddRequests(size_t n) const;
+        void PorcessRequests(size_t n) const;
 
-        void PorccessRequests() const;
+        void PorcessRequests() const;
 
         const Parser& GetParser() const {
             return parser_;

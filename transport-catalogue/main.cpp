@@ -11,8 +11,8 @@ int main() {
     const io::Reader reader(*catalog.GetDatabaseForWrite(), std::cin);
     const io::StatReader stat_reader(*catalog.GetDatabaseForWrite(), reader);
 
-    reader.PorccessRequests();
-    stat_reader.PorccessRequests();
+    reader.PorcessRequests();
+    stat_reader.PorcessRequests();
 
     return 0;
 }
