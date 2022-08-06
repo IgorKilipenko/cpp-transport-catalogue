@@ -1,18 +1,8 @@
 #include <iostream>
 
-#include "input_reader.h"
-#include "stat_reader.h"
-#include "transport_catalogue.h"
+#include "./training/cats_and_witches.h"
 
 int main() {
-    using namespace transport_catalogue;
-
-    TransportCatalogue catalog;
-    const io::Reader reader(*catalog.GetDatabaseForWrite(), std::cin);
-    const io::StatReader stat_reader(*catalog.GetDatabaseForWrite(), reader);
-
-    reader.PorcessRequests();
-    stat_reader.PorcessRequests();
-
+    Test();
     return 0;
 }
