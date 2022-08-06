@@ -17,9 +17,9 @@ namespace transport_catalogue::io {
 
         void PrintStopInfo(const std::string_view stop_name) const;
 
-        void PorccessGetRequests(size_t n) const;
+        void PorcessRequests(size_t n) const;
 
-        void PorccessRequests() const;
+        void PorcessRequests() const;
 
         void ExecuteRequest(const Parser::RawRequest &raw_req) const;
 

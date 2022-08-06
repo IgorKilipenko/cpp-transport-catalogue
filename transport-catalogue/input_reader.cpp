@@ -89,7 +89,7 @@ namespace transport_catalogue::io {
         }
     }
 
-    void Reader::PorccessRequests(size_t n) const {
+    void Reader::PorcessRequests(size_t n) const {
         auto lines = ReadLines(n);
         std::vector<Parser::RawRequest> requests;
         requests.reserve(n);
@@ -115,8 +115,8 @@ namespace transport_catalogue::io {
         });
     }
 
-    void Reader::PorccessRequests() const {
-        PorccessRequests(Read<size_t>());
+    void Reader::PorcessRequests() const {
+        PorcessRequests(Read<size_t>());
     }
 }
 
