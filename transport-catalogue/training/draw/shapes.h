@@ -43,18 +43,10 @@ namespace drawing {
                 for (int x = position_.x; x <= x_max; ++x) {
                     int texture_x = x - position_.x;
                     int texture_y = y - position_.y;
-                    if (type_ == ShapeType::ELLIPSE && IsPointInEllipse({texture_x, texture_y}, size_)) {
-                        if (texture_x < texture_size.width && texture_y < texture_size.height && texture_) {
-                            image[y][x] = texture_->GetPixelColor({texture_x, texture_y});
-                        } else {
-                            image[y][x] = '.';
-                        }
-                    } else if (type_ == ShapeType::RECTANGLE) {
-                        if (texture_x < texture_size.width && texture_y < texture_size.height && texture_) {
-                            image[y][x] = texture_->GetPixelColor({texture_x, texture_y});
-                        } else {
-                            image[y][x] = '.';
-                        }
+                    if (type_ != ShapeType::ELLIPSE || IsPointInEllipse({texture_x, texture_y}, size_)) {
+                        image[y][x] = (texture_x < texture_size.width && texture_y < texture_size.height && texture_)
+                                          ? texture_->GetPixelColor({texture_x, texture_y})
+                                          : '.';
                     }
                 }
             }
