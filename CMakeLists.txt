@@ -17,6 +17,7 @@ set(LIBS
     ${SRC_DIR}/input_reader.cpp
     ${SRC_DIR}/stat_reader.cpp
     ${SRC_DIR}/input_reader.cpp
+    ${SRC_DIR}/training/people/people.cpp
 )
 
 if (DEFINED TESTS AND TESTS)
