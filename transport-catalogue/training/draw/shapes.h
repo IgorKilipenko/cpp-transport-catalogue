@@ -35,30 +35,29 @@ namespace drawing {
         // должны отображаться с помощью символа точка '.'
         // Части фигуры, выходящие за границы объекта image, должны отбрасываться.
         void Draw(Image& image) const {
-            // const Size img_size{static_cast<int>(image.front().size()), static_cast<int>(image.size())};
-            //const auto isPointIn = type_ == ShapeType::ELLIPSE ? IsPointInEllipse : IsPointInRectangle;
-            static const char empty_pixel = '.';
-            image.resize(image.size() + position_.y, image.front());
-
-            int y = -1;
-            for (std::string& str : image) {
-                str.resize(str.size() + position_.x, str.front());
-                if (++y < position_.y) {
-                    continue;
-                }
-                int x = -1;
-                for (auto& ch : str) {
-                    if (++x < position_.x) {
-                        continue;
+            Size image_size = GetImageSize(image);
+            Size texture_size = texture_ ? texture_->GetSize() : Size({0, 0});
+            int x_max = std::min(position_.x + size_.width - 1, image_size.width - 1);
+            int y_max = std::min(position_.y + size_.height - 1, image_size.height - 1);
+            for (int y = position_.y; y <= y_max; ++y) {
+                for (int x = position_.x; x <= x_max; ++x) {
+                    int texture_x = x - position_.x;
+                    int texture_y = y - position_.y;
+                    if (type_ == ShapeType::ELLIPSE && IsPointInEllipse({texture_x, texture_y}, size_)) {
+                        if (texture_x < texture_size.width && texture_y < texture_size.height && texture_) {
+                            image[y][x] = texture_->GetPixelColor({texture_x, texture_y});
+                        } else {
+                            image[y][x] = '.';
+                        }
+                    } else if (type_ == ShapeType::RECTANGLE) {
+                        if (texture_x < texture_size.width && texture_y < texture_size.height && texture_) {
+                            image[y][x] = texture_->GetPixelColor({texture_x, texture_y});
+                        } else {
+                            image[y][x] = '.';
+                        }
                     }
-                    const Point p{x-position_.x, y-position_.y};
-                    ch = !texture_ ? empty_pixel :/* isPointIn(p, size_) ?*/ texture_->GetPixelColor(p) /*: empty_pixel*/;
                 }
             }
-            /*std::string line (image.front().size() + position_.y, image.front()[0]);
-            Image tmp_img(image.size() + position_.x, std::move(line));
-            line.resize(tmp_img.size());*/
-
         }
 
     private:

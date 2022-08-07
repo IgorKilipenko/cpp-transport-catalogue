@@ -56,6 +56,7 @@ namespace drawing::tests {
 
         std::stringstream output;
         canvas.Print(output);
+        canvas.Print(std::cout);
 
         const auto answer =
             "###############################################################################\n"
@@ -102,9 +103,11 @@ namespace drawing::tests {
             R"(####################)""\n";
         // clang-format on
 
-        std::cout << answer << std::endl;
-        std::cout << output.str() << std::endl;
-
+        //std::cout << answer << std::endl;
+        //std::cout << output.str() << std::endl;
+        std::string s1 = output.str();
+        std::string s2 = answer;
         assert(answer == output.str());
     }
 }
+
