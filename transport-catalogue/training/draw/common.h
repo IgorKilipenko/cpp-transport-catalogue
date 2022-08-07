@@ -39,4 +39,8 @@ namespace drawing {
         // Проверяем, лежит ли точка в единичном круге
         return x * x + y * y <= 1;
     }
+
+    inline bool IsPointInRectangle(Point p, Size size) {
+        return p.x >= 0 && p.x <= size.width && p.y >=0 && p.y <= size.height;
+    }
 }

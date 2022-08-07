@@ -8,13 +8,11 @@ namespace drawing {
 
         Size GetSize() const {
             // Заглушка. Реализуйте метод самостоятельно
-            return {0, 0};
+            return {static_cast<int>(image_.front().size()), static_cast<int>(image_.size())};
         }
 
         char GetPixelColor(Point p) const {
-            (void)p;
-            // Заглушка. Реализуйте метод самостоятельно
-            return ' ';
+            return IsPointInRectangle(p, GetSize()) ? image_[p.y][p.x] : ' ';
         }
 
     private:

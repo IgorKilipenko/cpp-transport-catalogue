@@ -1,6 +1,7 @@
 
 #pragma once
 #include <cassert>
+#include <iostream>
 #include <memory>
 #include <sstream>
 
@@ -87,6 +88,7 @@ namespace drawing::tests {
 
         std::stringstream output;
         canvas.Print(output);
+        canvas.Print(std::cout);
 
         // clang-format off
         // Здесь уместно использовать сырые литералы, т.к. в текстуре есть символы '\'
@@ -99,6 +101,9 @@ namespace drawing::tests {
             R"(#     ||     ||    #)""\n"
             R"(####################)""\n";
         // clang-format on
+
+        std::cout << answer << std::endl;
+        std::cout << output.str() << std::endl;
 
         assert(answer == output.str());
     }
