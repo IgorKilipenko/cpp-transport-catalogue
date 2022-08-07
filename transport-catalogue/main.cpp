@@ -1,11 +1,11 @@
 #include <iostream>
 
-#include "training/draw/draw_test.h"
+#include "training/cache.h"
 
 int main() {
-    using namespace drawing::tests;
-    TestCow();
-    TestCpp();
+    using namespace trainig::sprint10::cache::tests;
+    Test1();
+    Test2();
 
     return 0;
 }
