@@ -11,6 +11,8 @@
 
 namespace svg {
 
+    using namespace std::literals;
+
     namespace detail {
         template <typename FromType, typename ToType>
         using EnableIfConvertibleV = std::enable_if_t<std::is_convertible_v<std::decay_t<FromType>, ToType>, bool>;
@@ -18,8 +20,6 @@ namespace svg {
         template <typename BaseType, typename DerivedType>
         using EnableIfBaseOfV = std::enable_if_t<std::is_base_of_v<BaseType, std::decay_t<DerivedType>>, bool>;
     }
-
-    using namespace std::string_view_literals;
 
     struct Point {
         Point() = default;
@@ -89,9 +89,8 @@ namespace svg {
         }
 
         std::ostream& ToStream(std::ostream& out) const {
-            using namespace std::string_view_literals;
             out << "<circle cx=\""sv << center_.x << "\" cy=\""sv << center_.y << "\" "sv;
-            out << "r=\""sv << radius_ << "\""sv;
+            out << "r=\""sv << radius_ << "\" "sv;
             out << "/>"sv;
 
             return out;
@@ -123,22 +122,21 @@ namespace svg {
             if (points_.empty()) {
                 return out;
             }
-            char sep = '\0';
-            const char comma = ',';
+            std::string_view sep = ""sv;
+            const std::string_view comma = ","sv;
 
             for (const Point& point : points_) {
                 out << sep << point.x << comma << point.y;
-                sep = sep == '\0' ? ' ' : sep;
+                sep = sep.empty() ? " "sv : sep;
             }
 
             return out;
         }
 
         std::ostream& ToStream(std::ostream& out) const {
-            using namespace std::string_view_literals;
             out << "<polyline points=\""sv;
             PointsToStream(out);
-            out << '\"';
+            out << "\" "sv;
             out << "/>"sv;
             return out;
         }
@@ -182,23 +180,24 @@ namespace svg {
         }
 
         /// Задаёт название шрифта (атрибут font-family)
-        template <typename String=std::string, std::enable_if_t<std::is_convertible_v<std::decay_t<String>, std::string>, bool> = true>
+        template <typename String = std::string, std::enable_if_t<std::is_convertible_v<std::decay_t<String>, std::string>, bool> = true>
         Text& SetFontFamily(String&& font_family) {
             style_.font_family = move(font_family);
             return *this;
         }
 
         /// Задаёт толщину шрифта (атрибут font-weight)
-        template <typename String=std::string, std::enable_if_t<std::is_convertible_v<std::decay_t<String>, std::string>, bool> = true>
+        template <typename String = std::string, std::enable_if_t<std::is_convertible_v<std::decay_t<String>, std::string>, bool> = true>
         Text& SetFontWeight(String&& font_weight) {
             style_.font_weight = font_weight;
             return *this;
         }
 
         /// Задаёт текстовое содержимое объекта (отображается внутри тега text)
-        template <typename String=std::string, std::enable_if_t<std::is_convertible_v<std::decay_t<String>, std::string>, bool> = true>
+        template <typename String = std::string, std::enable_if_t<std::is_convertible_v<std::decay_t<String>, std::string>, bool> = true>
         Text& SetData(String&& data) {
-            text_ = std::move(data);
+            text_.clear();
+            DataPreprocessing(data, text_);
             return *this;
         }
 
@@ -207,17 +206,45 @@ namespace svg {
         TextStyle style_;
         std::string text_;
 
+        void DataPreprocessing(const std::string_view data, std::string& result) const {
+            for (char c : data) {
+                switch (c) {
+                case '"':
+                    result.append("&quot;"s);
+                    break;
+                case '\'':
+                    result.append("&apos;"s);
+                    break;
+                case '<':
+                    result.append("&lt;"s);
+                    break;
+                case '>':
+                    result.append("&gt;"s);
+                    break;
+                case '&':
+                    result.append("&amp;"s);
+                    break;
+                default:
+                    result.push_back(c);
+                    break;
+                }
+            }
+        }
+
         std::ostream& ToStream(std::ostream& out) const {
-            using namespace std::string_view_literals;
             out << "<text x=\""sv << base_point_.x << "\" y=\""sv << base_point_.y << "\""sv;
             out << " dx=\""sv << style_.offset.x << "\" dy=\""sv << style_.offset.y << "\""sv;
+            out << " font-size=\""sv << style_.size << "\"";
+
             if (!style_.font_family.empty()) {
                 out << " font-family=\""sv << style_.font_family << "\""sv;
             }
             if (!style_.font_weight.empty()) {
                 out << " font-weight=\""sv << style_.font_weight << "\""sv;
             }
+
             out << ">"sv << text_ << "</text>"sv;
+
             return out;
         }
 
@@ -249,7 +276,7 @@ namespace svg {
 
         /// Выводит в ostream svg-представление документа
         void Render(std::ostream& out) const {
-            out << HEADER_LINE;
+            out << HEADER_LINE << "\n"sv << SVG_TAG_OPEN << "\n"sv;
 
             for (const auto& obj : objects_) {
                 RenderContext ctx(out, 2, 2);
@@ -262,8 +289,8 @@ namespace svg {
 
     private:
         ObjectCollection objects_;
-        static constexpr const std::string_view HEADER_LINE = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"sv;
-        static constexpr const std::string_view SVG_TAG_OPEN = "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\">\n"sv;
+        static constexpr const std::string_view HEADER_LINE = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>"sv;
+        static constexpr const std::string_view SVG_TAG_OPEN = "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\">"sv;
         static constexpr const std::string_view SVG_TAG_CLOSE = "</svg>"sv;
     };
 

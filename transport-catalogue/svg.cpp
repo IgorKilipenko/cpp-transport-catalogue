@@ -10,7 +10,7 @@ namespace svg {
         // Делегируем вывод тега своим подклассам
         RenderObject(context);
 
-        context.out << '\n'; //std::endl;
+        context.out << "\n"sv; //!std::endl;
     }
 
     // ---------- Circle ------------------
