@@ -196,8 +196,9 @@ namespace svg {
         /// Задаёт текстовое содержимое объекта (отображается внутри тега text)
         template <typename String = std::string, std::enable_if_t<std::is_convertible_v<std::decay_t<String>, std::string>, bool> = true>
         Text& SetData(String&& data) {
-            text_.clear();
-            DataPreprocessing(data, text_);
+            //text_.clear();
+            //DataPreprocessing(data, text_);
+            text_ = std::move(data);
             return *this;
         }
 
@@ -230,6 +231,32 @@ namespace svg {
                 }
             }
         }
+        std::ostream& DataToStream(std::ostream& out) const {
+            for (const char c : text_) {
+                switch (c) {
+                case '"':
+                    out << "&quot;"sv;
+                    break;
+                case '\'':
+                    out << "&apos;"sv;
+                    break;
+                case '<':
+                    out << "&lt;"sv;
+                    break;
+                case '>':
+                    out << "&gt;"sv;
+                    break;
+                case '&':
+                    out << "&amp;"sv;
+                    break;
+                default:
+                    out << c;
+                    break;
+                }
+            }
+
+            return out;
+        }
 
         std::ostream& ToStream(std::ostream& out) const {
             out << "<text x=\""sv << base_point_.x << "\" y=\""sv << base_point_.y << "\""sv;
@@ -243,7 +270,8 @@ namespace svg {
                 out << " font-weight=\""sv << style_.font_weight << "\""sv;
             }
 
-            out << ">"sv << text_ << "</text>"sv;
+            out << ">"sv;
+            DataToStream(out) << "</text>"sv;
 
             return out;
         }
