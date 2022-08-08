@@ -154,7 +154,7 @@ namespace svg {
     public:
         struct TextStyle {
             Point offset;
-            uint32_t size = 0;
+            uint32_t size = 1;
             std::string font_family;
             std::string font_weight;
         };
@@ -196,8 +196,6 @@ namespace svg {
         /// Задаёт текстовое содержимое объекта (отображается внутри тега text)
         template <typename String = std::string, std::enable_if_t<std::is_convertible_v<std::decay_t<String>, std::string>, bool> = true>
         Text& SetData(String&& data) {
-            //text_.clear();
-            //DataPreprocessing(data, text_);
             text_ = std::move(data);
             return *this;
         }
@@ -206,31 +204,6 @@ namespace svg {
         Point base_point_;
         TextStyle style_;
         std::string text_;
-
-        void DataPreprocessing(const std::string_view data, std::string& result) const {
-            for (char c : data) {
-                switch (c) {
-                case '"':
-                    result.append("&quot;"s);
-                    break;
-                case '\'':
-                    result.append("&apos;"s);
-                    break;
-                case '<':
-                    result.append("&lt;"s);
-                    break;
-                case '>':
-                    result.append("&gt;"s);
-                    break;
-                case '&':
-                    result.append("&amp;"s);
-                    break;
-                default:
-                    result.push_back(c);
-                    break;
-                }
-            }
-        }
         
         std::ostream& DataToStream(std::ostream& out) const {
             for (const char c : text_) {
