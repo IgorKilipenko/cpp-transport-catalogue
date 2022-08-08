@@ -182,14 +182,14 @@ namespace svg {
         /// Задаёт название шрифта (атрибут font-family)
         template <typename String = std::string, std::enable_if_t<std::is_convertible_v<std::decay_t<String>, std::string>, bool> = true>
         Text& SetFontFamily(String&& font_family) {
-            style_.font_family = move(font_family);
+            style_.font_family = std::move(font_family);
             return *this;
         }
 
         /// Задаёт толщину шрифта (атрибут font-weight)
         template <typename String = std::string, std::enable_if_t<std::is_convertible_v<std::decay_t<String>, std::string>, bool> = true>
         Text& SetFontWeight(String&& font_weight) {
-            style_.font_weight = font_weight;
+            style_.font_weight = std::move(font_weight);
             return *this;
         }
 
@@ -231,6 +231,7 @@ namespace svg {
                 }
             }
         }
+        
         std::ostream& DataToStream(std::ostream& out) const {
             for (const char c : text_) {
                 switch (c) {
