@@ -156,16 +156,31 @@ namespace svg {
         void RenderObject(const RenderContext& context) const override;
     };
 
-    class Document {
+    class ObjectContainer {
+    public:
+        template <typename Object = svg::Object, detail::EnableIfBaseOfV<svg::Object, Object> = true>
+        void Add(Object&& obj);
+
+        virtual void AddPtr(std::unique_ptr<Object>&& obj) = 0;
+
+    protected:
+        ~ObjectContainer() = default;
+    };
+
+    class Drawable {
+    public:
+        virtual ~Drawable() = default;
+
+        virtual void Draw(ObjectContainer& container) const = 0;
+    };
+
+    class Document : public ObjectContainer {
     public:
         using ObjectPtr = std::unique_ptr<Object>;
         using ObjectCollection = std::vector<ObjectPtr>;
 
-        template <typename Object = svg::Object, detail::EnableIfBaseOfV<svg::Object, Object> = true>
-        void Add(Object&& obj);
-
         /// Добавляет в svg-документ объект-наследник svg::Object
-        void AddPtr(ObjectPtr&& obj);
+        void AddPtr(ObjectPtr&& obj) override;
 
         /// Выводит в ostream svg-представление документа
         void Render(std::ostream& out) const;
@@ -222,9 +237,9 @@ namespace svg /* Text class template impl */ {
     }
 }
 
-namespace svg /* Document class template impl */ {
+namespace svg /* ObjectContainer class template impl */ {
     template <typename Object, detail::EnableIfBaseOfV<svg::Object, Object>>
-    void Document::Add(Object&& obj) {
-        objects_.emplace_back(std::make_unique<std::decay_t<Object>>(std::move(obj)));
+    void ObjectContainer::Add(Object&& obj) {
+        AddPtr(std::make_unique<std::decay_t<Object>>(std::move(obj)));
     }
 }
