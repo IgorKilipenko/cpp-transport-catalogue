@@ -73,28 +73,14 @@ namespace svg {
      */
     class Circle final : public Object {
     public:
-        Circle& SetCenter(Point center) {
-            center_ = center;
-            return *this;
-        }
+        Circle& SetCenter(Point center);
 
-        Circle& SetRadius(double radius) {
-            radius_ = radius;
-            return *this;
-        }
+        Circle& SetRadius(double radius);
 
     private:
-        void RenderObject(const RenderContext& context) const override {
-            ToStream(context.out);
-        }
+        void RenderObject(const RenderContext& context) const override;
 
-        std::ostream& ToStream(std::ostream& out) const {
-            out << "<circle cx=\""sv << center_.x << "\" cy=\""sv << center_.y << "\" "sv;
-            out << "r=\""sv << radius_ << "\" "sv;
-            out << "/>"sv;
-
-            return out;
-        }
+        std::ostream& ToStream(std::ostream& out) const;
 
         Point center_;
         double radius_ = 1.0;
@@ -110,40 +96,16 @@ namespace svg {
     public:
         /// Добавляет очередную вершину к ломаной линии
         template <typename Point = svg::Point, detail::EnableIfConvertibleV<Point, svg::Point> = true>
-        Polyline& AddPoint(Point&& point) {
-            points_.push_back(std::move(point));
-            return *this;
-        }
+        Polyline& AddPoint(Point&& point);
 
     private:
         Points points_;
 
-        std::ostream& PointsToStream(std::ostream& out) const {
-            if (points_.empty()) {
-                return out;
-            }
-            std::string_view sep = ""sv;
-            const std::string_view comma = ","sv;
+        std::ostream& PointsToStream(std::ostream& out) const;
 
-            for (const Point& point : points_) {
-                out << sep << point.x << comma << point.y;
-                sep = sep.empty() ? " "sv : sep;
-            }
+        std::ostream& ToStream(std::ostream& out) const;
 
-            return out;
-        }
-
-        std::ostream& ToStream(std::ostream& out) const {
-            out << "<polyline points=\""sv;
-            PointsToStream(out);
-            out << "\" "sv;
-            out << "/>"sv;
-            return out;
-        }
-
-        void RenderObject(const RenderContext& context) const override {
-            ToStream(context.out);
-        }
+        void RenderObject(const RenderContext& context) const override;
     };
 
     /*
@@ -160,134 +122,53 @@ namespace svg {
         };
 
         /// Задаёт координаты опорной точки (атрибуты x и y)
-        template <typename Point = svg::Point, std::enable_if_t<std::is_convertible_v<std::decay_t<Point>, svg::Point>, bool> = true>
-        Text& SetPosition(Point&& pos) {
-            base_point_ = std::move(pos);
-            return *this;
-        }
+        template <typename Point = svg::Point, detail::EnableIfConvertibleV<Point, svg::Point> = true>
+        Text& SetPosition(Point&& pos);
 
         /// Задаёт смещение относительно опорной точки (атрибуты dx, dy)
-        template <typename Point = svg::Point, std::enable_if_t<std::is_convertible_v<std::decay_t<Point>, svg::Point>, bool> = true>
-        Text& SetOffset(Point&& offset) {
-            style_.offset = std::move(offset);
-            return *this;
-        }
+        template <typename Point = svg::Point, detail::EnableIfConvertibleV<Point, svg::Point> = true>
+        Text& SetOffset(Point&& offset);
 
         /// Задаёт размеры шрифта (атрибут font-size)
-        Text& SetFontSize(uint32_t size) {
-            style_.size = size;
-            return *this;
-        }
+        Text& SetFontSize(uint32_t size);
 
         /// Задаёт название шрифта (атрибут font-family)
-        template <typename String = std::string, std::enable_if_t<std::is_convertible_v<std::decay_t<String>, std::string>, bool> = true>
-        Text& SetFontFamily(String&& font_family) {
-            style_.font_family = std::move(font_family);
-            return *this;
-        }
+        template <typename String = std::string, detail::EnableIfConvertibleV<String, std::string> = true>
+        Text& SetFontFamily(String&& font_family);
 
         /// Задаёт толщину шрифта (атрибут font-weight)
-        template <typename String = std::string, std::enable_if_t<std::is_convertible_v<std::decay_t<String>, std::string>, bool> = true>
-        Text& SetFontWeight(String&& font_weight) {
-            style_.font_weight = std::move(font_weight);
-            return *this;
-        }
+        template <typename String = std::string, detail::EnableIfConvertibleV<String, std::string> = true>
+        Text& SetFontWeight(String&& font_weight);
 
         /// Задаёт текстовое содержимое объекта (отображается внутри тега text)
-        template <typename String = std::string, std::enable_if_t<std::is_convertible_v<std::decay_t<String>, std::string>, bool> = true>
-        Text& SetData(String&& data) {
-            text_ = std::move(data);
-            return *this;
-        }
+        template <typename String = std::string, detail::EnableIfConvertibleV<String, std::string> = true>
+        Text& SetData(String&& data);
 
     private:
         Point base_point_;
         TextStyle style_;
         std::string text_;
-        
-        std::ostream& DataToStream(std::ostream& out) const {
-            for (const char c : text_) {
-                switch (c) {
-                case '"':
-                    out << "&quot;"sv;
-                    break;
-                case '\'':
-                    out << "&apos;"sv;
-                    break;
-                case '<':
-                    out << "&lt;"sv;
-                    break;
-                case '>':
-                    out << "&gt;"sv;
-                    break;
-                case '&':
-                    out << "&amp;"sv;
-                    break;
-                default:
-                    out << c;
-                    break;
-                }
-            }
 
-            return out;
-        }
+        std::ostream& DataToStream(std::ostream& out) const;
 
-        std::ostream& ToStream(std::ostream& out) const {
-            out << "<text x=\""sv << base_point_.x << "\" y=\""sv << base_point_.y << "\""sv;
-            out << " dx=\""sv << style_.offset.x << "\" dy=\""sv << style_.offset.y << "\""sv;
-            out << " font-size=\""sv << style_.size << "\"";
+        std::ostream& ToStream(std::ostream& out) const;
 
-            if (!style_.font_family.empty()) {
-                out << " font-family=\""sv << style_.font_family << "\""sv;
-            }
-            if (!style_.font_weight.empty()) {
-                out << " font-weight=\""sv << style_.font_weight << "\""sv;
-            }
-
-            out << ">"sv;
-            DataToStream(out) << "</text>"sv;
-
-            return out;
-        }
-
-        void RenderObject(const RenderContext& context) const override {
-            ToStream(context.out);
-        }
+        void RenderObject(const RenderContext& context) const override;
     };
 
     class Document {
     public:
         using ObjectPtr = std::unique_ptr<Object>;
         using ObjectCollection = std::vector<ObjectPtr>;
-        /*
-         Метод Add добавляет в svg-документ любой объект-наследник svg::Object.
-         Пример использования:
-         Document doc;
-         doc.Add(Circle().SetCenter({20, 30}).SetRadius(15));
-        */
 
-        template <typename Object, detail::EnableIfBaseOfV<svg::Object, Object> = true>
-        void Add(Object&& obj) {
-            objects_.emplace_back(std::make_unique<std::decay_t<Object>>(std::move(obj)));
-        }
+        template <typename Object = svg::Object, detail::EnableIfBaseOfV<svg::Object, Object> = true>
+        void Add(Object&& obj);
 
         /// Добавляет в svg-документ объект-наследник svg::Object
-        void AddPtr(ObjectPtr&& obj) {
-            objects_.emplace_back(std::move(obj));
-        }
+        void AddPtr(ObjectPtr&& obj);
 
         /// Выводит в ostream svg-представление документа
-        void Render(std::ostream& out) const {
-            out << HEADER_LINE << "\n"sv << SVG_TAG_OPEN << "\n"sv;
-
-            for (const auto& obj : objects_) {
-                RenderContext ctx(out, 2, 2);
-                obj->Render(ctx);
-            }
-
-            out << SVG_TAG_CLOSE;
-            out.flush();
-        }
+        void Render(std::ostream& out) const;
 
     private:
         ObjectCollection objects_;
@@ -296,4 +177,54 @@ namespace svg {
         static constexpr const std::string_view SVG_TAG_CLOSE = "</svg>"sv;
     };
 
-}  // namespace svg
+}
+
+namespace svg /* Polyline class template impl */ {
+    template <typename Point, detail::EnableIfConvertibleV<Point, svg::Point>>
+    Polyline& Polyline::AddPoint(Point&& point) {
+        points_.push_back(std::move(point));
+        return *this;
+    }
+}
+
+namespace svg /* Text class template impl */ {
+    template <typename Point, detail::EnableIfConvertibleV<Point, svg::Point>>
+    Text& Text::SetPosition(Point&& pos) {
+        base_point_ = std::move(pos);
+        return *this;
+    }
+
+    template <typename Point, detail::EnableIfConvertibleV<Point, svg::Point>>
+    Text& Text::SetOffset(Point&& offset) {
+        style_.offset = std::move(offset);
+        return *this;
+    }
+
+    /// Задаёт название шрифта (атрибут font-family)
+    template <typename String, detail::EnableIfConvertibleV<String, std::string>>
+    Text& Text::SetFontFamily(String&& font_family) {
+        style_.font_family = std::move(font_family);
+        return *this;
+    }
+
+    /// Задаёт толщину шрифта (атрибут font-weight)
+    template <typename String, detail::EnableIfConvertibleV<String, std::string>>
+    Text& Text::SetFontWeight(String&& font_weight) {
+        style_.font_weight = std::move(font_weight);
+        return *this;
+    }
+
+    /// Задаёт текстовое содержимое объекта (отображается внутри тега text)
+    template <typename String, detail::EnableIfConvertibleV<String, std::string>>
+    Text& Text::SetData(String&& data) {
+        text_ = std::move(data);
+        return *this;
+    }
+}
+
+namespace svg /* Document class template impl */ {
+    template <typename Object, detail::EnableIfBaseOfV<svg::Object, Object>>
+    void Document::Add(Object&& obj) {
+        objects_.emplace_back(std::make_unique<std::decay_t<Object>>(std::move(obj)));
+    }
+}
