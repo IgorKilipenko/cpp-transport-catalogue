@@ -223,15 +223,15 @@ namespace svg::tests {
                 "\n"s
                 R"(<svg xmlns="http://www.w3.org/2000/svg" version="1.1">)"
                 "\n"s
-                R"(  <polyline points="100,20 120,50 80,40 100,20" />)"
+                R"(  <polyline points="100,20 120,50 80,40 100,20"/>)"
                 "\n"s
                 R"(  <polyline points="50,10 52.3511,16.7639 59.5106,16.9098 53.8042,21.2361 55.8779,28.0902 50,24 44.1221,28.0902 46.1958,21.2361 40.4894,16.9098 47.6489,16.7639 50,10" fill="red" stroke="black"/>)"
                 "\n"s
-                R"(  <circle cx="30" cy="70" r="20" fill="rgb(240,240,240***)***" stroke="black"/>)"
+                R"~(  <circle cx="30" cy="70" r="20" fill="rgb(240,240,240)" stroke="black"/>)~"
                 "\n"s
-                R"(  <circle cx="30" cy="40" r="15" fill="rgb(240,240,240***)***" stroke="black"/>)"
+                R"~(  <circle cx="30" cy="40" r="15" fill="rgb(240,240,240)" stroke="black"/>)~"
                 "\n"s
-                R"(  <circle cx="30" cy="20" r="10" fill="rgb(240,240,240***)***" stroke="black"/>)"
+                R"~(  <circle cx="30" cy="20" r="10" fill="rgb(240,240,240)" stroke="black"/>)~"
                 "\n"s
                 R"(  <text fill="yellow" stroke="yellow" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" x="10" y="100" dx="0" dy="0" font-size="12" font-family="Verdana">Happy New Year!</text>)"
                 "\n"s
