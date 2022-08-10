@@ -140,7 +140,15 @@ namespace svg::tests {
         const std::string result1 = stream1.str();
         const std::string result2 = stream2.str();
 
-        assert(result1 == result2);
+        if (result1 != result2) {
+            std::cerr << "Test result:" << std::endl;
+            std::cerr << result1 << std::endl;
+
+            std::cerr << std::endl << "Test expected result:" << std::endl;
+            std::cerr << result2 << std::endl;
+
+            assert(false);
+        }
     }
 
     // Выводит приветствие, круг и звезду
@@ -158,20 +166,29 @@ namespace svg::tests {
 
     void Test2() {
         using namespace std::literals;
-        const std::string svg_str = DrawTestPicture();
+        const std::string result = DrawTestPicture();
         const std::string expected_svg_str =
             R"(<?xml version="1.0" encoding="UTF-8" ?>)"
             "\n"s
             R"(<svg xmlns="http://www.w3.org/2000/svg" version="1.1">)"
             "\n"s
-            R"(  <circle cx="20" cy="20" r="10" />)"
+            R"(  <circle cx="20" cy="20" r="10"/>)"
             "\n"s
             R"(  <text x="35" y="20" dx="0" dy="6" font-size="12" font-family="Verdana" font-weight="bold">Hello C++</text>)"
             "\n"s
-            R"(  <polyline points="20,40 22.9389,45.9549 29.5106,46.9098 24.7553,51.5451 25.8779,58.0902 20,55 14.1221,58.0902 15.2447,51.5451 10.4894,46.9098 17.0611,45.9549 20,40" />)"
+            R"(  <polyline points="20,40 22.9389,45.9549 29.5106,46.9098 24.7553,51.5451 25.8779,58.0902 20,55 14.1221,58.0902 15.2447,51.5451 10.4894,46.9098 17.0611,45.9549 20,40"/>)"
             "\n"s
             R"(</svg>)";
-        assert(svg_str == expected_svg_str);
+
+        if (result != expected_svg_str) {
+            std::cerr << "Test result:" << std::endl;
+            std::cerr << result << std::endl;
+
+            std::cerr << std::endl << "Test expected result:" << std::endl;
+            std::cerr << expected_svg_str << std::endl;
+
+            assert(false);
+        }
     }
 
     namespace shapes {
@@ -182,15 +199,15 @@ namespace svg::tests {
                 "\n"s
                 R"(<svg xmlns="http://www.w3.org/2000/svg" version="1.1">)"
                 "\n"s
-                R"(  <polyline points="100,20 120,50 80,40 100,20" />)"
+                R"(  <polyline points="100,20 120,50 80,40 100,20"/>)"
                 "\n"s
-                R"(  <polyline points="50,10 52.3511,16.7639 59.5106,16.9098 53.8042,21.2361 55.8779,28.0902 50,24 44.1221,28.0902 46.1958,21.2361 40.4894,16.9098 47.6489,16.7639 50,10" />)"
+                R"(  <polyline points="50,10 52.3511,16.7639 59.5106,16.9098 53.8042,21.2361 55.8779,28.0902 50,24 44.1221,28.0902 46.1958,21.2361 40.4894,16.9098 47.6489,16.7639 50,10" fill="red" stroke="black"/>)"
                 "\n"s
-                R"(  <circle cx="30" cy="70" r="20" />)"
+                R"~(  <circle cx="30" cy="70" r="20" fill="rgb(240,240,240)" stroke="black"/>)~"
                 "\n"s
-                R"(  <circle cx="30" cy="40" r="15" />)"
+                R"~(  <circle cx="30" cy="40" r="15" fill="rgb(240,240,240)" stroke="black"/>)~"
                 "\n"s
-                R"(  <circle cx="30" cy="20" r="10" />)"
+                R"~(  <circle cx="30" cy="20" r="10" fill="rgb(240,240,240)" stroke="black"/>)~"
                 "\n"s
                 R"(</svg>)";
 
@@ -212,9 +229,16 @@ namespace svg::tests {
             doc.Render(stream);
 
             std::string result = stream.str();
-            std::cerr << result << std::endl;
 
-            assert(result == expected_svg_str);
+            if (result != expected_svg_str) {
+                std::cerr << "Test result:" << std::endl;
+                std::cerr << result << std::endl;
+
+                std::cerr << std::endl << "Test expected result:" << std::endl;
+                std::cerr << expected_svg_str << std::endl;
+
+                assert(false);
+            }
         }
 
         void Test2() {
@@ -263,13 +287,15 @@ namespace svg::tests {
 
             const std::string result = stream.str();
 
-            std::cerr << "Test result:" << std::endl;
-            std::cerr << result << std::endl;
+            if (result != expected_svg_str) {
+                std::cerr << "Test result:" << std::endl;
+                std::cerr << result << std::endl;
 
-            std::cerr << "Test expected result:" << std::endl;
-            std::cerr << expected_svg_str << std::endl;
+                std::cerr << std::endl << "Test expected result:" << std::endl;
+                std::cerr << expected_svg_str << std::endl;
 
-            assert(result == expected_svg_str);
+                assert(false);
+            }
         }
     }
 }
@@ -279,14 +305,14 @@ int main() {
     // using namespace svg::tests::shapes;
     //  using namespace std;
 
-    // svg::tests::Test1();
-    // std::cerr << "Test1 : Done." << std::endl;
+    svg::tests::Test1();
+    std::cerr << "Test1 : Done." << std::endl;
 
-    // svg::tests::Test2();
-    // std::cerr << "Test2 : Done." << std::endl;
+    svg::tests::Test2();
+    std::cerr << "Test2 : Done." << std::endl;
 
-    // svg::tests::shapes::Test1();
-    // std::cerr << "shapes::Test1 : Done." << std::endl;
+    svg::tests::shapes::Test1();
+    std::cerr << "shapes::Test1 : Done." << std::endl;
 
     svg::tests::shapes::Test2();
     std::cerr << "shapes::Test2 : Done." << std::endl;
