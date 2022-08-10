@@ -41,7 +41,7 @@ namespace shapes {
                 angle += M_PI / num_rays_;
                 polyline.AddPoint({center_.x + inner_radius_ * sin(angle), center_.y - inner_radius_ * cos(angle)});
             }
-            container.Add(polyline);
+            container.Add(polyline.SetFillColor("red"s).SetStrokeColor("black"s));
         }
 
     private:
@@ -55,9 +55,17 @@ namespace shapes {
         Snowman(svg::Point head_center, double head_radius) : head_center_(head_center), head_radius(head_radius) {}
 
         void Draw(ObjectContainer& container) const override {
-            container.Add(Circle().SetCenter({head_center_.x, head_center_.y + head_radius * 5}).SetRadius(2 * head_radius));
-            container.Add(Circle().SetCenter({head_center_.x, head_center_.y + head_radius * 2}).SetRadius(1.5 * head_radius));
-            container.Add(Circle().SetCenter(head_center_).SetRadius(head_radius));
+            container.Add(Circle()
+                              .SetCenter({head_center_.x, head_center_.y + head_radius * 5})
+                              .SetRadius(2 * head_radius)
+                              .SetFillColor("rgb(240,240,240)"s)
+                              .SetStrokeColor("black"s));
+            container.Add(Circle()
+                              .SetCenter({head_center_.x, head_center_.y + head_radius * 2})
+                              .SetRadius(1.5 * head_radius)
+                              .SetFillColor("rgb(240,240,240)"s)
+                              .SetStrokeColor("black"s));
+            container.Add(Circle().SetCenter(head_center_).SetRadius(head_radius).SetFillColor("rgb(240,240,240)"s).SetStrokeColor("black"s));
         }
 
     private:
@@ -208,6 +216,61 @@ namespace svg::tests {
 
             assert(result == expected_svg_str);
         }
+
+        void Test2() {
+            const std::string expected_svg_str =
+                R"(<?xml version="1.0" encoding="UTF-8" ?>)"
+                "\n"s
+                R"(<svg xmlns="http://www.w3.org/2000/svg" version="1.1">)"
+                "\n"s
+                R"(  <polyline points="100,20 120,50 80,40 100,20" />)"
+                "\n"s
+                R"(  <polyline points="50,10 52.3511,16.7639 59.5106,16.9098 53.8042,21.2361 55.8779,28.0902 50,24 44.1221,28.0902 46.1958,21.2361 40.4894,16.9098 47.6489,16.7639 50,10" fill="red" stroke="black"/>)"
+                "\n"s
+                R"(  <circle cx="30" cy="70" r="20" fill="rgb(240,240,240***)***" stroke="black"/>)"
+                "\n"s
+                R"(  <circle cx="30" cy="40" r="15" fill="rgb(240,240,240***)***" stroke="black"/>)"
+                "\n"s
+                R"(  <circle cx="30" cy="20" r="10" fill="rgb(240,240,240***)***" stroke="black"/>)"
+                "\n"s
+                R"(  <text fill="yellow" stroke="yellow" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" x="10" y="100" dx="0" dy="0" font-size="12" font-family="Verdana">Happy New Year!</text>)"
+                "\n"s
+                R"(  <text fill="red" x="10" y="100" dx="0" dy="0" font-size="12" font-family="Verdana">Happy New Year!</text>)"
+                "\n"s
+                R"(</svg>)";
+
+            std::stringstream stream;
+            std::vector<std::unique_ptr<svg::Drawable>> picture;
+
+            picture.emplace_back(std::make_unique<::shapes::Triangle>(Point{100, 20}, Point{120, 50}, Point{80, 40}));
+            picture.emplace_back(std::make_unique<::shapes::Star>(Point{50.0, 20.0}, 10.0, 4.0, 5));
+            picture.emplace_back(std::make_unique<::shapes::Snowman>(Point{30, 20}, 10.0));
+
+            svg::Document doc;
+            ::shapes::DrawPicture(picture, doc);
+
+            const Text base_text =  //
+                Text().SetFontFamily("Verdana"s).SetFontSize(12).SetPosition({10, 100}).SetData("Happy New Year!"s);
+            doc.Add(Text{base_text}
+                        .SetStrokeColor("yellow"s)
+                        .SetFillColor("yellow"s)
+                        .SetStrokeLineJoin(StrokeLineJoin::ROUND)
+                        .SetStrokeLineCap(StrokeLineCap::ROUND)
+                        .SetStrokeWidth(3));
+            doc.Add(Text{base_text}.SetFillColor("red"s));
+
+            doc.Render(stream);
+
+            const std::string result = stream.str();
+
+            std::cerr << "Test result:" << std::endl;
+            std::cerr << result << std::endl;
+
+            std::cerr << "Test expected result:" << std::endl;
+            std::cerr << expected_svg_str << std::endl;
+
+            assert(result == expected_svg_str);
+        }
     }
 }
 
@@ -216,14 +279,17 @@ int main() {
     // using namespace svg::tests::shapes;
     //  using namespace std;
 
-    svg::tests::Test1();
-    std::cerr << "Test1 : Done." << std::endl;
+    // svg::tests::Test1();
+    // std::cerr << "Test1 : Done." << std::endl;
 
-    svg::tests::Test2();
-    std::cerr << "Test2 : Done." << std::endl;
+    // svg::tests::Test2();
+    // std::cerr << "Test2 : Done." << std::endl;
 
-    svg::tests::shapes::Test1();
-    std::cerr << "shapes::Test1 : Done." << std::endl;
+    // svg::tests::shapes::Test1();
+    // std::cerr << "shapes::Test1 : Done." << std::endl;
+
+    svg::tests::shapes::Test2();
+    std::cerr << "shapes::Test2 : Done." << std::endl;
 
     std::cerr << std::endl << "All Tests : Done." << std::endl << std::endl;
 }

@@ -32,7 +32,8 @@ namespace svg /* Circle class impl */ {
 
     std::ostream& Circle::ToStream(std::ostream& out) const {
         out << "<circle cx=\""sv << center_.x << "\" cy=\""sv << center_.y << "\" "sv;
-        out << "r=\""sv << radius_ << "\" "sv;
+        out << "r=\""sv << radius_ << "\""sv;
+        RenderAttrs(out);
         out << "/>"sv;
 
         return out;
@@ -58,7 +59,8 @@ namespace svg /* Polyline class impl */ {
     std::ostream& Polyline::ToStream(std::ostream& out) const {
         out << "<polyline points=\""sv;
         PointsToStream(out);
-        out << "\" "sv;
+        out << "\""sv;
+        RenderAttrs(out);
         out << "/>"sv;
         return out;
     }
@@ -102,7 +104,9 @@ namespace svg /* Text class impl */ {
     }
 
     std::ostream& Text::ToStream(std::ostream& out) const {
-        out << "<text x=\""sv << base_point_.x << "\" y=\""sv << base_point_.y << "\""sv;
+        out << "<text"sv ;
+        RenderAttrs(out);
+        out << " x=\""sv << base_point_.x << "\" y=\""sv << base_point_.y << "\""sv;
         out << " dx=\""sv << style_.offset.x << "\" dy=\""sv << style_.offset.y << "\""sv;
         out << " font-size=\""sv << style_.size << "\"";
 
@@ -112,7 +116,7 @@ namespace svg /* Text class impl */ {
         if (!style_.font_weight.empty()) {
             out << " font-weight=\""sv << style_.font_weight << "\""sv;
         }
-
+        
         out << ">"sv;
         DataToStream(out) << "</text>"sv;
 
