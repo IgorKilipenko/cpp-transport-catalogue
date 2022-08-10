@@ -74,7 +74,8 @@ namespace svg /* Colors */ {
             Rgb(uint8_t red = 0, uint8_t green = 0, uint8_t blue = 0) : red(red), green(green), blue(blue) {}
 
             /// Выполняет линейную интерполяцию Rgb цвета от from до to в зависимости от параметра t
-            Rgb Lerp(Rgb to, double t) {
+            template <typename Rgb, detail::EnableIfConvertible<Rgb, Colors::Rgb> = true>
+            Rgb Lerp(Rgb&& to, double t) {
                 return Colors::Lerp(*this, to, t);
             }
         };
@@ -89,48 +90,28 @@ namespace svg /* Colors */ {
         public:
             explicit ColorPrinter(std::ostream& out) : out_(out) {}
 
-            void operator()(std::monostate) const {
-                out_ << Colors::NONE;
-            }
+            void operator()(std::monostate) const;
 
             template <typename String, detail::EnableIfConvertible<String, std::string_view> = true>
-            void operator()(String&& color) const {
-                out_ << std::move(color);
-            }
+            void operator()(String&& color) const;
 
-            void operator()(Rgb color) const {
-                using namespace std::string_view_literals;
-                out_ << "rgb("sv;
-                Print(color) << ")"sv;
-            }
+            template <typename Rgb = Colors::Rgb, detail::EnableIfSame<Rgb, Colors::Rgb> = true>
+            void operator()(Rgb&& color) const;
 
-            void operator()(Rgba color) const {
-                using namespace std::string_view_literals;
-                out_ << "rgba("sv;
-                Print(color) << ")"sv;
-            }
+            template <typename Rgba = Colors::Rgba, detail::EnableIfSame<Rgba, Colors::Rgba> = true>
+            void operator()(Rgba&& color) const;
 
-            std::ostream& GetStream() const {
-                return out_;
-            }
+            std::ostream& GetStream() const;
 
         private:
             std::ostream& out_;
             static constexpr const std::string_view SEPARATOR{","};
 
             template <typename Rgb = Colors::Rgb, detail::EnableIfSame<Rgb, Colors::Rgb> = true>
-            std::ostream& Print(Rgb&& color) const {
-                using namespace std::string_view_literals;
-                out_ << +color.red << SEPARATOR << +color.green << SEPARATOR << +color.blue;
-                return out_;
-            }
+            std::ostream& Print(Rgb&& color) const;
 
             template <typename Rgba = Colors::Rgba, detail::EnableIfSame<Rgba, Colors::Rgba> = true>
-            std::ostream& Print(Rgba&& color) const {
-                using namespace std::string_view_literals;
-                Print(static_cast<Rgb>(color)) << SEPARATOR << +color.opacity;
-                return out_;
-            }
+            std::ostream& Print(Rgba&& color) const;
         };
 
     private:
@@ -140,14 +121,13 @@ namespace svg /* Colors */ {
         static inline const Color NoneColor{static_cast<std::string>(Colors::NONE)};
 
         /// Выполняет линейную интерполяцию значения от from до to в зависимости от параметра t
-        static uint8_t Lerp(uint8_t from, uint8_t to, double t) {
-            return static_cast<uint8_t>(std::round((to - from) * t + from));
-        }
+        static uint8_t Lerp(uint8_t from, uint8_t to, double t);
 
         // Выполняет линейную интерполяцию Rgb цвета от from до to в зависимости от параметра t
-        static Rgb Lerp(Rgb from, Rgb to, double t) {
-            return {Lerp(from.red, to.red, t), Lerp(from.green, to.green, t), Lerp(from.blue, to.blue, t)};
-        }
+        template <
+            typename RgbFrom, typename RgbTo,
+            std::enable_if_t<detail::IsConvertible<RgbFrom, Rgb>::value && detail::IsConvertible<RgbTo, Rgb>::value, bool> = true>
+        static Rgb Lerp(RgbFrom&& from, RgbTo to, double t);
     };
 }
 
@@ -304,7 +284,7 @@ namespace svg {
     private:
         void RenderObject(const RenderContext& context) const override;
 
-        std::ostream& ToStream(std::ostream& out) const;
+        std::ostream& Print(std::ostream& out) const;
 
         Point center_;
         double radius_ = 1.0;
@@ -325,9 +305,9 @@ namespace svg {
     private:
         Points points_;
 
-        std::ostream& PointsToStream(std::ostream& out) const;
+        std::ostream& PrintPoints(std::ostream& out) const;
 
-        std::ostream& ToStream(std::ostream& out) const;
+        std::ostream& Print(std::ostream& out) const;
 
         void RenderObject(const RenderContext& context) const override;
     };
@@ -373,9 +353,9 @@ namespace svg {
         TextStyle style_;
         std::string text_;
 
-        std::ostream& DataToStream(std::ostream& out) const;
+        std::ostream& PrintData(std::ostream& out) const;
 
-        std::ostream& ToStream(std::ostream& out) const;
+        std::ostream& Print(std::ostream& out) const;
 
         void RenderObject(const RenderContext& context) const override;
     };
@@ -465,5 +445,50 @@ namespace svg /* ObjectContainer class template impl */ {
     template <typename Object, detail::EnableIfBaseOf<svg::Object, Object>>
     void ObjectContainer::Add(Object&& obj) {
         AddPtr(std::make_unique<std::decay_t<Object>>(std::move(obj)));
+    }
+}
+
+namespace svg /* Colors class template impl */ {
+    template <
+        typename RgbFrom, typename RgbTo,
+        std::enable_if_t<detail::IsConvertible<RgbFrom, Rgb>::value && detail::IsConvertible<RgbTo, Rgb>::value, bool>>
+    Rgb Colors::Lerp(RgbFrom&& from, RgbTo to, double t) {
+        return {Lerp(from.red, to.red, t), Lerp(from.green, to.green, t), Lerp(from.blue, to.blue, t)};
+    }
+}
+
+namespace svg /* Colors::ColorPrinter class template impl */ {
+
+    template <typename String, detail::EnableIfConvertible<String, std::string_view>>
+    void Colors::ColorPrinter::operator()(String&& color) const {
+        out_ << std::move(color);
+    }
+
+    template <typename Rgb, detail::EnableIfSame<Rgb, Colors::Rgb>>
+    void Colors::ColorPrinter::operator()(Rgb&& color) const {
+        using namespace std::string_view_literals;
+        out_ << "rgb("sv;
+        Print(std::move(color)) << ")"sv;
+    }
+
+    template <typename Rgba, detail::EnableIfSame<Rgba, Colors::Rgba>>
+    void Colors::ColorPrinter::operator()(Rgba&& color) const {
+        using namespace std::string_view_literals;
+        out_ << "rgba("sv;
+        Print(std::move(color)) << ")"sv;
+    }
+
+    template <typename Rgb, detail::EnableIfSame<Rgb, Colors::Rgb>>
+    std::ostream& Colors::ColorPrinter::Print(Rgb&& color) const {
+        using namespace std::string_view_literals;
+        out_ << +color.red << SEPARATOR << +color.green << SEPARATOR << +color.blue;
+        return out_;
+    }
+
+    template <typename Rgba, detail::EnableIfSame<Rgba, Colors::Rgba>>
+    std::ostream& Colors::ColorPrinter::Print(Rgba&& color) const {
+        using namespace std::string_view_literals;
+        Print(static_cast<Rgb>(color)) << SEPARATOR << +color.opacity;
+        return out_;
     }
 }

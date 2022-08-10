@@ -27,10 +27,10 @@ namespace svg /* Circle class impl */ {
     }
 
     void Circle::RenderObject(const RenderContext& context) const {
-        ToStream(context.out);
+        Print(context.out);
     }
 
-    std::ostream& Circle::ToStream(std::ostream& out) const {
+    std::ostream& Circle::Print(std::ostream& out) const {
         out << "<circle cx=\""sv << center_.x << "\" cy=\""sv << center_.y << "\" "sv;
         out << "r=\""sv << radius_ << "\""sv;
         RenderAttrs(out);
@@ -41,7 +41,7 @@ namespace svg /* Circle class impl */ {
 }
 
 namespace svg /* Polyline class impl */ {
-    std::ostream& Polyline::PointsToStream(std::ostream& out) const {
+    std::ostream& Polyline::PrintPoints(std::ostream& out) const {
         if (points_.empty()) {
             return out;
         }
@@ -56,9 +56,9 @@ namespace svg /* Polyline class impl */ {
         return out;
     }
 
-    std::ostream& Polyline::ToStream(std::ostream& out) const {
+    std::ostream& Polyline::Print(std::ostream& out) const {
         out << "<polyline points=\""sv;
-        PointsToStream(out);
+        PrintPoints(out);
         out << "\""sv;
         RenderAttrs(out);
         out << "/>"sv;
@@ -66,7 +66,7 @@ namespace svg /* Polyline class impl */ {
     }
 
     void Polyline::RenderObject(const RenderContext& context) const {
-        ToStream(context.out);
+        Print(context.out);
     }
 }
 
@@ -76,7 +76,7 @@ namespace svg /* Text class impl */ {
         return *this;
     }
 
-    std::ostream& Text::DataToStream(std::ostream& out) const {
+    std::ostream& Text::PrintData(std::ostream& out) const {
         for (const char c : text_) {
             switch (c) {
             case '"':
@@ -103,7 +103,7 @@ namespace svg /* Text class impl */ {
         return out;
     }
 
-    std::ostream& Text::ToStream(std::ostream& out) const {
+    std::ostream& Text::Print(std::ostream& out) const {
         out << "<text"sv;
         RenderAttrs(out);
         out << " x=\""sv << base_point_.x << "\" y=\""sv << base_point_.y << "\""sv;
@@ -118,13 +118,13 @@ namespace svg /* Text class impl */ {
         }
 
         out << ">"sv;
-        DataToStream(out) << "</text>"sv;
+        PrintData(out) << "</text>"sv;
 
         return out;
     }
 
     void Text::RenderObject(const RenderContext& context) const {
-        ToStream(context.out);
+        Print(context.out);
     }
 }
 
@@ -187,5 +187,22 @@ namespace svg {
             break;
         }
         return ""sv;
+    }
+}
+
+namespace svg /* Colors */ {
+    uint8_t Colors::Lerp(uint8_t from, uint8_t to, double t) {
+        return static_cast<uint8_t>(std::round((to - from) * t + from));
+    }
+}
+
+namespace svg /* Colors::ColorPrinter */ {
+
+    void Colors::ColorPrinter::operator()(std::monostate) const {
+        out_ << Colors::NONE;
+    }
+
+    std::ostream& Colors::ColorPrinter::GetStream() const {
+        return out_;
     }
 }
