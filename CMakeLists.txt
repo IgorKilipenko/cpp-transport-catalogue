@@ -18,6 +18,7 @@ set(LIBS
     ${SRC_DIR}/stat_reader.cpp
     ${SRC_DIR}/input_reader.cpp
     ${SRC_DIR}/svg.cpp
+    ${SRC_DIR}/json.cpp
 )
 
 if (DEFINED TESTS AND TESTS)
