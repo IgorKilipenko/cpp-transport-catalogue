@@ -297,6 +297,61 @@ namespace svg::tests {
                 assert(false);
             }
         }
+
+        void Test3() {
+            using namespace svg;
+            using namespace std;
+
+            const std::string expected_svg_str = R"(none)"
+                                                 "\n"s
+                                                 R"(purple)"
+                                                 "\n"s
+                                                 R"(rgb(100,200,255))"
+                                                 "\n"s
+                                                 R"(rgba(100,200,255,0.5))"
+                                                 "\n"s
+                                                 R"(<?xml version="1.0" encoding="UTF-8" ?>)"
+                                                 "\n"s
+                                                 R"(<svg xmlns="http://www.w3.org/2000/svg" version="1.1">)"
+                                                 "\n"s
+                                                 R"~(  <circle cx="1" cy="2" r="3.5" fill="rgba(100,200,255,0.5)" stroke="purple"/>)~"
+                                                 "\n"s
+                                                 R"(</svg>)";
+
+            std::stringstream stream;
+
+            Color none_color;
+            stream << none_color << endl;  // none
+
+            Color purple{"purple"s};
+            stream << purple << endl;  // purple
+
+            Color rgb = Rgb{100, 200, 255};
+            stream << rgb << endl;  // rgb(100,200,255)
+
+            Color rgba = Rgba{100, 200, 255, 0.5};
+            stream << rgba << endl;  // rgba(100,200,255,0.5)
+
+            Circle c;
+            c.SetRadius(3.5).SetCenter({1.0, 2.0});
+            c.SetFillColor(rgba);
+            c.SetStrokeColor(purple);
+
+            Document doc;
+            doc.Add(std::move(c));
+            doc.Render(stream);
+
+            std::string result = stream.str();
+            if (result != expected_svg_str) {
+                std::cerr << "Test result:" << std::endl;
+                std::cerr << result << std::endl;
+
+                std::cerr << std::endl << "Test expected result:" << std::endl;
+                std::cerr << expected_svg_str << std::endl;
+
+                assert(false);
+            }
+        }
     }
 }
 
@@ -316,6 +371,9 @@ int main() {
 
     svg::tests::shapes::Test2();
     std::cerr << "shapes::Test2 : Done." << std::endl;
+
+    svg::tests::shapes::Test3();
+    std::cerr << "shapes::Test3 : Done." << std::endl;
 
     std::cerr << std::endl << "All Tests : Done." << std::endl << std::endl;
 }

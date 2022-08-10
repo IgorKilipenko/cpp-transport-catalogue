@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <iostream>
 #include <map>
@@ -10,11 +11,15 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <variant>
 #include <vector>
 
 namespace svg::detail {
     template <typename FromType, typename ToType>
     using EnableIfConvertible = std::enable_if_t<std::is_convertible_v<std::decay_t<FromType>, ToType>, bool>;
+
+    template <typename FromType, typename ToType>
+    using IsConvertible = std::is_convertible<std::decay_t<FromType>, ToType>;
 
     template <typename FromType, typename ToType>
     using IsSame = std::is_same<std::decay_t<FromType>, ToType>;
@@ -24,75 +29,150 @@ namespace svg::detail {
 
     template <typename BaseType, typename DerivedType>
     using EnableIfBaseOf = std::enable_if_t<std::is_base_of_v<BaseType, std::decay_t<DerivedType>>, bool>;
+}
 
-    template <typename Out = std::string_view, typename EnumType, EnableIfConvertible<Out, std::string_view> = true>
-    Out ToString(EnumType);
+namespace svg /* Stroke */ {
+
+    class Stroke {
+    public:
+        enum class StrokeLineCap {
+            BUTT,
+            ROUND,
+            SQUARE,
+        };
+
+        enum class StrokeLineJoin {
+            ARCS,
+            BEVEL,
+            MITER,
+            MITER_CLIP,
+            ROUND,
+        };
+
+        template <
+            typename Out = std::string_view, typename EnumType,
+            std::enable_if_t<
+                detail::IsConvertible<Out, std::string_view>::value &&
+                    (detail::IsSame<EnumType, StrokeLineCap>::value || detail::IsSame<EnumType, StrokeLineJoin>::value),
+                bool> = true>
+        static Out ToString(EnumType line_cap);
+    };
+}
+
+namespace svg /* Colors */ {
+    class Colors {
+    public:
+        struct Rgb;
+        struct Rgba;
+        using Color = std::variant<std::monostate, std::string, Rgb, Rgba>;
+
+        struct Rgb {
+            uint8_t red = 0;
+            uint8_t green = 0;
+            uint8_t blue = 0;
+
+            Rgb(uint8_t red = 0, uint8_t green = 0, uint8_t blue = 0) : red(red), green(green), blue(blue) {}
+
+            /// Выполняет линейную интерполяцию Rgb цвета от from до to в зависимости от параметра t
+            Rgb Lerp(Rgb to, double t) {
+                return Colors::Lerp(*this, to, t);
+            }
+        };
+
+        struct Rgba : Rgb {
+            double opacity = 1.;
+
+            Rgba(uint8_t red = 0, uint8_t green = 0, uint8_t blue = 0, double opacity = 1.) : Rgb(red, green, blue), opacity{opacity} {}
+        };
+
+        class ColorPrinter {
+        public:
+            explicit ColorPrinter(std::ostream& out) : out_(out) {}
+
+            void operator()(std::monostate) const {
+                out_ << Colors::NONE;
+            }
+
+            template <typename String, detail::EnableIfConvertible<String, std::string_view> = true>
+            void operator()(String&& color) const {
+                out_ << std::move(color);
+            }
+
+            void operator()(Rgb color) const {
+                using namespace std::string_view_literals;
+                out_ << "rgb("sv;
+                Print(color) << ")"sv;
+            }
+
+            void operator()(Rgba color) const {
+                using namespace std::string_view_literals;
+                out_ << "rgba("sv;
+                Print(color) << ")"sv;
+            }
+
+            std::ostream& GetStream() const {
+                return out_;
+            }
+
+        private:
+            std::ostream& out_;
+            static constexpr const std::string_view SEPARATOR{","};
+
+            template <typename Rgb = Colors::Rgb, detail::EnableIfSame<Rgb, Colors::Rgb> = true>
+            std::ostream& Print(Rgb&& color) const {
+                using namespace std::string_view_literals;
+                out_ << +color.red << SEPARATOR << +color.green << SEPARATOR << +color.blue;
+                return out_;
+            }
+
+            template <typename Rgba = Colors::Rgba, detail::EnableIfSame<Rgba, Colors::Rgba> = true>
+            std::ostream& Print(Rgba&& color) const {
+                using namespace std::string_view_literals;
+                Print(static_cast<Rgb>(color)) << SEPARATOR << +color.opacity;
+                return out_;
+            }
+        };
+
+    private:
+        static constexpr const std::string_view NONE{"none"};
+
+    public:
+        static inline const Color NoneColor{static_cast<std::string>(Colors::NONE)};
+
+        /// Выполняет линейную интерполяцию значения от from до to в зависимости от параметра t
+        static uint8_t Lerp(uint8_t from, uint8_t to, double t) {
+            return static_cast<uint8_t>(std::round((to - from) * t + from));
+        }
+
+        // Выполняет линейную интерполяцию Rgb цвета от from до to в зависимости от параметра t
+        static Rgb Lerp(Rgb from, Rgb to, double t) {
+            return {Lerp(from.red, to.red, t), Lerp(from.green, to.green, t), Lerp(from.blue, to.blue, t)};
+        }
+    };
 }
 
 namespace svg {
     using namespace std::literals;
 
-    using Color = std::string;
+    using Color = svg::Colors::Color;
+    using Rgb = svg::Colors::Rgb;
+    using Rgba = svg::Colors::Rgba;
+    static inline const Color NoneColor = svg::Colors::NoneColor;
 
-    inline const Color NoneColor{"none"};
-
-    enum class StrokeLineCap {
-        BUTT,
-        ROUND,
-        SQUARE,
-    };
-
-    enum class StrokeLineJoin {
-        ARCS,
-        BEVEL,
-        MITER,
-        MITER_CLIP,
-        ROUND,
-    };
-
-    namespace detail {
-        template <typename Out = std::string_view, EnableIfConvertible<Out, std::string_view> = true>
-        Out ToString(StrokeLineCap line_cap) {
-            switch (line_cap) {
-            case StrokeLineCap::BUTT:
-                return "butt"sv;
-            case StrokeLineCap::ROUND:
-                return "round"sv;
-            case StrokeLineCap::SQUARE:
-                return "square"sv;
-            default:
-                assert(false);
-                break;
-            }
-            return ""sv;
-        }
-
-        template <typename Out = std::string_view, EnableIfConvertible<Out, std::string_view> = true>
-        Out ToString(StrokeLineJoin line_join) {
-            switch (line_join) {
-            case svg::StrokeLineJoin::ARCS:
-                return "arcs"sv;
-            case svg::StrokeLineJoin::BEVEL:
-                return "bevel"sv;
-            case svg::StrokeLineJoin::MITER:
-                return "miter"sv;
-            case svg::StrokeLineJoin::MITER_CLIP:
-                return "miter-clip"sv;
-            case svg::StrokeLineJoin::ROUND:
-                return "round"sv;
-            default:
-                assert(false);
-                break;
-            }
-            return ""sv;
-        }
-    }
+    using StrokeLineCap = svg::Stroke::StrokeLineCap;
+    using StrokeLineJoin = svg::Stroke::StrokeLineJoin;
 
     template <
         typename EnumType,
         std::enable_if_t<detail::IsSame<EnumType, StrokeLineCap>::value || detail::IsSame<EnumType, StrokeLineJoin>::value, bool> = true>
     std::ostream& operator<<(std::ostream& os, EnumType&& val) {
-        os << detail::ToString(std::move(val));
+        os << Stroke::ToString(std::move(val));
+        return os;
+    }
+
+    template <typename Color, detail::EnableIfSame<Color, svg::Color> = true>
+    std::ostream& operator<<(std::ostream& os, Color&& color) {
+        std::visit(svg::Colors::ColorPrinter{os}, std::move(color));
         return os;
     }
 
@@ -161,11 +241,17 @@ namespace svg {
         void RenderAttrs(std::ostream& out) const {
             using namespace std::literals;
 
+            const Colors::ColorPrinter color_printer{out};
+
             if (fill_color_) {
-                out << " fill=\""sv << *fill_color_ << "\""sv;
+                out << " fill=\""sv;
+                std::visit(color_printer, std::move(*fill_color_));
+                out << "\""sv;
             }
             if (stroke_color_) {
-                out << " stroke=\""sv << *stroke_color_ << "\""sv;
+                out << " stroke=\""sv;
+                std::visit(std::move(color_printer), std::move(*stroke_color_));
+                out << "\""sv;
             }
             if (stroke_width_) {
                 out << " stroke-width=\""sv << *stroke_width_ << "\""sv;

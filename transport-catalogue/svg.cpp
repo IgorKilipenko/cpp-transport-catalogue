@@ -104,7 +104,7 @@ namespace svg /* Text class impl */ {
     }
 
     std::ostream& Text::ToStream(std::ostream& out) const {
-        out << "<text"sv ;
+        out << "<text"sv;
         RenderAttrs(out);
         out << " x=\""sv << base_point_.x << "\" y=\""sv << base_point_.y << "\""sv;
         out << " dx=\""sv << style_.offset.x << "\" dy=\""sv << style_.offset.y << "\""sv;
@@ -116,7 +116,7 @@ namespace svg /* Text class impl */ {
         if (!style_.font_weight.empty()) {
             out << " font-weight=\""sv << style_.font_weight << "\""sv;
         }
-        
+
         out << ">"sv;
         DataToStream(out) << "</text>"sv;
 
@@ -145,5 +145,47 @@ namespace svg /* Document class impl */
 
         out << SVG_TAG_CLOSE;
         out.flush();
+    }
+}
+
+namespace svg {
+    template <>
+    std::string_view Stroke::ToString(StrokeLineCap line_cap) {
+        using namespace std::string_view_literals;
+
+        switch (line_cap) {
+        case StrokeLineCap::BUTT:
+            return "butt"sv;
+        case StrokeLineCap::ROUND:
+            return "round"sv;
+        case StrokeLineCap::SQUARE:
+            return "square"sv;
+        default:
+            assert(false);
+            break;
+        }
+        return ""sv;
+    }
+
+    template <>
+    std::string_view Stroke::ToString(StrokeLineJoin line_join) {
+        using namespace std::string_view_literals;
+
+        switch (line_join) {
+        case StrokeLineJoin::ARCS:
+            return "arcs"sv;
+        case StrokeLineJoin::BEVEL:
+            return "bevel"sv;
+        case StrokeLineJoin::MITER:
+            return "miter"sv;
+        case StrokeLineJoin::MITER_CLIP:
+            return "miter-clip"sv;
+        case StrokeLineJoin::ROUND:
+            return "round"sv;
+        default:
+            assert(false);
+            break;
+        }
+        return ""sv;
     }
 }
