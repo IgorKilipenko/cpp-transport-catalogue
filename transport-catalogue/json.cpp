@@ -44,49 +44,13 @@ namespace json /* Parser */ {
             } else if (c == Token::START_NULL) {
                 return ParseNull();
             } else if (std::isdigit(c) || c == Token::SIGN_LITERAL) {
-                Numeric result = ParseNumber();
-                if (holds_alternative<int>(result)) {
-                    return get<int>(result);
-                } else if (holds_alternative<double>(result)) {
-                    return get<double>(result);
-                }
+                return ParseNumber();
             }
         }
         throw ParsingError("Parsing error");
     }
 
-    bool Parser::ParseBool() const {
-        /*assert(input_.peek() == Token::START_TRUE || input_.peek() == Token::START_FALSE);
-
-        const bool is_true_literal = input_.peek() == Token::START_TRUE;
-        const std::string_view expected_literal = is_true_literal ? Token::TRUE_LITERAL : Token::FALSE_LITERAL;
-
-        std::string result(expected_literal.size(), '\0');
-        input_.getline(result.data(), result.size() + 1, ' ');
-        if (result != expected_literal) {
-            throw ParsingError("Boolean value parsing error");
-        }
-
-        return is_true_literal;*/
-
-        /*
-        assert(input_.peek() == Token::START_TRUE || input_.peek() == Token::START_FALSE);
-
-        const bool is_true_literal = input_.peek() == Token::START_TRUE;
-        const std::string_view expected_literal = is_true_literal ? Token::TRUE_LITERAL : Token::FALSE_LITERAL;
-
-        std::string result(expected_literal.size(), '\0');
-        for (auto ptr = result.begin(); ptr != result.end(); ++ptr) {
-            input_ >> *ptr;
-            if (!*ptr) {
-                break;
-            }
-        }
-        if (result != expected_literal) {
-            throw ParsingError("Boolean value parsing error");
-        }
-
-        return is_true_literal;*/
+    Node Parser::ParseBool() const {
         assert(input_.peek() == Token::START_TRUE || input_.peek() == Token::START_FALSE);
 
         const bool is_true_literal = input_.peek() == Token::START_TRUE;
@@ -101,7 +65,7 @@ namespace json /* Parser */ {
         return is_true_literal;
     }
 
-    std::nullptr_t Parser::ParseNull() const {
+    Node Parser::ParseNull() const {
         assert(input_.peek() == Token::START_NULL);
         const std::string_view expected_literal = Token::NULL_LITERAL;
 
@@ -114,7 +78,7 @@ namespace json /* Parser */ {
         return nullptr;
     }
 
-    Array Parser::ParseArray() const {
+    Node Parser::ParseArray() const {
         using namespace std::string_literals;
 
         Array result;
@@ -134,7 +98,7 @@ namespace json /* Parser */ {
         return result;
     }
 
-    Dict Parser::ParseDict() const {
+    Node Parser::ParseDict() const {
         using namespace std::string_literals;
 
         Dict result;
@@ -145,7 +109,7 @@ namespace json /* Parser */ {
                 input_ >> ch;
             }
 
-            const std::string key = ParseString();
+            const std::string key = ParseString().AsString();
             // for (; input_ >> ch && ch == ' ';) {
             // }
             Ignore(Token::DICT_SEPARATOR);
@@ -165,12 +129,17 @@ namespace json /* Parser */ {
         return result;
     }
 
-    std::string Parser::ParseString() const {
+    Node Parser::ParseString() const {
         return string_parser_.Parse();
     }
 
-    Numeric Parser::ParseNumber() const {
-        return numeric_parser_.Parse();
+    Node Parser::ParseNumber() const {
+        Numeric result = numeric_parser_.Parse();
+        if (holds_alternative<int>(result)) {
+            return get<int>(result);
+        } else {
+            return get<double>(result);
+        }
     }
 }
 
@@ -243,7 +212,7 @@ namespace json /* Parser::NumericParser */ {
         if (!input_) {
             throw ParsingError("Failed to read number from stream"s);
         }
-    };
+    }
 
     void Parser::NumericParser::ReadDigits(std::string& buffer) const {
         using namespace std::literals;
@@ -253,7 +222,7 @@ namespace json /* Parser::NumericParser */ {
         while (std::isdigit(input_.peek())) {
             ReadChar(buffer);
         }
-    };
+    }
 }
 
 namespace json /* Parser::StringParser */ {

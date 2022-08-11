@@ -151,8 +151,10 @@ namespace json {
 
     class Document {
     public:
-        template <typename Node, detail::EnableIfConvertible<Node, json::Node> = true>
+        /*template <typename Node, detail::EnableIfConvertible<Node, json::Node> = true>
         explicit Document(Node&& root) : root_(std::move(root)) {
+        }*/
+        explicit Document(Node root) : root_(std::move(root)) {
         }
 
         const Node& GetRoot() const;
@@ -199,17 +201,17 @@ namespace json {
 
         Node Parse() const;
 
-        bool ParseBool() const;
+        Node ParseBool() const;
 
-        std::nullptr_t ParseNull() const;
+        Node ParseNull() const;
 
-        Array ParseArray() const;
+        Node ParseArray() const;
 
-        Dict ParseDict() const;
+        Node ParseDict() const;
 
-        std::string ParseString() const;
+        Node ParseString() const;
 
-        Numeric ParseNumber() const;
+        Node ParseNumber() const;
 
         void Ignore(const char character) const {
             /*size_t size = 0;
