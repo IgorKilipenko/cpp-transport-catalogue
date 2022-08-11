@@ -4,29 +4,7 @@ using namespace std;
 
 namespace json {
 
-    Node::Node(vector<Node> array) : as_array_(move(array)) {}
-
-    Node::Node(map<string, Node> map) : as_map_(move(map)) {}
-
-    Node::Node(int value) : as_int_(value) {}
-
-    Node::Node(string value) : as_string_(move(value)) {}
-
-    const vector<Node>& Node::AsArray() const {
-        return as_array_;
-    }
-
-    const map<string, Node>& Node::AsMap() const {
-        return as_map_;
-    }
-
-    int Node::AsInt() const {
-        return as_int_;
-    }
-
-    const string& Node::AsString() const {
-        return as_string_;
-    }
+    Node::Node(ValueType value) : value_{std::move(value)} {}
 
     Document::Document(Node root) : root_(move(root)) {}
 
