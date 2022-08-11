@@ -19,4 +19,8 @@ namespace json {
         return Document{LoadNode(input)};
     }
 
+    void Print(const Document& doc, std::ostream& output) {
+        auto node_json = doc.GetRoot().GetValue();
+        std::visit(NodePrinter{output}, node_json);
+    }
 }

@@ -38,7 +38,7 @@ namespace json {
     using Dict = std::map<std::string, Node>;
     // template <typename ...T>
     // using NodeValueVarianrs = ...T;
-    using NodeValueType = std::variant<std::nullptr_t, std::monostate, std::string, int, double, bool, json::Array, json::Dict>;
+    using NodeValueType = std::variant<std::nullptr_t, /*std::monostate,*/ std::string, int, double, bool, json::Array, json::Dict>;
     using Numeric = std::variant<int, double>;
 
     class Node : private NodeValueType {
@@ -48,10 +48,10 @@ namespace json {
         template <typename ValueType, detail::EnableIfConvertible<ValueType, Node::ValueType> = true>
         Node(ValueType&& value) : NodeValueType(std::move(value)) {}
 
-        Node() : Node(nullptr) {}
+        Node() : NodeValueType(nullptr) {}
 
         bool IsNull() const {
-            return IsType<std::monostate>() || IsType<std::nullptr_t>();
+            return /*IsType<std::monostate>() ||*/ IsType<std::nullptr_t>();
         }
 
         bool IsBool() const {
@@ -158,6 +158,103 @@ namespace json {
         }
     };
 
+    struct PrintContext {
+        PrintContext(std::ostream& out) : out(out) {}
+
+        PrintContext(std::ostream& out, int indent_step, int indent = 0) : out(out), indent_step(indent_step), indent(indent) {}
+
+        PrintContext Indented() const {
+            return {out, indent_step, indent + indent_step};
+        }
+
+        void RenderIndent() const {
+            for (int i = 0; i < indent; ++i) {
+                out.put(' ');
+            }
+        }
+
+        std::ostream& out;
+        int indent_step = 4;
+        int indent = 0;
+    };
+
+    class NodePrinter {
+        const int def_indent_step = 4;
+        const int def_indent = 4;
+
+    public:
+        // Контекст вывода, хранит ссылку на поток вывода и текущий отсуп
+
+        NodePrinter(std::ostream& out_stream, bool pretty_print = true)
+            : context_{out_stream, pretty_print ? NodePrinter::def_indent_step : 0, pretty_print ? def_indent : 0} {}
+
+        template <typename Value>
+        void PrintValue(Value&& value, const PrintContext& ctx) const {}
+
+        void operator()(std::nullptr_t) const {
+            using namespace std::string_view_literals;
+            context_.out << "null"sv;  //! json::Parser::Token::NULL_LITERAL;
+        }
+
+        void operator()(Array array) const {
+            int size = array.size() - 1;
+            context_.out << '[';  //! json::Parser::Token::START_ARRAY;
+            for (const Node& node : array) {
+                PrintValue(node, context_);
+                if (size > 0) {
+                    context_.out << ',';
+                    --size;
+                }
+            }
+            context_.out << ']';
+        }
+
+        void operator()(Dict dict) const {
+            int size = dict.size() - 1;
+            context_.out << '{';
+            for (const auto& [key, node] : dict) {
+                context_.out << '"' << key << "\": ";
+                PrintValue(node, context_.out);
+                if (size > 0) {
+                    context_.out << ',';
+                    --size;
+                }
+            }
+            context_.out << '}';
+        }
+
+        void operator()(bool value) const {
+            context_.out << std::boolalpha << value;
+        }
+
+        void operator()(int value) const {
+            context_.out << value;
+        }
+
+        void operator()(double value) const {
+            context_.out << value;
+        }
+
+        void operator()(const std::string& value) const {
+            context_.out << '"';
+            for (const auto& symbol : value) {
+                if (symbol == '\"') {
+                    context_.out << '\\' << '\"';
+                } else if (symbol == '\\') {
+                    context_.out << '\\' << '\\';
+                } else if (symbol == '\n') {
+                    context_.out << '\\' << 'n';
+                } else {
+                    context_.out << symbol;
+                }
+            }
+            context_.out << '"';
+        }
+
+    private:
+        PrintContext context_;
+    };
+
     class Document {
     public:
         explicit Document(Node root);
@@ -183,6 +280,24 @@ namespace json {
             using runtime_error::runtime_error;
         };
 
+        struct Token {
+            static constexpr const std::string_view TRUE_LITERAL{"true"};
+            static constexpr const std::string_view FALSE_LITERAL{"false"};
+            static constexpr const std::string_view NULL_LITERAL{"null"};
+            static const char START_TRUE = 't';
+            static const char START_FALSE = 'f';
+            static const char START_NULL = 'n';
+            static const char START_ARRAY = '[';
+            static const char END_ARRAY = ']';
+            static const char START_OBJ = '{';
+            static const char END_OBJ = '}';
+            static const char START_STRING = '"';
+            static const char END_STRING = START_STRING;
+            static const char VALUE_SEPARATOR = ',';
+            static const char SIGN_LITERAL = '-';
+            static const char DICT_SEPARATOR = ':';
+        };
+
     public:
         explicit Parser(std::istream& input_stream) : input_(input_stream), numeric_parser_(input_), string_parser_(input_) {}
 
@@ -191,7 +306,7 @@ namespace json {
             input_ >> c;
 
             if (c && c == '[') {
-                return ParseArray();
+                return {ParseArray()};
             } else if (c == Token::START_ARRAY) {
                 return ParseDict();
             } else if (c == Token::START_STRING) {
@@ -289,24 +404,6 @@ namespace json {
         }
 
     private:
-        struct Token {
-            static constexpr const std::string_view TRUE_LITERAL{"true"};
-            static constexpr const std::string_view FALSE_LITERAL{"false"};
-            static constexpr const std::string_view NULL_LITERAL{"null"};
-            static const char START_TRUE = 't';
-            static const char START_FALSE = 'f';
-            static const char START_NULL = 'n';
-            static const char START_ARRAY = '[';
-            static const char END_ARRAY = ']';
-            static const char START_OBJ = '{';
-            static const char END_OBJ = '}';
-            static const char START_STRING = '"';
-            static const char END_STRING = START_STRING;
-            static const char VALUE_SEPARATOR = ',';
-            static const char SIGN_LITERAL = '-';
-            static const char DICT_SEPARATOR = ':';
-        };
-
         class NumericParser {
         public:
             NumericParser(std::istream& input) : input_(input) {}
@@ -453,6 +550,8 @@ namespace json {
     };
 
     using ParsingError = Parser::ParsingError;
+
     Document Load(std::istream& input);
+
     void Print(const Document& doc, std::ostream& output);
 }
