@@ -151,10 +151,8 @@ namespace json {
 
     class Document {
     public:
-        /*template <typename Node, detail::EnableIfConvertible<Node, json::Node> = true>
-        explicit Document(Node&& root) : root_(std::move(root)) {
-        }*/
-        explicit Document(Node root) : root_(std::move(root)) {
+        template <typename Node, detail::EnableIfConvertible<Node, json::Node> = true>
+        explicit Document(Node&& root) : root_(std::forward<Node>(root)) {
         }
 
         const Node& GetRoot() const;
