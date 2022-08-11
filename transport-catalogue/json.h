@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <iostream>
@@ -287,13 +288,13 @@ namespace json /* NodePrinter class template impl */ {
     void NodePrinter::operator()(Dict&& dict) const {
         int size = dict.size();
         context_.out << Parser::Token::START_OBJ;
-        for (const auto& [key, node] : dict) {
-            context_.out << Parser::Token::START_STRING << key << Parser::Token::END_STRING << Parser::Token::DICT_SEPARATOR << ' ';
-            PrintValue(node);
+        std::for_each(dict.begin(), dict.end(), [this, &size](const auto& item) {
+            context_.out << Parser::Token::START_STRING << item.first << Parser::Token::END_STRING << Parser::Token::DICT_SEPARATOR << ' ';
+            PrintValue(item.second);
             if (--size > 0) {
                 context_.out << Parser::Token::VALUE_SEPARATOR;
             }
-        }
+        });
         context_.out << Parser::Token::END_OBJ;
     }
 
@@ -301,12 +302,12 @@ namespace json /* NodePrinter class template impl */ {
     void NodePrinter::operator()(Array&& array) const {
         int size = array.size();
         context_.out << Parser::Token::START_ARRAY;
-        for (const Node& node : array) {
+        std::for_each(array.begin(), array.end(), [this, &size](const Node& node) {
             PrintValue(node);
             if (--size > 0) {
                 context_.out << Parser::Token::VALUE_SEPARATOR;
             }
-        }
+        });
         context_.out << Parser::Token::END_ARRAY;
     }
 

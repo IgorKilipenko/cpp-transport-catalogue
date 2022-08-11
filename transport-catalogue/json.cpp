@@ -1,7 +1,6 @@
 #include "json.h"
 
 #include <cstddef>
-#include <limits>
 
 using namespace std;
 
