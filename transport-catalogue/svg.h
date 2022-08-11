@@ -11,6 +11,7 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -146,13 +147,13 @@ namespace svg {
         typename EnumType,
         std::enable_if_t<detail::IsSame<EnumType, StrokeLineCap>::value || detail::IsSame<EnumType, StrokeLineJoin>::value, bool> = true>
     std::ostream& operator<<(std::ostream& os, EnumType&& val) {
-        os << Stroke::ToString(std::move(val));
+        os << Stroke::ToString(std::forward<EnumType>(val));
         return os;
     }
 
     template <typename Color, detail::EnableIfSame<Color, svg::Color> = true>
     std::ostream& operator<<(std::ostream& os, Color&& color) {
-        std::visit(svg::Colors::ColorPrinter{os}, std::move(color));
+        std::visit(svg::Colors::ColorPrinter{os}, std::forward<Color>(color));
         return os;
     }
 
@@ -401,7 +402,7 @@ namespace svg {
 namespace svg /* Polyline class template impl */ {
     template <typename Point, detail::EnableIfConvertible<Point, svg::Point>>
     Polyline& Polyline::AddPoint(Point&& point) {
-        points_.push_back(std::move(point));
+        points_.push_back(std::forward<Point>(point));
         return *this;
     }
 }
@@ -409,34 +410,34 @@ namespace svg /* Polyline class template impl */ {
 namespace svg /* Text class template impl */ {
     template <typename Point, detail::EnableIfConvertible<Point, svg::Point>>
     Text& Text::SetPosition(Point&& pos) {
-        base_point_ = std::move(pos);
+        base_point_ = std::forward<Point>(pos);
         return *this;
     }
 
     template <typename Point, detail::EnableIfConvertible<Point, svg::Point>>
     Text& Text::SetOffset(Point&& offset) {
-        style_.offset = std::move(offset);
+        style_.offset = std::forward<Point>(offset);
         return *this;
     }
 
     /// Задаёт название шрифта (атрибут font-family)
     template <typename String, detail::EnableIfConvertible<String, std::string>>
     Text& Text::SetFontFamily(String&& font_family) {
-        style_.font_family = std::move(font_family);
+        style_.font_family = std::forward<String>(font_family);
         return *this;
     }
 
     /// Задаёт толщину шрифта (атрибут font-weight)
     template <typename String, detail::EnableIfConvertible<String, std::string>>
     Text& Text::SetFontWeight(String&& font_weight) {
-        style_.font_weight = std::move(font_weight);
+        style_.font_weight = std::forward<String>(font_weight);
         return *this;
     }
 
     /// Задаёт текстовое содержимое объекта (отображается внутри тега text)
     template <typename String, detail::EnableIfConvertible<String, std::string>>
     Text& Text::SetData(String&& data) {
-        text_ = std::move(data);
+        text_ = std::forward<String>(data);
         return *this;
     }
 }
@@ -444,7 +445,7 @@ namespace svg /* Text class template impl */ {
 namespace svg /* ObjectContainer class template impl */ {
     template <typename Object, detail::EnableIfBaseOf<svg::Object, Object>>
     void ObjectContainer::Add(Object&& obj) {
-        AddPtr(std::make_unique<std::decay_t<Object>>(std::move(obj)));
+        AddPtr(std::make_unique<std::decay_t<Object>>(std::forward<Object>(obj)));
     }
 }
 
@@ -461,21 +462,21 @@ namespace svg /* Colors::ColorPrinter class template impl */ {
 
     template <typename String, detail::EnableIfConvertible<String, std::string_view>>
     void Colors::ColorPrinter::operator()(String&& color) const {
-        out_ << std::move(color);
+        out_ << std::forward<String>(color);
     }
 
     template <typename Rgb, detail::EnableIfSame<Rgb, Colors::Rgb>>
     void Colors::ColorPrinter::operator()(Rgb&& color) const {
         using namespace std::string_view_literals;
         out_ << "rgb("sv;
-        Print(std::move(color)) << ")"sv;
+        Print(std::forward<Rgb>(color)) << ")"sv;
     }
 
     template <typename Rgba, detail::EnableIfSame<Rgba, Colors::Rgba>>
     void Colors::ColorPrinter::operator()(Rgba&& color) const {
         using namespace std::string_view_literals;
         out_ << "rgba("sv;
-        Print(std::move(color)) << ")"sv;
+        Print(std::forward<Rgba>(color)) << ")"sv;
     }
 
     template <typename Rgb, detail::EnableIfSame<Rgb, Colors::Rgb>>
