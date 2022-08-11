@@ -290,20 +290,7 @@ namespace json /* NodePrinter */ {
 
     void NodePrinter::operator()(std::nullptr_t) const {
         using namespace std::string_view_literals;
-        context_.out << "null"sv;  //! json::Parser::Token::NULL_LITERAL;
-    }
-
-    void NodePrinter::operator()(Array array) const {
-        int size = array.size() - 1;
-        context_.out << '[';  //! json::Parser::Token::START_ARRAY;
-        for (const Node& node : array) {
-            PrintValue(node);
-            if (size > 0) {
-                context_.out << ',';
-                --size;
-            }
-        }
-        context_.out << ']';
+        context_.out << Parser::Token::NULL_LITERAL;
     }
 
     void NodePrinter::operator()(bool value) const {

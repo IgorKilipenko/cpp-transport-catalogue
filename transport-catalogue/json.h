@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <iostream>
 #include <istream>
+#include <limits>
 #include <map>
 #include <optional>
 #include <string>
@@ -12,7 +13,6 @@
 #include <unordered_map>
 #include <variant>
 #include <vector>
-#include <limits>
 
 namespace json::detail {
     template <bool Condition>
@@ -38,9 +38,7 @@ namespace json {
     class Node;
     using Array = std::vector<Node>;
     using Dict = std::map<std::string, Node>;
-    // template <typename ...T>
-    // using NodeValueVarianrs = ...T;
-    using NodeValueType = std::variant<std::nullptr_t, /*std::monostate,*/ std::string, int, double, bool, json::Array, json::Dict>;
+    using NodeValueType = std::variant<std::nullptr_t, std::string, int, double, bool, json::Array, json::Dict>;
     using Numeric = std::variant<int, double>;
 
     class Node : private NodeValueType {
@@ -121,8 +119,6 @@ namespace json {
         const int def_indent = 4;
 
     public:
-        // Контекст вывода, хранит ссылку на поток вывода и текущий отсуп
-
         NodePrinter(std::ostream& out_stream, bool pretty_print = true)
             : context_{out_stream, pretty_print ? NodePrinter::def_indent_step : 0, pretty_print ? def_indent : 0} {}
 
@@ -130,8 +126,6 @@ namespace json {
         void PrintValue(Value&& value) const;
 
         void operator()(std::nullptr_t) const;
-
-        void operator()(Array array) const;
 
         void operator()(bool value) const;
 
@@ -145,6 +139,9 @@ namespace json {
         template <typename Dict = json::Dict, detail::EnableIfSame<Dict, json::Dict> = true>
         void operator()(Dict&& dict) const;
 
+        template <typename Array = json::Array, detail::EnableIfSame<Array, json::Array> = true>
+        void operator()(Array&& array) const;
+
     private:
         PrintContext context_;
     };
@@ -152,8 +149,7 @@ namespace json {
     class Document {
     public:
         template <typename Node, detail::EnableIfConvertible<Node, json::Node> = true>
-        explicit Document(Node&& root) : root_(std::forward<Node>(root)) {
-        }
+        explicit Document(Node&& root) : root_(std::forward<Node>(root)) {}
 
         const Node& GetRoot() const;
 
@@ -212,10 +208,6 @@ namespace json {
         Node ParseNumber() const;
 
         void Ignore(const char character) const {
-            /*size_t size = 0;
-            for (char ch; input_ >> ch && ch == character; ++size) {
-            }
-            return size;*/
             static const std::streamsize max_count = std::numeric_limits<std::streamsize>::max();
             input_.ignore(max_count, character);
         }
@@ -293,17 +285,29 @@ namespace json /* Node class template impl */ {
 namespace json /* NodePrinter class template impl */ {
     template <typename Dict, detail::EnableIfSame<Dict, json::Dict>>
     void NodePrinter::operator()(Dict&& dict) const {
-        int size = dict.size() - 1;
-        context_.out << '{';
+        int size = dict.size();
+        context_.out << Parser::Token::START_OBJ;
         for (const auto& [key, node] : dict) {
-            context_.out << '"' << key << "\": ";
+            context_.out << Parser::Token::START_STRING << key << Parser::Token::END_STRING << Parser::Token::DICT_SEPARATOR << ' ';
             PrintValue(node);
-            if (size > 0) {
-                context_.out << ',';
-                --size;
+            if (--size > 0) {
+                context_.out << Parser::Token::VALUE_SEPARATOR;
             }
         }
-        context_.out << '}';
+        context_.out << Parser::Token::END_OBJ;
+    }
+
+    template <typename Array, detail::EnableIfSame<Array, json::Array>>
+    void NodePrinter::operator()(Array&& array) const {
+        int size = array.size();
+        context_.out << Parser::Token::START_ARRAY;
+        for (const Node& node : array) {
+            PrintValue(node);
+            if (--size > 0) {
+                context_.out << Parser::Token::VALUE_SEPARATOR;
+            }
+        }
+        context_.out << Parser::Token::END_ARRAY;
     }
 
     template <typename String, detail::EnableIfSame<String, std::string>>
