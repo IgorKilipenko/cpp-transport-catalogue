@@ -1,10 +1,11 @@
 #include "json.h"
 
+#include <cstddef>
+#include <limits>
+
 using namespace std;
 
 namespace json {
-
-    Document::Document(Node root) : root_(move(root)) {}
 
     const Node& Document::GetRoot() const {
         return root_;
@@ -30,9 +31,9 @@ namespace json /* Parser */ {
         char c;
         input_ >> c;
 
-        if (c && c == '[') {
+        if (c && c == Token::START_ARRAY) {
             return ParseArray();
-        } else if (c == Token::START_ARRAY) {
+        } else if (c == Token::START_OBJ) {
             return ParseDict();
         } else if (c == Token::START_STRING) {
             return ParseString();
@@ -55,7 +56,7 @@ namespace json /* Parser */ {
     }
 
     bool Parser::ParseBool() const {
-        assert(input_.peek() == Token::START_TRUE || input_.peek() == Token::START_FALSE);
+        /*assert(input_.peek() == Token::START_TRUE || input_.peek() == Token::START_FALSE);
 
         const bool is_true_literal = input_.peek() == Token::START_TRUE;
         const std::string_view expected_literal = is_true_literal ? Token::TRUE_LITERAL : Token::FALSE_LITERAL;
@@ -66,6 +67,37 @@ namespace json /* Parser */ {
             throw ParsingError("Boolean value parsing error");
         }
 
+        return is_true_literal;*/
+
+        /*
+        assert(input_.peek() == Token::START_TRUE || input_.peek() == Token::START_FALSE);
+
+        const bool is_true_literal = input_.peek() == Token::START_TRUE;
+        const std::string_view expected_literal = is_true_literal ? Token::TRUE_LITERAL : Token::FALSE_LITERAL;
+
+        std::string result(expected_literal.size(), '\0');
+        for (auto ptr = result.begin(); ptr != result.end(); ++ptr) {
+            input_ >> *ptr;
+            if (!*ptr) {
+                break;
+            }
+        }
+        if (result != expected_literal) {
+            throw ParsingError("Boolean value parsing error");
+        }
+
+        return is_true_literal;*/
+        assert(input_.peek() == Token::START_TRUE || input_.peek() == Token::START_FALSE);
+
+        const bool is_true_literal = input_.peek() == Token::START_TRUE;
+        const std::string_view expected_literal = is_true_literal ? Token::TRUE_LITERAL : Token::FALSE_LITERAL;
+
+        for (auto ptr = expected_literal.begin(); ptr != expected_literal.end(); ++ptr) {
+            if (*ptr != input_.get()) {
+                throw ParsingError("Boolean value parsing error");
+            }
+        }
+
         return is_true_literal;
     }
 
@@ -73,10 +105,10 @@ namespace json /* Parser */ {
         assert(input_.peek() == Token::START_NULL);
         const std::string_view expected_literal = Token::NULL_LITERAL;
 
-        std::string result(expected_literal.size(), '\0');
-        input_.getline(result.data(), result.size() + 1, ' ');
-        if (result != expected_literal) {
-            throw ParsingError("Null value parsing error");
+        for (auto ptr = expected_literal.begin(); ptr != expected_literal.end(); ++ptr) {
+            if (*ptr != input_.get()) {
+                throw ParsingError("Null value parsing error");
+            }
         }
 
         return nullptr;
@@ -114,12 +146,20 @@ namespace json /* Parser */ {
             }
 
             const std::string key = ParseString();
-            input_ >> ch;
+            // for (; input_ >> ch && ch == ' ';) {
+            // }
+            Ignore(Token::DICT_SEPARATOR);
+            if (!input_.peek()) {
+                throw ParsingError("Dict parsing error. Not found dictionary key/value separator character : ["s + Token::DICT_SEPARATOR + "]"s);
+            }
             result.emplace(move(key), Parse());
+
+            [[maybe_unused]] char ppp = +input_.peek();
+            ppp = input_.peek();
         }
 
         if (ch != Token::END_OBJ) {
-            throw ParsingError("Dict parsing error"s);
+            throw ParsingError("Dict parsing error");
         }
 
         return result;

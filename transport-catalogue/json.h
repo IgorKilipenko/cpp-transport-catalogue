@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <iostream>
 #include <istream>
 #include <map>
 #include <optional>
@@ -11,6 +12,7 @@
 #include <unordered_map>
 #include <variant>
 #include <vector>
+#include <limits>
 
 namespace json::detail {
     template <bool Condition>
@@ -43,10 +45,10 @@ namespace json {
 
     class Node : private NodeValueType {
     public:
-        using ValueType = NodeValueType;
+        using ValueType = variant;
 
         template <typename ValueType, detail::EnableIfConvertible<ValueType, Node::ValueType> = true>
-        Node(ValueType&& value) : NodeValueType(std::move(value)) {}
+        Node(ValueType&& value) : NodeValueType(std::forward<ValueType>(value)) {}
 
         Node() : NodeValueType(nullptr) {}
 
@@ -149,7 +151,9 @@ namespace json {
 
     class Document {
     public:
-        explicit Document(Node root);
+        template <typename Node, detail::EnableIfConvertible<Node, json::Node> = true>
+        explicit Document(Node&& root) : root_(std::move(root)) {
+        }
 
         const Node& GetRoot() const;
 
@@ -206,6 +210,15 @@ namespace json {
         std::string ParseString() const;
 
         Numeric ParseNumber() const;
+
+        void Ignore(const char character) const {
+            /*size_t size = 0;
+            for (char ch; input_ >> ch && ch == character; ++size) {
+            }
+            return size;*/
+            static const std::streamsize max_count = std::numeric_limits<std::streamsize>::max();
+            input_.ignore(max_count, character);
+        }
 
     private:
         class NumericParser {
