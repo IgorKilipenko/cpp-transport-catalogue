@@ -295,16 +295,24 @@ namespace json /* NodePrinter class template impl */ {
 
     template <typename String, detail::EnableIfSame<String, std::string>>
     void NodePrinter::operator()(String&& value) const {
+        //const char escape_symbol = '\\';
         context_.out << '"';
-        for (const auto& symbol : value) {
-            if (symbol == '\"') {
-                context_.out << '\\' << '\"';
-            } else if (symbol == '\\') {
-                context_.out << '\\' << '\\';
-            } else if (symbol == '\n') {
+        for (char c : value) {
+            switch (c) {
+            case '\n':
                 context_.out << '\\' << 'n';
-            } else {
-                context_.out << symbol;
+                break;
+            case '\r':
+                context_.out << '\\' << 'r';
+                break;
+            case '\\':
+                context_.out << '\\' << '\\';
+                break;
+            case '\"':
+                context_.out << '\\' << '"';
+                break;
+            default:
+                context_.out << c;
             }
         }
         context_.out << '"';
@@ -312,6 +320,6 @@ namespace json /* NodePrinter class template impl */ {
 
     template <typename Value>
     void NodePrinter::PrintValue(Value&& value) const {
-         std::visit(*this, value.GetValue());
+        std::visit(*this, value.GetValue());
     }
 }
