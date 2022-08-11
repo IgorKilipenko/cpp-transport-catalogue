@@ -295,21 +295,21 @@ namespace json /* NodePrinter class template impl */ {
 
     template <typename String, detail::EnableIfSame<String, std::string>>
     void NodePrinter::operator()(String&& value) const {
-        //const char escape_symbol = '\\';
+        const char escape_symbol = '\\';
         context_.out << '"';
         for (char c : value) {
             switch (c) {
             case '\n':
-                context_.out << '\\' << 'n';
+                context_.out << escape_symbol << 'n';
                 break;
             case '\r':
-                context_.out << '\\' << 'r';
+                context_.out << escape_symbol << 'r';
                 break;
             case '\\':
-                context_.out << '\\' << '\\';
+                context_.out << escape_symbol << escape_symbol;
                 break;
             case '\"':
-                context_.out << '\\' << '"';
+                context_.out << escape_symbol << '"';
                 break;
             default:
                 context_.out << c;
