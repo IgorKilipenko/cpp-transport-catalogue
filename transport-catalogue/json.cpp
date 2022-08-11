@@ -11,8 +11,7 @@ namespace json {
     }
 
     Node LoadNode(istream& input) {
-        static const Parser parser(input);
-        return parser.Parse();
+        return Parser(input).Parse();
     }
 
     Document Load(istream& input) {
@@ -32,7 +31,7 @@ namespace json /* Parser */ {
         input_ >> c;
 
         if (c && c == '[') {
-            return {ParseArray()};
+            return ParseArray();
         } else if (c == Token::START_ARRAY) {
             return ParseDict();
         } else if (c == Token::START_STRING) {
@@ -43,9 +42,13 @@ namespace json /* Parser */ {
                 return ParseBool();
             } else if (c == Token::START_NULL) {
                 return ParseNull();
-            } else if (isdigit(c) || c == Token::SIGN_LITERAL) {
+            } else if (std::isdigit(c) || c == Token::SIGN_LITERAL) {
                 Numeric result = ParseNumber();
-                return {std::holds_alternative<double>(result) ? std::get<double>(std::move(result)) : std::get<int>(std::move(result))};
+                if (holds_alternative<int>(result)) {
+                    return get<int>(result);
+                } else if (holds_alternative<double>(result)) {
+                    return get<double>(result);
+                }
             }
         }
         throw ParsingError("Parsing error");
@@ -75,7 +78,7 @@ namespace json /* Parser */ {
         if (result != expected_literal) {
             throw ParsingError("Null value parsing error");
         }
-        
+
         return nullptr;
     }
 
@@ -137,28 +140,43 @@ namespace json /* Parser::NumericParser */ {
         using namespace std::literals;
         std::string buffer;
 
-        // Парсим целую часть числа
-        if (const char ch = input_.peek(); ch == '-' || ch == '0' /* После 0 в JSON не могут идти другие цифры */) {
+        // Считывает в parsed_num очередной символ из input
+        auto read_char = [this, &buffer] {
             ReadChar(buffer);
-        } else {
+        };
+
+        // Считывает одну или более цифр в parsed_num из input
+        auto read_digits = [this, &buffer] {
             ReadDigits(buffer);
+        };
+
+        if (input_.peek() == '-') {
+            read_char();
+        }
+
+        // Парсим целую часть числа
+        if (input_.peek() == '0') {
+            read_char();
+            // После 0 в JSON не могут идти другие цифры
+        } else {
+            read_digits();
         }
 
         bool is_integer = true;
         // Парсим дробную часть числа
         if (input_.peek() == '.') {
-            ReadChar(buffer);
-            ReadDigits(buffer);
+            read_char();
+            read_digits();
             is_integer = false;
         }
 
         // Парсим экспоненциальную часть числа
         if (int ch = input_.peek(); ch == 'e' || ch == 'E') {
-            ReadChar(buffer);
+            read_char();
             if (ch = input_.peek(); ch == '+' || ch == '-') {
-                ReadChar(buffer);
+                read_char();
             }
-            ReadDigits(buffer);
+            read_digits();
             is_integer = false;
         }
 
@@ -338,12 +356,15 @@ namespace json /* Node */ {
     }
 
     double Node::AsDouble() const {
-        const auto* ptr = GetValuePtr<double>();
-        ptr = ptr == nullptr ? reinterpret_cast<const double*>(GetValuePtr<int>()) : ptr;
-        if (ptr == nullptr) {
-            throw std::logic_error("Node don't contained [double/integer] value alternative.");
+        const double* double_ptr = GetValuePtr<double>();
+        if (double_ptr != nullptr) {
+            return *double_ptr;
         }
-        return *ptr;
+        const int* int_ptr = GetValuePtr<int>();
+        if (int_ptr != nullptr) {
+            return *int_ptr;
+        }
+        throw std::logic_error("Node don't contained [double/integer] value alternative.");
     }
 
     const std::string& Node::AsString() const {
