@@ -1,4 +1,5 @@
 #include "transport_catalogue.h"
+#include <utility>
 
 namespace transport_catalogue {
     const std::deque<data::Stop>& TransportCatalogue::GetStops() const {
@@ -23,5 +24,9 @@ namespace transport_catalogue {
 
     const data::Stop* TransportCatalogue::GetStop(const std::string_view name) const {
         return db_->GetStop(std::move(name));
+    }
+
+    const data::Bus& TransportCatalogue::AddBus(data::Bus&& bus) {
+        return db_->AddBus(std::move(bus));
     }
 }

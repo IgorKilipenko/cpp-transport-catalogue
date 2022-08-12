@@ -12,7 +12,7 @@ namespace transport_catalogue {
     class TransportCatalogue {
     public:
         using Database = data::Database<TransportCatalogue>;
-        TransportCatalogue() : db_{new Database()} {}
+        TransportCatalogue() : db_{std::make_shared<Database>()} {}
         TransportCatalogue(std::shared_ptr<Database> db) : db_{db} {}
 
         template <
@@ -21,6 +21,8 @@ namespace transport_catalogue {
                 std::is_same_v<std::decay_t<String>, std::string> && std::is_same_v<std::decay_t<Coordinates>, transport_catalogue::Coordinates>,
                 bool> = true>
         const data::Stop& AddStop(String&& name, Coordinates&& coordinates);
+
+        const data::Bus& AddBus(data::Bus&& bus);
 
         const data::Bus* GetBus(const std::string_view name) const;
 
