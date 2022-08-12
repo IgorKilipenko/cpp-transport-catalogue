@@ -44,6 +44,7 @@ namespace json {
 
     class Node : private NodeValueType {
     public:
+        // Делаем доступными все конструкторы родительского класса variant
         using variant::variant;
         using ValueType = variant;
 
