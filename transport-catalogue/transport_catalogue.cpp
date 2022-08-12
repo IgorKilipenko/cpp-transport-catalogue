@@ -1,4 +1,5 @@
 #include "transport_catalogue.h"
+
 namespace transport_catalogue {
     const std::deque<Stop>& TransportCatalogue::GetStops() const {
         return db_->GetStopsTable();
