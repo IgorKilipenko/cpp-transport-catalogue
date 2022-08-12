@@ -47,11 +47,6 @@ namespace json {
         using variant::variant;
         using ValueType = variant;
 
-        /*template <typename ValueType, detail::EnableIfConvertible<ValueType, Node::ValueType> = true>
-        Node(ValueType&& value) : NodeValueType(std::forward<ValueType>(value)) {}
-
-        Node() : NodeValueType(nullptr) {}*/
-
         bool IsNull() const;
 
         bool IsBool() const;
