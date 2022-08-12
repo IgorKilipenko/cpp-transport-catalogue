@@ -27,6 +27,7 @@ namespace transport_catalogue::io {
         const Reader &reader_;
         TransportCatalogue::Database &catalog_db_;
         std::ostream &out_stream_;
+        static constexpr const std::string_view new_line = "\n"sv;
     };
 
 }

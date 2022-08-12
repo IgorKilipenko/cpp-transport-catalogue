@@ -9,16 +9,15 @@ namespace transport_catalogue::io {
 
     void StatReader::PrintBusInfo(const std::string_view bus_name) const {
         using namespace std::string_view_literals;
-
         const data::Bus* bus = catalog_db_.GetBus(bus_name);
         out_stream_ << "Bus "sv << bus_name << ": "sv;
 
         if (bus == nullptr) {
-            out_stream_ << "not found"sv << std::endl;
+            out_stream_ << "not found"sv << new_line;
         } else {
             auto info = catalog_db_.GetBusInfo(bus);
             out_stream_ << info.total_stops << " stops on route, "sv << info.unique_stops << " unique stops, "sv << std::setprecision(6)
-                      << info.route_length << " route length, "sv << info.route_curvature << " curvature"sv << std::endl;
+                      << info.route_length << " route length, "sv << info.route_curvature << " curvature"sv << new_line;
         }
     }
 
@@ -29,13 +28,13 @@ namespace transport_catalogue::io {
 
         const data::Stop* stop = catalog_db_.GetStop(stop_name);
         if (stop == nullptr) {
-            out_stream_ << "not found"sv << std::endl;
+            out_stream_ << "not found"sv << new_line;
             return;
         }
 
         const auto& buses_names = catalog_db_.GetBuses(stop);
         if (buses_names.empty()) {
-            out_stream_ << "no buses"sv << std::endl;
+            out_stream_ << "no buses"sv << new_line;
             return;
         }
 
@@ -56,6 +55,7 @@ namespace transport_catalogue::io {
                 ExecuteRequest(raw_req);
             }
         });
+        out_stream_.flush();
     }
 
     void StatReader::ExecuteRequest(const Parser::RawRequest& raw_req) const {
