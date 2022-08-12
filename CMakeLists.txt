@@ -19,6 +19,11 @@ set(LIBS
     ${SRC_DIR}/input_reader.cpp
     ${SRC_DIR}/svg.cpp
     ${SRC_DIR}/json.cpp
+    ${SRC_DIR}/domain.cpp
+    ${SRC_DIR}/geo.cpp
+    ${SRC_DIR}/json_reader.cpp
+    ${SRC_DIR}/map_renderer.cpp
+    ${SRC_DIR}/request_handler.cpp
 )
 
 if (DEFINED TESTS AND TESTS)
