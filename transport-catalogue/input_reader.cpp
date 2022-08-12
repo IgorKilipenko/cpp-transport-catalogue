@@ -80,7 +80,7 @@ namespace transport_catalogue::io {
 
         if (parser_.IsStopRequest(raw_req.command)) {
             auto stop = parser_.ParseStop(raw_req);
-            catalog_db_.AddStop(Stop{static_cast<std::string>(stop.name), std::move(stop.coordinates)});
+            catalog_db_.AddStop(data::Stop{static_cast<std::string>(stop.name), std::move(stop.coordinates)});
             std::move(stop.measured_distancies.begin(), stop.measured_distancies.end(), std::back_inserter(out_distances));
 
         } else if (parser_.IsRouteRequest(raw_req.command)) {
