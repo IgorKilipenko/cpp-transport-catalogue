@@ -5,7 +5,7 @@
 #include <type_traits>
 
 namespace transport_catalogue::geo {
-    static constexpr double PI() {
+    [[maybe_unused]]static constexpr double PI() {
         return std::atan(1) * 4.;
     }
     static const double EARTH_RADIUS = 6371000.;
@@ -35,15 +35,5 @@ namespace transport_catalogue::geo {
         Coordinates& operator=(Coordinates&& other) = default;
     };
 
-    inline double ComputeDistance(Coordinates from, Coordinates to) {
-        using namespace std;
-        if (from == to) {
-            return 0;
-        }
-        static const double dr = PI() / 180.;
-        return std::acos(
-                   std::sin(from.lat * dr) * std::sin(to.lat * dr) +
-                   std::cos(from.lat * dr) * std::cos(to.lat * dr) * std::cos(std::abs(from.lng - to.lng) * dr)) *
-               EARTH_RADIUS;
-    }
+    double ComputeDistance(Coordinates from, Coordinates to);
 }
