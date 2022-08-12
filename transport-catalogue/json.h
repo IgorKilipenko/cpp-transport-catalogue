@@ -123,7 +123,10 @@ namespace json {
         NodePrinter(std::ostream& out_stream, bool pretty_print = true)
             : context_{out_stream, pretty_print ? NodePrinter::def_indent_step : 0, pretty_print ? def_indent : 0} {}
 
-        template <typename Value>
+        template <typename Node, detail::EnableIfSame<Node, json::Node> = true>
+        void PrintValue(Node&& value) const;
+
+        template <typename Value, detail::EnableIfConvertible<Value, json::Node::ValueType> = true>
         void PrintValue(Value&& value) const;
 
         void operator()(std::nullptr_t) const;
@@ -334,8 +337,13 @@ namespace json /* NodePrinter class template impl */ {
         context_.out << '"';
     }
 
-    template <typename Value>
-    void NodePrinter::PrintValue(Value&& value) const {
+    template <typename Node, detail::EnableIfSame<Node, json::Node>>
+    void NodePrinter::PrintValue(Node&& value) const {
         std::visit(*this, value.GetValue());
+    }
+
+    template <typename Value, detail::EnableIfConvertible<Value, json::Node::ValueType>>
+    void NodePrinter::PrintValue(Value&& value) const {
+        std::visit(*this, std::forward<Value>(value));
     }
 }
