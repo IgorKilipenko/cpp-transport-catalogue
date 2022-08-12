@@ -1,5 +1,6 @@
 #include "./tests/json_test.h"
 #include "./tests/svg_test.h"
+#include "./tests/transport_catalogue_test.h"
 
 /*
  * Примерная структура программы:
@@ -12,6 +13,7 @@
  */
 
 int main() {
+    using namespace transport_catalogue::tests;
     using namespace svg::tests;
     using namespace json::tests;
 
@@ -20,6 +22,9 @@ int main() {
 
     JsonTester json_tester;
     json_tester.TestJsonlib();
+
+    TransportCatalogueTester tester;
+    tester.TestTransportCatalogue();
 
     return 0;
 }
