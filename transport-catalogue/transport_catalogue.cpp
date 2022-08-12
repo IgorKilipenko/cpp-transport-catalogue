@@ -1,7 +1,7 @@
 #include "transport_catalogue.h"
 
 namespace transport_catalogue {
-    const std::deque<Stop>& TransportCatalogue::GetStops() const {
+    const std::deque<data::Stop>& TransportCatalogue::GetStops() const {
         return db_->GetStopsTable();
     }
 
@@ -13,15 +13,15 @@ namespace transport_catalogue {
         return db_;
     }
 
-    const BusInfo TransportCatalogue::GetBusInfo(const Bus* bus) const {
+    const data::BusStat TransportCatalogue::GetBusInfo(const data::Bus* bus) const {
         return db_->GetBusInfo(bus);
     }
 
-    const Bus* TransportCatalogue::GetBus(const std::string_view name) const {
+    const data::Bus* TransportCatalogue::GetBus(const std::string_view name) const {
         return db_->GetBus(std::move(name));
     }
 
-    const Stop* TransportCatalogue::GetStop(const std::string_view name) const {
+    const data::Stop* TransportCatalogue::GetStop(const std::string_view name) const {
         return db_->GetStop(std::move(name));
     }
 }

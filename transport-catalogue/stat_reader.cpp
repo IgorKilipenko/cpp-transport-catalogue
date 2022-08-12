@@ -27,7 +27,7 @@ namespace transport_catalogue::io {
 
         out_stream_ << "Stop "sv << stop_name << ": "sv;
 
-        const Stop* stop = catalog_db_.GetStop(stop_name);
+        const data::Stop* stop = catalog_db_.GetStop(stop_name);
         if (stop == nullptr) {
             out_stream_ << "not found"sv << std::endl;
             return;

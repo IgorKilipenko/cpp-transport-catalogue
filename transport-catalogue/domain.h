@@ -14,6 +14,7 @@
 
 #include <cassert>
 #include <deque>
+#include <memory>
 #include <mutex>
 #include <set>
 #include <string>
@@ -51,7 +52,9 @@ namespace transport_catalogue::data {
         Bus(Bus&& other) : name{std::move(other.name)}, route{std::move(other.route)} {}
     };
 
-    struct BusRouteInfo {
+    using BusPtr = std::unique_ptr<Bus>;
+
+    struct BusStat {
         size_t total_stops{};
         size_t unique_stops{};
         double route_length{};
@@ -128,7 +131,7 @@ namespace transport_catalogue::data {
 
         const Stop* GetStop(const std::string_view name) const;
 
-        const BusRouteInfo GetBusInfo(const Bus* bus) const;
+        const BusStat GetBusInfo(const Bus* bus) const;
 
         const std::set<std::string_view, std::less<>>& GetBuses(const Stop* stop) const;
 
@@ -280,8 +283,8 @@ namespace transport_catalogue::data {
     }
 
     template <class Owner>
-    const BusRouteInfo Database<Owner>::GetBusInfo(const Bus* bus) const {
-        BusRouteInfo info;
+    const BusStat Database<Owner>::GetBusInfo(const Bus* bus) const {
+        BusStat info;
         double route_length = 0;
         double pseudo_length = 0;
         const Route& route = bus->route;
