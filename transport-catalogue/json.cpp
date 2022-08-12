@@ -43,13 +43,18 @@ namespace json /* Parser */ {
             } else if (c == Token::START_NULL) {
                 return ParseNull();
             } else if (std::isdigit(c) || c == Token::SIGN_LITERAL) {
-                return ParseNumber();
+                const Numeric result = ParseNumber();
+                if (holds_alternative<int>(result)) {
+                    return get<int>(result);
+                } else {
+                    return get<double>(result);
+                }
             }
         }
         throw ParsingError("Parsing error");
     }
 
-    Node Parser::ParseBool() const {
+    bool Parser::ParseBool() const {
         assert(input_.peek() == Token::START_TRUE || input_.peek() == Token::START_FALSE);
 
         const bool is_true_literal = input_.peek() == Token::START_TRUE;
@@ -64,7 +69,7 @@ namespace json /* Parser */ {
         return is_true_literal;
     }
 
-    Node Parser::ParseNull() const {
+    std::nullptr_t Parser::ParseNull() const {
         assert(input_.peek() == Token::START_NULL);
         const std::string_view expected_literal = Token::NULL_LITERAL;
 
@@ -77,7 +82,7 @@ namespace json /* Parser */ {
         return nullptr;
     }
 
-    Node Parser::ParseArray() const {
+    Array Parser::ParseArray() const {
         using namespace std::string_literals;
 
         Array result;
@@ -97,7 +102,7 @@ namespace json /* Parser */ {
         return result;
     }
 
-    Node Parser::ParseDict() const {
+    Dict Parser::ParseDict() const {
         using namespace std::string_literals;
 
         Dict result;
@@ -108,9 +113,7 @@ namespace json /* Parser */ {
                 input_ >> ch;
             }
 
-            const std::string key = ParseString().AsString();
-            // for (; input_ >> ch && ch == ' ';) {
-            // }
+            const std::string key = ParseString();
             Ignore(Token::DICT_SEPARATOR);
             if (!input_.peek()) {
                 throw ParsingError("Dict parsing error. Not found dictionary key/value separator character : ["s + Token::DICT_SEPARATOR + "]"s);
@@ -128,17 +131,12 @@ namespace json /* Parser */ {
         return result;
     }
 
-    Node Parser::ParseString() const {
+    std::string Parser::ParseString() const {
         return string_parser_.Parse();
     }
 
-    Node Parser::ParseNumber() const {
-        Numeric result = numeric_parser_.Parse();
-        if (holds_alternative<int>(result)) {
-            return get<int>(result);
-        } else {
-            return get<double>(result);
-        }
+    Numeric Parser::ParseNumber() const {
+        return numeric_parser_.Parse();
     }
 }
 

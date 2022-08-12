@@ -44,12 +44,13 @@ namespace json {
 
     class Node : private NodeValueType {
     public:
+        using variant::variant;
         using ValueType = variant;
 
-        template <typename ValueType, detail::EnableIfConvertible<ValueType, Node::ValueType> = true>
+        /*template <typename ValueType, detail::EnableIfConvertible<ValueType, Node::ValueType> = true>
         Node(ValueType&& value) : NodeValueType(std::forward<ValueType>(value)) {}
 
-        Node() : NodeValueType(nullptr) {}
+        Node() : NodeValueType(nullptr) {}*/
 
         bool IsNull() const;
 
@@ -199,17 +200,17 @@ namespace json {
 
         Node Parse() const;
 
-        Node ParseBool() const;
+        bool ParseBool() const;
 
-        Node ParseNull() const;
+        std::nullptr_t ParseNull() const;
 
-        Node ParseArray() const;
+        Array ParseArray() const;
 
-        Node ParseDict() const;
+        Dict ParseDict() const;
 
-        Node ParseString() const;
+        std::string ParseString() const;
 
-        Node ParseNumber() const;
+        Numeric ParseNumber() const;
 
         void Ignore(const char character) const {
             static const std::streamsize max_count = std::numeric_limits<std::streamsize>::max();
