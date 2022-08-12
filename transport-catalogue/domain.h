@@ -12,17 +12,61 @@
  *
  */
 
+#include <algorithm>
 #include <cassert>
 #include <deque>
+#include <iterator>
 #include <memory>
 #include <mutex>
 #include <set>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
+
 #include "geo.h"
+
+namespace transport_catalogue::detail {
+    template <bool Condition>
+    using EnableIf = typename std::enable_if_t<Condition, bool>;
+
+    template <typename FromType, typename ToType>
+    using EnableIfConvertible = std::enable_if_t<std::is_convertible_v<std::decay_t<FromType>, ToType>, bool>;
+
+    template <typename FromType, typename ToType>
+    using IsConvertible = std::is_convertible<std::decay_t<FromType>, ToType>;
+
+    template <typename FromType, typename ToType>
+    inline constexpr bool IsConvertibleV = std::is_convertible<std::decay_t<FromType>, ToType>::value;
+
+    template <typename FromType, typename ToType>
+    using IsSame = std::is_same<std::decay_t<FromType>, ToType>;
+
+    template <typename FromType, typename ToType>
+    inline constexpr bool IsSameV = std::is_same<std::decay_t<FromType>, ToType>::value;
+
+    template <typename FromType, typename ToType>
+    using EnableIfSame = std::enable_if_t<std::is_same_v<std::decay_t<FromType>, ToType>, bool>;
+
+    template <typename BaseType, typename DerivedType>
+    using EnableIfBaseOf = std::enable_if_t<std::is_base_of_v<BaseType, std::decay_t<DerivedType>>, bool>;
+}
+
+namespace transport_catalogue::data {
+    class DatabaseException : public std::exception {
+    public:
+        DatabaseException(std::string message) : std::exception(), message_{std::move(message)} {}
+        const char* what() const noexcept {
+            return message_.c_str();
+        }
+
+    private:
+        std::string message_;
+    };
+}
 
 namespace transport_catalogue::data {
     using Coordinates = geo::Coordinates;
@@ -31,25 +75,39 @@ namespace transport_catalogue::data {
         std::string name;
         Coordinates coordinates;
         Stop() = default;
+        // template <
+        //     typename String=std::string, typename Coordinates = data::Coordinates,
+        //     std::enable_if_t<
+        //         std::is_same_v<std::decay_t<String>, std::string> && std::is_same_v<std::decay_t<Coordinates>, data::Coordinates>, bool> = true>
         template <
-            typename String, typename Coordinates,
-            std::enable_if_t<
-                std::is_same_v<std::decay_t<String>, std::string> && std::is_same_v<std::decay_t<Coordinates>, data::Coordinates>, bool> = true>
-        Stop(String&& name, Coordinates&& coordinates) : name{std::move(name)}, coordinates{std::move(coordinates)} {}
-        Stop(Stop&& other) : name{std::move(other.name)}, coordinates{std::move(other.coordinates)} {}
+            typename String = std::string, typename Coordinates = data::Coordinates,
+            detail::EnableIf<detail::IsConvertibleV<String, std::string_view> && detail::IsSameV<Coordinates, data::Coordinates>> = true>
+        Stop(String&& name, Coordinates&& coordinates) : name{std::forward<String>(name)}, coordinates{std::forward<Coordinates>(coordinates)} {}
+        // Stop(Stop&& other) : name{std::move(other.name)}, coordinates{std::move(other.coordinates)} {}
     };
 
-    using Route = std::vector<const Stop*>;
+    // using Route = std::vector<const Stop*>;
+    class Route : public std::vector<const Stop*> {
+        using vector::vector;
+    };
 
     struct Bus {
         std::string name;
         Route route;
         Bus() = default;
         template <
-            typename String, typename Route,
-            std::enable_if_t<std::is_same_v<std::decay_t<String>, std::string> && std::is_same_v<std::decay_t<Route>, data::Route>, bool> = true>
-        Bus(String&& name, Route&& route) : name{std::move(name)}, route{std::move(route)} {}
-        Bus(Bus&& other) : name{std::move(other.name)}, route{std::move(other.route)} {}
+            typename String = std::string, typename Route = data::Route,
+            detail::EnableIf<detail::IsConvertibleV<String, std::string_view> && detail::IsSameV<Route, data::Route>> = true>
+        Bus(String&& name, Route&& route) : name{std::forward<String>(name)}, route{std::forward<Route>(route)} {}
+        // Bus(Bus&& other) : name{std::move(other.name)}, route{std::move(other.route)} {}
+
+        bool operator==(const Bus& rhs) const noexcept {
+            return this == &rhs || (name == rhs.name && route == rhs.route);
+        }
+
+        bool operator!=(const Bus& rhs) const noexcept {
+            return !(*this == rhs);
+        }
     };
 
     using BusPtr = std::unique_ptr<Bus>;
@@ -81,8 +139,26 @@ namespace transport_catalogue::data {
         static const size_t INDEX = 42;
     };
 
+    class ITransportDataReader {
+    protected:
+        virtual ~ITransportDataReader() = 0;
+    };
+
+    class ITransportDataWriter {
+    public:
+        virtual void AddBus(Bus&& bus) const = 0;
+        virtual void AddBus(std::string_view name, const std::vector<std::string_view>& stops) const = 0;
+
+        virtual const Stop& AddStop(Stop&& stop) const = 0;
+
+        virtual ~ITransportDataWriter() = default;
+
+        // protected:
+        //     virtual ~ITransportDataWriter() = 0;
+    };
+
     template <class Owner>
-    class Database {
+    class Database /*: public ITransportDataReader, public ITransportDataWriter*/ {
         friend Owner;
 
     public:
@@ -121,11 +197,27 @@ namespace transport_catalogue::data {
         const Bus& AddBus(String&& name, Route&& route);
 
         template <
-            typename String, typename RawRouteContainer,
-            std::enable_if_t<
-                std::is_same_v<std::decay_t<String>, std::string> && std::is_same_v<std::decay_t<RawRouteContainer>, std::vector<std::string_view>>,
-                bool> = true>
-        const Bus& AddBus(String&& name, RawRouteContainer&& route);
+            typename String = std::string, typename StopsNameContainer,
+            detail::EnableIf<detail::IsConvertibleV<String, std::string> && detail::IsSameV<StopsNameContainer, std::vector<std::string_view>>> =
+                true>
+        const Bus& AddBus(String&& name, StopsNameContainer&& route);
+
+        template <
+            typename String = std::string, typename StopsNameContainer,
+            detail::EnableIf<detail::IsConvertibleV<String, std::string> && detail::IsSameV<StopsNameContainer, std::vector<std::string_view>>> =
+                true>
+        const Bus* AddBusForce(String&& name, StopsNameContainer&& stops) {
+            Route route;
+            route.reserve(stops.size());
+            std::for_each(stops.begin(), stops.end(), [&](const std::string_view stop) {
+                auto ptr = name_to_stop_.find(stop);
+                if (ptr != name_to_stop_.end()) {
+                    route.push_back(ptr->second);
+                }
+            });
+
+            return AddBus(std::forward<String>(name), std::move(route));
+        }
 
         const Bus* GetBus(const std::string_view name) const;
 
@@ -163,6 +255,27 @@ namespace transport_catalogue::data {
         std::lock_guard<std::mutex> LockGuard() {
             return std::lock_guard<std::mutex>{mutex_};
         }
+
+    public:
+        class DataWriter : public ITransportDataWriter {
+        public:
+            DataWriter(Database& db) : db_{db} {}
+
+            void AddBus(Bus&& bus) const override {
+                return db_.AddBus(std::move(bus));
+            }
+
+            void AddBus(std::string_view name, const std::vector<std::string_view>& stops) const override {
+                return db_.AddBus(name, stops);
+            }
+
+            const Stop& AddStop(Stop&& stop) const override {
+                return db_.AddStop(std::move(stop));
+            }
+
+        private:
+            Database& db_;
+        };
     };
 }
 
@@ -171,7 +284,7 @@ namespace transport_catalogue::data {
     template <class Owner>
     template <typename Stop, std::enable_if_t<std::is_same_v<std::decay_t<Stop>, data::Stop>, bool>>
     const Stop& Database<Owner>::AddStop(Stop&& stop) {
-        const Stop& new_stop = stops_.emplace_back(std::move(stop));
+        const Stop& new_stop = stops_.emplace_back(std::forward<Stop>(stop));
         name_to_stop_[new_stop.name] = &new_stop;
         return new_stop;
     }
@@ -182,7 +295,7 @@ namespace transport_catalogue::data {
         std::enable_if_t<
             std::is_same_v<std::decay_t<String>, std::string> && std::is_convertible_v<std::decay_t<Coordinates>, data::Coordinates>, bool>>
     const Stop& Database<Owner>::AddStop(String&& name, Coordinates&& coordinates) {
-        return AddStop({std::move(name), std::move(coordinates)});
+        return AddStop(Stop{std::move(name), std::move(coordinates)});
     }
 
     template <class Owner>
@@ -212,23 +325,21 @@ namespace transport_catalogue::data {
         typename String, typename Route,
         std::enable_if_t<std::is_same_v<std::decay_t<String>, std::string> && std::is_convertible_v<std::decay_t<Route>, data::Route>, bool>>
     const Bus& Database<Owner>::AddBus(String&& name, Route&& route) {
-        return AddBus(Bus{std::move(name), std::move(route)});
+        return AddBus(Bus{std::forward<String>(name), std::forward<Route>(route)});
     }
 
     template <class Owner>
     template <
-        typename String, typename RawRouteContainer,
-        std::enable_if_t<
-            std::is_same_v<std::decay_t<String>, std::string> && std::is_same_v<std::decay_t<RawRouteContainer>, std::vector<std::string_view>>,
-            bool>>
-    const Bus& Database<Owner>::AddBus(String&& name, RawRouteContainer&& stops) {
+        typename String, typename StopsNameContainer,
+        detail::EnableIf<detail::IsConvertibleV<String, std::string> && detail::IsSameV<StopsNameContainer, std::vector<std::string_view>>>>
+    const Bus& Database<Owner>::AddBus(String&& name, StopsNameContainer&& stops) {
         Route route{stops.size()};
         std::transform(stops.begin(), stops.end(), route.begin(), [&](const std::string_view stop) {
             assert(name_to_stop_.count(stop));
             return name_to_stop_[stop];
         });
 
-        return AddBus(std::move(name), std::move(route));
+        return AddBus(std::forward<String>(name), std::move(route));
     }
 
     template <class Owner>
