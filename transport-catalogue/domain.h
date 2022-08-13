@@ -103,8 +103,10 @@ namespace transport_catalogue::data {
         }
     };
 
-    // using Route = std::vector<const Stop*>;
-    class Route : public std::vector<const Stop*> {
+    using StopRecord = const Stop*;
+    using StopRecordSet = std::deque<StopRecord>;
+    
+    class Route : public std::vector<StopRecord> {
         using vector::vector;
     };
 
@@ -129,8 +131,7 @@ namespace transport_catalogue::data {
 
     using BusRecord = const Bus*;
     using BusRecordSet = std::set<BusRecord>;
-    using StopRecord = const Stop*;
-    using StopRecordSet = std::deque<StopRecord>;
+
     struct DistanceBetweenStopsRecord {
         double distance = 0.;
         double measured_distance = 0.;
@@ -165,10 +166,10 @@ namespace transport_catalogue::data {
 
     class ITransportDataReader {
     public:
-        virtual const Bus* GetBus(std::string_view name) const = 0;
-        virtual const Stop* GetStop(std::string_view name) const = 0;
+        virtual BusRecord GetBus(std::string_view name) const = 0;
+        virtual StopRecord GetStop(std::string_view name) const = 0;
         virtual const BusRecordSet& GetBuses(StopRecord stop) const = 0;
-        virtual DistanceBetweenStopsRecord GetDistanceBetweenStops(const Stop* from, const Stop* to) const = 0;
+        virtual DistanceBetweenStopsRecord GetDistanceBetweenStops(StopRecord from, StopRecord to) const = 0;
 
         virtual ~ITransportDataReader() = default;
     };
@@ -371,11 +372,11 @@ namespace transport_catalogue::data {
         public:
             DataReader(Database& db) : db_{db} {}
 
-            const Bus* GetBus(std::string_view name) const override {
+            BusRecord GetBus(std::string_view name) const override {
                 return db_.GetBus(name);
             }
 
-            const Stop* GetStop(std::string_view name) const override {
+            StopRecord GetStop(std::string_view name) const override {
                 return db_.GetStop(name);
             }
 
@@ -385,7 +386,7 @@ namespace transport_catalogue::data {
                 return ptr == db_.stop_to_buses_.end() ? empty_result : ptr->second;
             }
 
-            DistanceBetweenStopsRecord GetDistanceBetweenStops(const Stop* from, const Stop* to) const override {
+            DistanceBetweenStopsRecord GetDistanceBetweenStops(StopRecord from, StopRecord to) const override {
                 auto ptr = db_.measured_distances_btw_stops_.find({from, to});
                 if (ptr != db_.measured_distances_btw_stops_.end()) {
                     return ptr->second;
