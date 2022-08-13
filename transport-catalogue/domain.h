@@ -133,7 +133,7 @@ namespace transport_catalogue::data {
     using StopRecordSet = std::deque<StopRecord>;
     struct DistanceBetweenStopsRecord {
         double distance = 0.;
-        double measured_distance = 0.;     
+        double measured_distance = 0.;
     };
 
     struct BusStat {
@@ -188,7 +188,7 @@ namespace transport_catalogue::data {
 
     class ITransportStatDataReader {
     public:
-        virtual const  BusStat GetBusInfo(const data::Bus* bus) const = 0;
+        virtual const BusStat GetBusInfo(const data::Bus* bus) const = 0;
         virtual const std::optional<BusStat> GetBusInfo(const std::string_view bus_name) const = 0;
         virtual const data::ITransportDataReader& GetDataReader() const = 0;
 
@@ -205,7 +205,7 @@ namespace transport_catalogue::data {
         using DistanceBetweenStopsTableBase = std::unordered_map<std::pair<const Stop*, const Stop*>, DistanceBetweenStopsRecord, Hasher>;
         using NameToStopViewBase = std::unordered_map<std::string_view, const data::Stop*>;
         using NameToBusRoutesViewBase = std::unordered_map<std::string_view, const data::Bus*>;
-        //using StopToBusesViewBase = std::unordered_map<const Stop*, std::set<std::string_view, std::less<>>>;
+        // using StopToBusesViewBase = std::unordered_map<const Stop*, std::set<std::string_view, std::less<>>>;
         using StopToBusesViewBase = std::unordered_map<StopRecord, BusRecordSet>;
 
     public: /* DB scheme */
@@ -262,14 +262,12 @@ namespace transport_catalogue::data {
         }
 
     protected: /* ORM */
-        template <typename Stop, std::enable_if_t<std::is_same_v<std::decay_t<Stop>, data::Stop>, bool> = true>
+        template <typename Stop = data::Stop, detail::EnableIfSame<Stop, data::Stop> = true>
         const Stop& AddStop(Stop&& stop);
 
         template <
-            typename String, typename Coordinates,
-            std::enable_if_t<
-                std::is_same_v<std::decay_t<String>, std::string> && std::is_convertible_v<std::decay_t<Coordinates>, data::Coordinates>, bool> =
-                true>
+            typename String = std::string, typename Coordinates = data::Coordinates,
+            detail::EnableIf<detail::IsSameV<String, std::string> && detail::IsConvertibleV<Coordinates, data::Coordinates>> = true>
         const Stop& AddStop(String&& name, Coordinates&& coordinates);
 
         void AddMeasuredDistance(const std::string_view from_stop_name, const std::string_view to_stop_name, double distance);
@@ -278,19 +276,18 @@ namespace transport_catalogue::data {
         const Bus& AddBus(Bus&& bus);
 
         template <
-            typename String, typename Route,
-            std::enable_if_t<std::is_same_v<std::decay_t<String>, std::string> && std::is_convertible_v<std::decay_t<Route>, data::Route>, bool> =
-                true>
+            typename String = std::string, typename Route = data::Route,
+            detail::EnableIf<detail::IsSameV<String, std::string> && detail::IsConvertibleV<Route, data::Route>> = true>
         const Bus& AddBus(String&& name, Route&& route);
 
         template <
-            typename String = std::string, typename StopsNameContainer,
+            typename String = std::string, typename StopsNameContainer = std::vector<std::string_view>,
             detail::EnableIf<detail::IsConvertibleV<String, std::string> && detail::IsSameV<StopsNameContainer, std::vector<std::string_view>>> =
                 true>
         const Bus& AddBus(String&& name, StopsNameContainer&& route);
 
         template <
-            typename String = std::string, typename StopsNameContainer,
+            typename String = std::string, typename StopsNameContainer = std::vector<std::string_view>,
             detail::EnableIf<detail::IsConvertibleV<String, std::string> && detail::IsSameV<StopsNameContainer, std::vector<std::string_view>>> =
                 true>
         const Bus* AddBusForce(String&& name, StopsNameContainer&& stops) {
@@ -362,7 +359,7 @@ namespace transport_catalogue::data {
                 db_.AddStop(static_cast<std::string>(name), coordinates);
             }
 
-            void SetMeasuredDistance(const std::string_view from_stop_name, const std::string_view to_stop_name, double distance) const override { 
+            void SetMeasuredDistance(const std::string_view from_stop_name, const std::string_view to_stop_name, double distance) const override {
                 db_.AddMeasuredDistance(from_stop_name, to_stop_name, distance);
             }
 
@@ -411,7 +408,7 @@ namespace transport_catalogue::data {
 namespace transport_catalogue::data {
 
     template <class Owner>
-    template <typename Stop, std::enable_if_t<std::is_same_v<std::decay_t<Stop>, data::Stop>, bool>>
+    template <typename Stop, detail::EnableIfSame<Stop, data::Stop>>
     const Stop& Database<Owner>::AddStop(Stop&& stop) {
         const Stop& new_stop = stops_.emplace_back(std::forward<Stop>(stop));
         name_to_stop_[new_stop.name] = &new_stop;
@@ -421,8 +418,7 @@ namespace transport_catalogue::data {
     template <class Owner>
     template <
         typename String, typename Coordinates,
-        std::enable_if_t<
-            std::is_same_v<std::decay_t<String>, std::string> && std::is_convertible_v<std::decay_t<Coordinates>, data::Coordinates>, bool>>
+        detail::EnableIf<detail::IsSameV<String, std::string> && detail::IsConvertibleV<Coordinates, data::Coordinates>>>
     const Stop& Database<Owner>::AddStop(String&& name, Coordinates&& coordinates) {
         return AddStop(Stop{std::move(name), std::move(coordinates)});
     }
@@ -450,9 +446,7 @@ namespace transport_catalogue::data {
     }
 
     template <class Owner>
-    template <
-        typename String, typename Route,
-        std::enable_if_t<std::is_same_v<std::decay_t<String>, std::string> && std::is_convertible_v<std::decay_t<Route>, data::Route>, bool>>
+    template <typename String, typename Route, detail::EnableIf<detail::IsSameV<String, std::string> && detail::IsConvertibleV<Route, data::Route>>>
     const Bus& Database<Owner>::AddBus(String&& name, Route&& route) {
         return AddBus(Bus{std::forward<String>(name), std::forward<Route>(route)});
     }
@@ -473,8 +467,8 @@ namespace transport_catalogue::data {
 
     template <class Owner>
     template <
-            typename StringView, typename TableView,
-            detail::EnableIf<detail::IsConvertibleV<StringView, std::string_view> && detail::IsBaseOfV<typename Database<Owner>::TableView, TableView>>>
+        typename StringView, typename TableView,
+        detail::EnableIf<detail::IsConvertibleV<StringView, std::string_view> && detail::IsBaseOfV<typename Database<Owner>::TableView, TableView>>>
     const auto* Database<Owner>::GetItem(StringView&& name, const TableView& table) const {
         auto ptr = table.find(std::move(name));
         return ptr == table.end() ? nullptr : ptr->second;
