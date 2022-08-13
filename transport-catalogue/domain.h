@@ -272,7 +272,7 @@ namespace transport_catalogue::data {
                 true>
         const Stop& AddStop(String&& name, Coordinates&& coordinates);
 
-        void SetMeasuredDistance(const std::string_view from_stop_name, const std::string_view to_stop_name, double distance);
+        void AddMeasuredDistance(const std::string_view from_stop_name, const std::string_view to_stop_name, double distance);
 
         template <typename Bus, detail::EnableIfSame<Bus, data::Bus> = true>
         const Bus& AddBus(Bus&& bus);
@@ -363,7 +363,7 @@ namespace transport_catalogue::data {
             }
 
             void SetMeasuredDistance(const std::string_view from_stop_name, const std::string_view to_stop_name, double distance) const override { 
-                db_.SetMeasuredDistance(from_stop_name, to_stop_name, distance);
+                db_.AddMeasuredDistance(from_stop_name, to_stop_name, distance);
             }
 
         private:
@@ -428,7 +428,7 @@ namespace transport_catalogue::data {
     }
 
     template <class Owner>
-    void Database<Owner>::SetMeasuredDistance(const std::string_view from_stop_name, const std::string_view to_stop_name, double distance) {
+    void Database<Owner>::AddMeasuredDistance(const std::string_view from_stop_name, const std::string_view to_stop_name, double distance) {
         const Stop* from_stop = GetStop(from_stop_name);
         const Stop* to_stop = GetStop(to_stop_name);
         assert(from_stop != nullptr && to_stop != nullptr);
