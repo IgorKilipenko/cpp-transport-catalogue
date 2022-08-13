@@ -9,13 +9,13 @@ namespace transport_catalogue::io {
 
     void StatReader::PrintBusInfo(const std::string_view bus_name) const {
         using namespace std::string_view_literals;
-        const data::Bus* bus = catalog_db_.GetBus(bus_name);
+        const data::Bus* bus = db_reader_.GetBus(bus_name);
         out_stream_ << "Bus "sv << bus_name << ": "sv;
 
         if (bus == nullptr) {
             out_stream_ << "not found"sv << new_line;
         } else {
-            auto info = catalog_db_.GetBusInfo(bus);
+            auto info = db_stat_reader_.GetBusInfo(bus);
             out_stream_ << info.total_stops << " stops on route, "sv << info.unique_stops << " unique stops, "sv << std::setprecision(6)
                       << info.route_length << " route length, "sv << info.route_curvature << " curvature"sv << new_line;
         }
@@ -26,13 +26,13 @@ namespace transport_catalogue::io {
 
         out_stream_ << "Stop "sv << stop_name << ": "sv;
 
-        const data::Stop* stop = catalog_db_.GetStop(stop_name);
+        const data::Stop* stop = db_reader_.GetStop(stop_name);
         if (stop == nullptr) {
             out_stream_ << "not found"sv << new_line;
             return;
         }
 
-        const auto& buses_names = catalog_db_.GetBuses(stop);
+        const auto& buses_names = db_reader_.GetBuses(stop);
         if (buses_names.empty()) {
             out_stream_ << "no buses"sv << new_line;
             return;

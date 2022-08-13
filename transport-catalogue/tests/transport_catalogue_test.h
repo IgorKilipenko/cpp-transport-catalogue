@@ -59,8 +59,8 @@ namespace transport_catalogue::tests {
 
             std::ostringstream output;
             TransportCatalogue catalog;
-            const io::Reader reader(*catalog.GetDatabaseForWrite(), mainn_stream);
-            const io::StatReader stat_reader(*catalog.GetDatabaseForWrite(), reader, output);
+            const io::Reader reader(catalog.GetDataWriter(), mainn_stream);
+            const io::StatReader stat_reader(catalog.GetStatDataReader(), reader, output);
 
             reader.PorcessRequests();
             stat_reader.PorcessRequests();
@@ -90,7 +90,7 @@ namespace transport_catalogue::tests {
             // Test IDbWriter
             {
                 TransportCatalogue catalog;
-                const auto &db_writer = catalog.GetWriter();
+                const auto &db_writer = catalog.GetDataWriter();
                 data::Stop stop("Stop1", {0, 0});
                 data::Route route{{}};
                 data::Bus bus("256"s, route);
@@ -102,8 +102,8 @@ namespace transport_catalogue::tests {
 
         void TestAddStop() const {
             TransportCatalogue catalog;
-            const auto &db_writer = catalog.GetWriter();
-            const auto &db_reader = catalog.GetReader();
+            const auto &db_writer = catalog.GetDataWriter();
+            const auto &db_reader = catalog.GetDataReader();
             data::Stop expected_result{"Stop1", {94, 54}};
             db_writer.AddStop(expected_result.name, geo::Coordinates{expected_result.coordinates});
             const auto* result = db_reader.GetStop(expected_result.name);

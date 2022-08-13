@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "domain.h"
 #include "geo.h"
 #include "transport_catalogue.h"
 
@@ -105,7 +106,7 @@ namespace transport_catalogue::io {
 
     class Reader {
     public:
-        Reader(TransportCatalogue::Database& db, std::istream& in_stream = std::cin) : in_stream_{in_stream}, catalog_db_{db} {}
+        Reader(const data::ITransportDataWriter& db_writer, std::istream& in_stream = std::cin) : in_stream_{in_stream}, db_writer_{db_writer} {}
 
         template <typename TOut = std::string>
         TOut Read() const;
@@ -127,7 +128,7 @@ namespace transport_catalogue::io {
     private:
         std::istream& in_stream_;
         Parser parser_;
-        TransportCatalogue::Database& catalog_db_;
+        const data::ITransportDataWriter& db_writer_;
     };
 }
 

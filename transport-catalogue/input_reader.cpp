@@ -80,12 +80,12 @@ namespace transport_catalogue::io {
 
         if (parser_.IsStopRequest(raw_req.command)) {
             auto stop = parser_.ParseStop(raw_req);
-            catalog_db_.AddStop(data::Stop{static_cast<std::string>(stop.name), std::move(stop.coordinates)});
+            db_writer_.AddStop(data::Stop{static_cast<std::string>(stop.name), std::move(stop.coordinates)});
             std::move(stop.measured_distancies.begin(), stop.measured_distancies.end(), std::back_inserter(out_distances));
 
         } else if (parser_.IsRouteRequest(raw_req.command)) {
             auto [name, route, _] = parser_.ParseBusRoute(raw_req);
-            catalog_db_.AddBus(static_cast<std::string>(name), std::move(route));
+            db_writer_.AddBus(static_cast<std::string>(name), std::move(route));
         }
     }
 
@@ -111,7 +111,7 @@ namespace transport_catalogue::io {
             });
 
         std::for_each(std::make_move_iterator(distances.begin()), std::make_move_iterator(distances.end()), [this](const auto& distance_btw) {
-            catalog_db_.SetMeasuredDistance(distance_btw.from_stop, distance_btw.to_stop, distance_btw.distance);
+            db_writer_.SetMeasuredDistance(distance_btw.from_stop, distance_btw.to_stop, distance_btw.distance);
         });
     }
 

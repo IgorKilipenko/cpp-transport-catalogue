@@ -53,19 +53,31 @@ namespace transport_catalogue::detail {
     using EnableIfSame = std::enable_if_t<std::is_same_v<std::decay_t<FromType>, ToType>, bool>;
 
     template <typename BaseType, typename DerivedType>
+    using IsBaseOf = std::is_base_of<BaseType, std::decay_t<DerivedType>>;
+
+    template <typename FromType, typename ToType>
+    inline constexpr bool IsBaseOfV = IsBaseOf<FromType, ToType>::value;
+
+    template <typename BaseType, typename DerivedType>
     using EnableIfBaseOf = std::enable_if_t<std::is_base_of_v<BaseType, std::decay_t<DerivedType>>, bool>;
 }
 
-namespace transport_catalogue::data {
-    class DatabaseException : public std::exception {
-    public:
-        DatabaseException(std::string message) : std::exception(), message_{std::move(message)} {}
-        const char* what() const noexcept {
-            return message_.c_str();
-        }
+namespace transport_catalogue::exceptions {
+    namespace data {
+        class DatabaseException : public std::exception {
+        public:
+            DatabaseException(std::string message) : std::exception(), message_{std::move(message)} {}
+            const char* what() const noexcept {
+                return message_.c_str();
+            }
 
-    private:
-        std::string message_;
+        private:
+            std::string message_;
+        };
+    }
+    class NotImplementedException : public std::logic_error {
+    public:
+        NotImplementedException() : std::logic_error("Function not yet implemented.") {}
     };
 }
 
@@ -149,6 +161,9 @@ namespace transport_catalogue::data {
     public:
         virtual const Bus* GetBus(std::string_view name) const = 0;
         virtual const Stop* GetStop(std::string_view name) const = 0;
+        virtual const std::set<std::string_view, std::less<>>& GetBuses(const Stop* stop) const = 0;
+        virtual std::pair<double, double> GetDistanceBetweenStops(const Stop* from, const Stop* to) const = 0;
+
         virtual ~ITransportDataReader() = default;
     };
 
@@ -160,20 +175,58 @@ namespace transport_catalogue::data {
         virtual void AddStop(Stop&& stop) const = 0;
         virtual void AddStop(std::string_view, Coordinates&& coordinates) const = 0;
 
+        virtual void SetMeasuredDistance(const std::string_view from_stop_name, const std::string_view to_stop_name, double distance) const = 0;
+
         virtual ~ITransportDataWriter() = default;
+    };
+
+    class ITransportStatDataReader {
+    public:
+        virtual const data::BusStat GetBusInfo(const data::Bus* bus) const = 0;
+        virtual const data::ITransportDataReader& GetDataReader() const = 0;
+
+        virtual ~ITransportStatDataReader() = default;
     };
 
     template <class Owner>
     class Database /*: public ITransportDataReader, public ITransportDataWriter*/ {
         friend Owner;
 
-    public: /* aliases */
-        using StopsTable = std::deque<Stop>;
-        using BusRoutesTable = std::deque<Bus>;
-        using NameToStopView = std::unordered_map<std::string_view, const data::Stop*>;
-        using NameToBusRoutesView = std::unordered_map<std::string_view, const data::Bus*>;
-        using StopToBusesView = std::unordered_map<const Stop*, std::set<std::string_view, std::less<>>>;
-        using DistanceBetweenStopsTable = std::unordered_map<std::pair<const Stop*, const Stop*>, std::pair<double, double>, Hasher>;
+    private: /* aliases */
+        using StopsTableBase = std::deque<Stop>;
+        using BusRoutesTableBase = std::deque<Bus>;
+        using DistanceBetweenStopsTableBase = std::unordered_map<std::pair<const Stop*, const Stop*>, std::pair<double, double>, Hasher>;
+        using NameToStopViewBase = std::unordered_map<std::string_view, const data::Stop*>;
+        using NameToBusRoutesViewBase = std::unordered_map<std::string_view, const data::Bus*>;
+        using StopToBusesViewBase = std::unordered_map<const Stop*, std::set<std::string_view, std::less<>>>;
+
+    public: /* DB scheme */
+        class DataTable {};
+        class DataView {};
+
+        class StopsTable : public DataTable, public StopsTableBase {
+            using StopsTableBase::deque;
+        };
+
+        class BusRoutesTable : public DataTable, public BusRoutesTableBase {
+            using BusRoutesTableBase::deque;
+        };
+
+        class DistanceBetweenStopsTable : public DataTable, public DistanceBetweenStopsTableBase {
+            using DistanceBetweenStopsTableBase::unordered_map;
+        };
+
+        class NameToStopView : public DataView, public NameToStopViewBase {
+            using NameToStopViewBase::unordered_map;
+        };
+
+        class NameToBusRoutesView : public DataView, public NameToBusRoutesViewBase {
+            using NameToBusRoutesViewBase::unordered_map;
+        };
+
+        class StopToBusesView : public DataView, public StopToBusesViewBase {
+            using StopToBusesViewBase::unordered_map;
+        };
 
     public:
         Database() : db_writer_{*this}, db_reader_{*this} {}
@@ -184,6 +237,23 @@ namespace transport_catalogue::data {
 
         const NameToStopView& GetNameToStopView() const;
 
+        const ITransportDataWriter& GetDataWriter() const {
+            return db_writer_;
+        }
+
+        const ITransportDataReader& GetDataReader() const {
+            return db_reader_;
+        }
+
+        explicit operator ITransportDataWriter() const {
+            return db_writer_;
+        }
+
+        explicit operator ITransportDataReader() const {
+            return db_reader_;
+        }
+
+    protected: /* ORM */
         template <typename Stop, std::enable_if_t<std::is_same_v<std::decay_t<Stop>, data::Stop>, bool> = true>
         const Stop& AddStop(Stop&& stop);
 
@@ -232,28 +302,6 @@ namespace transport_catalogue::data {
 
         const Stop* GetStop(const std::string_view name) const;
 
-        const BusStat GetBusInfo(const Bus* bus) const;
-
-        const std::set<std::string_view, std::less<>>& GetBuses(const Stop* stop) const;
-
-        std::pair<double, double> GetDistanceBetweenStops(const Stop* from, const Stop* to) const;
-
-        const ITransportDataWriter& GetDataWriter() const {
-            return db_writer_;
-        }
-
-        const ITransportDataReader& GetDataReader() const {
-            return db_reader_;
-        }
-
-        explicit operator ITransportDataWriter() const {
-            return db_writer_;
-        }
-
-        explicit operator ITransportDataReader() const {
-            return db_reader_;
-        }
-
     private:
         StopsTable stops_;
         BusRoutesTable bus_routes_;
@@ -266,18 +314,22 @@ namespace transport_catalogue::data {
         std::mutex mutex_;
 
         template <
-            typename StringView, typename TableView, std::enable_if_t<std::is_convertible_v<std::decay_t<StringView>, std::string_view>, bool> = true>
+            typename StringView, typename TableView,
+            detail::EnableIf<detail::IsConvertibleV<StringView, std::string_view> && detail::IsBaseOfV<Database::DataView, TableView>> = true>
         const auto* GetItem(StringView&& name, const TableView& table) const;
 
         void LockDatabase() {
+            throw transport_catalogue::exceptions::NotImplementedException();
             mutex_.lock();
         }
 
         void UnlockDatabase() {
+            throw transport_catalogue::exceptions::NotImplementedException();
             mutex_.unlock();
         }
 
         std::lock_guard<std::mutex> LockGuard() {
+            throw transport_catalogue::exceptions::NotImplementedException();
             return std::lock_guard<std::mutex>{mutex_};
         }
 
@@ -302,6 +354,10 @@ namespace transport_catalogue::data {
                 db_.AddStop(static_cast<std::string>(name), coordinates);
             }
 
+            void SetMeasuredDistance(const std::string_view from_stop_name, const std::string_view to_stop_name, double distance) const override { 
+                db_.SetMeasuredDistance(from_stop_name, to_stop_name, distance);
+            }
+
         private:
             Database& db_;
         };
@@ -313,8 +369,25 @@ namespace transport_catalogue::data {
             const Bus* GetBus(std::string_view name) const override {
                 return db_.GetBus(name);
             }
+
             const Stop* GetStop(std::string_view name) const override {
                 return db_.GetStop(name);
+            }
+
+            virtual const std::set<std::string_view, std::less<>>& GetBuses(const Stop* stop) const override {
+                static const std::set<std::string_view, std::less<>> empty_result;
+                auto ptr = db_.stop_to_buses_.find(stop);
+                return ptr == db_.stop_to_buses_.end() ? empty_result : ptr->second;
+            }
+
+            std::pair<double, double> GetDistanceBetweenStops(const Stop* from, const Stop* to) const override {
+                auto ptr = db_.measured_distances_btw_stops_.find({from, to});
+                if (ptr != db_.measured_distances_btw_stops_.end()) {
+                    return ptr->second;
+                } else if (ptr = db_.measured_distances_btw_stops_.find({to, from}); ptr != db_.measured_distances_btw_stops_.end()) {
+                    return ptr->second;
+                }
+                return {0., 0.};
             }
 
         private:
@@ -391,7 +464,9 @@ namespace transport_catalogue::data {
     }
 
     template <class Owner>
-    template <typename StringView, typename TableView, std::enable_if_t<std::is_convertible_v<std::decay_t<StringView>, std::string_view>, bool>>
+    template <
+            typename StringView, typename TableView,
+            detail::EnableIf<detail::IsConvertibleV<StringView, std::string_view> && detail::IsBaseOfV<typename Database<Owner>::DataView, TableView>>>
     const auto* Database<Owner>::GetItem(StringView&& name, const TableView& table) const {
         auto ptr = table.find(std::move(name));
         return ptr == table.end() ? nullptr : ptr->second;
@@ -409,24 +484,6 @@ namespace transport_catalogue::data {
     }
 
     template <class Owner>
-    const std::set<std::string_view, std::less<>>& Database<Owner>::GetBuses(const Stop* stop) const {
-        static const std::set<std::string_view, std::less<>> empty_result;
-        auto ptr = stop_to_buses_.find(stop);
-        return ptr == stop_to_buses_.end() ? empty_result : ptr->second;
-    }
-
-    template <class Owner>
-    std::pair<double, double> Database<Owner>::GetDistanceBetweenStops(const Stop* from, const Stop* to) const {
-        auto ptr = measured_distances_btw_stops_.find({from, to});
-        if (ptr != measured_distances_btw_stops_.end()) {
-            return ptr->second;
-        } else if (ptr = measured_distances_btw_stops_.find({to, from}); ptr != measured_distances_btw_stops_.end()) {
-            return ptr->second;
-        }
-        return {0., 0.};
-    }
-
-    template <class Owner>
     const typename Database<Owner>::StopsTable& Database<Owner>::GetStopsTable() const {
         return stops_;
     }
@@ -439,30 +496,5 @@ namespace transport_catalogue::data {
     template <class Owner>
     const typename Database<Owner>::NameToStopView& Database<Owner>::GetNameToStopView() const {
         return name_to_stop_;
-    }
-
-    template <class Owner>
-    const BusStat Database<Owner>::GetBusInfo(const Bus* bus) const {
-        BusStat info;
-        double route_length = 0;
-        double pseudo_length = 0;
-        const Route& route = bus->route;
-
-        for (auto i = 0; i < route.size() - 1; ++i) {
-            const Stop* from_stop = GetStop(route[i]->name);
-            const Stop* to_stop = GetStop(route[i + 1]->name);
-            assert(from_stop && from_stop);
-
-            const auto& [measured_dist, dist] = GetDistanceBetweenStops(from_stop, to_stop);
-            route_length += measured_dist;
-            pseudo_length += dist;
-        }
-
-        info.total_stops = route.size();
-        info.unique_stops = std::unordered_set<const Stop*>(route.begin(), route.end()).size();
-        info.route_length = route_length;
-        info.route_curvature = route_length / std::max(pseudo_length, 1.);
-
-        return info;
     }
 }

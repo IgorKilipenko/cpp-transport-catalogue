@@ -4,14 +4,15 @@
 #include <iostream>
 #include <ostream>
 
+#include "domain.h"
 #include "input_reader.h"
 #include "transport_catalogue.h"
 
 namespace transport_catalogue::io {
     class StatReader {
     public:
-        StatReader(TransportCatalogue::Database &catalog_db, const Reader &reader, std::ostream &out_stream = std::cout)
-            : reader_{reader}, catalog_db_{catalog_db}, out_stream_{out_stream} {}
+        StatReader(const data::ITransportStatDataReader &db_stat_reader, const Reader &reader, std::ostream &out_stream = std::cout)
+            : reader_{reader}, db_stat_reader_{db_stat_reader}, db_reader_{db_stat_reader.GetDataReader()}, out_stream_{out_stream} {}
 
         void PrintBusInfo(const std::string_view bus_name) const;
 
@@ -25,7 +26,8 @@ namespace transport_catalogue::io {
 
     private:
         const Reader &reader_;
-        TransportCatalogue::Database &catalog_db_;
+        const data::ITransportStatDataReader &db_stat_reader_;
+        const data::ITransportDataReader &db_reader_;
         std::ostream &out_stream_;
         static constexpr const std::string_view new_line = "\n"sv;
     };
