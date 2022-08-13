@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <iterator>
 #include <string_view>
+#include "domain.h"
 
 namespace transport_catalogue::io {
 
@@ -32,15 +33,15 @@ namespace transport_catalogue::io {
             return;
         }
 
-        const auto& buses_names = db_reader_.GetBuses(stop);
-        if (buses_names.empty()) {
+        const auto& buses = db_reader_.GetBuses(stop);
+        if (buses.empty()) {
             out_stream_ << "no buses"sv << new_line;
             return;
         }
 
         out_stream_ << "buses"sv;
-        std::for_each(buses_names.begin(), buses_names.end(), [this](const std::string_view bus) {
-            out_stream_ << " "sv << bus;
+        std::for_each(buses.begin(), buses.end(), [this](const data::BusRecord& bus) {
+            out_stream_ << " "sv << bus->name;
         });
 
         out_stream_ << std::endl;

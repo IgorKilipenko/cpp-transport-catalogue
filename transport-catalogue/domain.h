@@ -127,8 +127,14 @@ namespace transport_catalogue::data {
         }
     };
 
-    using ConstBusPtr = std::unique_ptr<const Bus>;
-    using ConstStopPtr = std::unique_ptr<const Stop>;
+    using BusRecord = const Bus*;
+    using BusRecordSet = std::set<BusRecord>;
+    using StopRecord = const Stop*;
+    using StopRecordSet = std::deque<StopRecord>;
+    struct DistanceBetweenStopsRecord {
+        double distance = 0.;
+        double measured_distance = 0.;     
+    };
 
     struct BusStat {
         size_t total_stops{};
@@ -161,8 +167,8 @@ namespace transport_catalogue::data {
     public:
         virtual const Bus* GetBus(std::string_view name) const = 0;
         virtual const Stop* GetStop(std::string_view name) const = 0;
-        virtual const std::set<std::string_view, std::less<>>& GetBuses(const Stop* stop) const = 0;
-        virtual std::pair<double, double> GetDistanceBetweenStops(const Stop* from, const Stop* to) const = 0;
+        virtual const BusRecordSet& GetBuses(StopRecord stop) const = 0;
+        virtual DistanceBetweenStopsRecord GetDistanceBetweenStops(const Stop* from, const Stop* to) const = 0;
 
         virtual ~ITransportDataReader() = default;
     };
@@ -182,7 +188,8 @@ namespace transport_catalogue::data {
 
     class ITransportStatDataReader {
     public:
-        virtual const data::BusStat GetBusInfo(const data::Bus* bus) const = 0;
+        virtual const  BusStat GetBusInfo(const data::Bus* bus) const = 0;
+        virtual const std::optional<BusStat> GetBusInfo(const std::string_view bus_name) const = 0;
         virtual const data::ITransportDataReader& GetDataReader() const = 0;
 
         virtual ~ITransportStatDataReader() = default;
@@ -195,14 +202,15 @@ namespace transport_catalogue::data {
     private: /* aliases */
         using StopsTableBase = std::deque<Stop>;
         using BusRoutesTableBase = std::deque<Bus>;
-        using DistanceBetweenStopsTableBase = std::unordered_map<std::pair<const Stop*, const Stop*>, std::pair<double, double>, Hasher>;
+        using DistanceBetweenStopsTableBase = std::unordered_map<std::pair<const Stop*, const Stop*>, DistanceBetweenStopsRecord, Hasher>;
         using NameToStopViewBase = std::unordered_map<std::string_view, const data::Stop*>;
         using NameToBusRoutesViewBase = std::unordered_map<std::string_view, const data::Bus*>;
-        using StopToBusesViewBase = std::unordered_map<const Stop*, std::set<std::string_view, std::less<>>>;
+        //using StopToBusesViewBase = std::unordered_map<const Stop*, std::set<std::string_view, std::less<>>>;
+        using StopToBusesViewBase = std::unordered_map<StopRecord, BusRecordSet>;
 
     public: /* DB scheme */
         class DataTable {};
-        class DataView {};
+        class TableView {};
 
         class StopsTable : public DataTable, public StopsTableBase {
             using StopsTableBase::deque;
@@ -216,15 +224,15 @@ namespace transport_catalogue::data {
             using DistanceBetweenStopsTableBase::unordered_map;
         };
 
-        class NameToStopView : public DataView, public NameToStopViewBase {
+        class NameToStopView : public TableView, public NameToStopViewBase {
             using NameToStopViewBase::unordered_map;
         };
 
-        class NameToBusRoutesView : public DataView, public NameToBusRoutesViewBase {
+        class NameToBusRoutesView : public TableView, public NameToBusRoutesViewBase {
             using NameToBusRoutesViewBase::unordered_map;
         };
 
-        class StopToBusesView : public DataView, public StopToBusesViewBase {
+        class StopToBusesView : public TableView, public StopToBusesViewBase {
             using StopToBusesViewBase::unordered_map;
         };
 
@@ -315,7 +323,7 @@ namespace transport_catalogue::data {
 
         template <
             typename StringView, typename TableView,
-            detail::EnableIf<detail::IsConvertibleV<StringView, std::string_view> && detail::IsBaseOfV<Database::DataView, TableView>> = true>
+            detail::EnableIf<detail::IsConvertibleV<StringView, std::string_view> && detail::IsBaseOfV<Database::TableView, TableView>> = true>
         const auto* GetItem(StringView&& name, const TableView& table) const;
 
         void LockDatabase() {
@@ -374,13 +382,13 @@ namespace transport_catalogue::data {
                 return db_.GetStop(name);
             }
 
-            virtual const std::set<std::string_view, std::less<>>& GetBuses(const Stop* stop) const override {
-                static const std::set<std::string_view, std::less<>> empty_result;
+            virtual const BusRecordSet& GetBuses(StopRecord stop) const override {
+                static const std::set<BusRecord> empty_result;
                 auto ptr = db_.stop_to_buses_.find(stop);
                 return ptr == db_.stop_to_buses_.end() ? empty_result : ptr->second;
             }
 
-            std::pair<double, double> GetDistanceBetweenStops(const Stop* from, const Stop* to) const override {
+            DistanceBetweenStopsRecord GetDistanceBetweenStops(const Stop* from, const Stop* to) const override {
                 auto ptr = db_.measured_distances_btw_stops_.find({from, to});
                 if (ptr != db_.measured_distances_btw_stops_.end()) {
                     return ptr->second;
@@ -436,7 +444,7 @@ namespace transport_catalogue::data {
         const Bus& new_bus = bus_routes_.emplace_back(std::forward<Bus>(bus));
         name_to_bus_[new_bus.name] = &new_bus;
         std::for_each(new_bus.route.begin(), new_bus.route.end(), [this, &new_bus](const Stop* stop) {
-            stop_to_buses_[stop].insert(new_bus.name);
+            stop_to_buses_[stop].insert(&new_bus);
         });
         return new_bus;
     }
@@ -466,7 +474,7 @@ namespace transport_catalogue::data {
     template <class Owner>
     template <
             typename StringView, typename TableView,
-            detail::EnableIf<detail::IsConvertibleV<StringView, std::string_view> && detail::IsBaseOfV<typename Database<Owner>::DataView, TableView>>>
+            detail::EnableIf<detail::IsConvertibleV<StringView, std::string_view> && detail::IsBaseOfV<typename Database<Owner>::TableView, TableView>>>
     const auto* Database<Owner>::GetItem(StringView&& name, const TableView& table) const {
         auto ptr = table.find(std::move(name));
         return ptr == table.end() ? nullptr : ptr->second;

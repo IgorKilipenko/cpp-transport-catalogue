@@ -2,6 +2,7 @@
 
 #include <deque>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "domain.h"
@@ -41,13 +42,11 @@ namespace transport_catalogue {
 
         const data::Stop* GetStop(const std::string_view name) const override;
 
-        const std::set<std::string_view, std::less<>>& GetBuses(const data::Stop* stop) const override {
+        const data::BusRecordSet& GetBuses(data::StopRecord stop) const override {
             return db_reader_.GetBuses(stop);
         }
 
-        const std::deque<data::Stop>& GetStops() const;
-
-        std::pair<double, double> GetDistanceBetweenStops(const data::Stop* from, const data::Stop* to) const override {
+        data::DistanceBetweenStopsRecord GetDistanceBetweenStops(const data::Stop* from, const data::Stop* to) const override {
             return db_reader_.GetDistanceBetweenStops(from, to);
         }
 
@@ -55,7 +54,13 @@ namespace transport_catalogue {
 
         const std::shared_ptr<const Database> GetDatabaseReadOnly() const;
 
-        const data::BusStat GetBusInfo(const data::Bus* bus) const override;
+        const  data::BusStat GetBusInfo(const data::Bus* bus) const override {
+            return db_stat_reader_.GetBusInfo(bus);
+        }
+
+        const  std::optional<data::BusStat> GetBusInfo(const std::string_view bus_name) const override {
+            return db_stat_reader_.GetBusInfo(bus_name);
+        }
 
         const data::ITransportDataWriter& GetDataWriter() const {
             return db_writer_;
@@ -95,6 +100,11 @@ namespace transport_catalogue {
                 info.route_curvature = route_length / std::max(pseudo_length, 1.);
 
                 return info;
+            }
+
+            const std::optional<data::BusStat> GetBusInfo(const std::string_view bus_name) const override {
+                const data::Bus* bus = db_reader_.GetBus(bus_name);
+                return bus != nullptr ? std::optional{GetBusInfo(bus)} : std::nullopt;
             }
 
             const data::ITransportDataReader& GetDataReader() const override {
