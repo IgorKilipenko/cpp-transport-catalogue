@@ -105,7 +105,7 @@ namespace transport_catalogue::data {
 
     using StopRecord = const Stop*;
     using StopRecordSet = std::deque<StopRecord>;
-    
+
     class Route : public std::vector<StopRecord> {
         using vector::vector;
     };
@@ -169,6 +169,7 @@ namespace transport_catalogue::data {
         virtual BusRecord GetBus(std::string_view name) const = 0;
         virtual StopRecord GetStop(std::string_view name) const = 0;
         virtual const BusRecordSet& GetBuses(StopRecord stop) const = 0;
+        virtual const BusRecordSet& GetBuses(const std::string_view bus_name) const = 0;
         virtual DistanceBetweenStopsRecord GetDistanceBetweenStops(StopRecord from, StopRecord to) const = 0;
 
         virtual ~ITransportDataReader() = default;
@@ -380,10 +381,16 @@ namespace transport_catalogue::data {
                 return db_.GetStop(name);
             }
 
-            virtual const BusRecordSet& GetBuses(StopRecord stop) const override {
-                static const std::set<BusRecord> empty_result;
+            const BusRecordSet& GetBuses(StopRecord stop) const override {
+                static const BusRecordSet empty_result;
                 auto ptr = db_.stop_to_buses_.find(stop);
                 return ptr == db_.stop_to_buses_.end() ? empty_result : ptr->second;
+            }
+
+            const BusRecordSet& GetBuses(const std::string_view bus_name) const override {
+                static const BusRecordSet empty_result;
+                auto stop_ptr = GetStop(bus_name);
+                return stop_ptr == nullptr ? empty_result : GetBuses(stop_ptr);
             }
 
             DistanceBetweenStopsRecord GetDistanceBetweenStops(StopRecord from, StopRecord to) const override {

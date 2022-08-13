@@ -46,6 +46,10 @@ namespace transport_catalogue {
             return db_reader_.GetBuses(stop);
         }
 
+        const data::BusRecordSet& GetBuses(const std::string_view bus_name) const override {
+            return db_reader_.GetBuses(bus_name);
+        }
+
         data::DistanceBetweenStopsRecord GetDistanceBetweenStops(data::StopRecord from, data::StopRecord to) const override {
             return db_reader_.GetDistanceBetweenStops(from, to);
         }

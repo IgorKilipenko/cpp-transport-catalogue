@@ -25,26 +25,27 @@
 namespace transport_catalogue::io {
     class RequestHandler {
     public:
-        using BusesSet = std::unordered_set<data::BusRecord>;
 
         // MapRenderer понадобится в следующей части итогового проекта
         RequestHandler(const data::ITransportStatDataReader& reader, const io::renderer::MapRenderer& renderer)
-            : reader_{reader}, renderer_{renderer} {}
+            : db_reader_{reader}, renderer_{renderer} {}
 
         // Возвращает информацию о маршруте (запрос Bus)
         std::optional<data::BusStat> GetBusStat(const std::string_view bus_name) const {
-            return reader_.GetBusInfo(bus_name);
+            return db_reader_.GetBusInfo(bus_name);
         }
 
         // Возвращает маршруты, проходящие через
-        const BusesSet* GetBusesByStop(const std::string_view& stop_name) const;
+        const data::BusRecordSet& GetBusesByStop(const std::string_view& stop_name) const {
+            return db_reader_.GetDataReader().GetBuses(stop_name);
+        }
 
         // Этот метод будет нужен в следующей части итогового проекта
         svg::Document RenderMap() const;
 
     private:
         // RequestHandler использует агрегацию объектов "Транспортный Справочник" и "Визуализатор Карты"
-        const data::ITransportStatDataReader& reader_;
+        const data::ITransportStatDataReader& db_reader_;
         const renderer::MapRenderer& renderer_;
     };
 }
