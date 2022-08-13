@@ -31,7 +31,7 @@ namespace transport_catalogue::io {
         std::optional<data::BusStat> GetBusStat(const std::string_view& bus_name) const;
 
         // Возвращает маршруты, проходящие через
-        const std::unordered_set<data::BusPtr>* GetBusesByStop(const std::string_view& stop_name) const;
+        const std::unordered_set<data::ConstBusPtr>* GetBusesByStop(const std::string_view& stop_name) const;
 
         // Этот метод будет нужен в следующей части итогового проекта
         svg::Document RenderMap() const;

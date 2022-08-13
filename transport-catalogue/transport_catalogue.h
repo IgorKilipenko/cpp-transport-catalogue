@@ -9,24 +9,30 @@
 namespace transport_catalogue {
     using Coordinates = data::Coordinates;
 
-    class TransportCatalogue {
+    class TransportCatalogue : private data::ITransportDataWriter, private data::ITransportDataReader {
     public:
         using Database = data::Database<TransportCatalogue>;
+        using DataTransportWriter = Database::DataWriter;
         TransportCatalogue() : db_{std::make_shared<Database>()} {}
         TransportCatalogue(std::shared_ptr<Database> db) : db_{db} {}
 
-        template <
-            typename String, typename Coordinates,
-            std::enable_if_t<
-                std::is_same_v<std::decay_t<String>, std::string> && std::is_same_v<std::decay_t<Coordinates>, transport_catalogue::Coordinates>,
-                bool> = true>
-        const data::Stop& AddStop(String&& name, Coordinates&& coordinates);
+        void AddStop(data::Stop&& stop) const override {
+            db_->AddStop(std::move(stop));
+        }
 
-        const data::Bus& AddBus(data::Bus&& bus);
+        void AddStop(std::string_view name, Coordinates&& coordinates) const override {
+            db_->AddStop(static_cast<std::string>(name), coordinates);
+        }
 
-        const data::Bus* GetBus(const std::string_view name) const;
+        void AddBus(data::Bus&& bus) const override;
 
-        const data::Stop* GetStop(const std::string_view name) const;
+        void AddBus(std::string_view name, const std::vector<std::string_view>& stops) const override {
+            db_->AddBus(static_cast<std::string>(name), stops);
+        }
+
+        const data::Bus* GetBus(const std::string_view name) const override;
+
+        const data::Stop* GetStop(const std::string_view name) const override;
 
         const std::deque<data::Stop>& GetStops() const;
 
@@ -36,18 +42,18 @@ namespace transport_catalogue {
 
         const data::BusStat GetBusInfo(const data::Bus* bus) const;
 
+        const data::ITransportDataWriter& GetWriter() const {
+            return db_->GetDataWriter();
+        }
+        
+        const data::ITransportDataReader& GetReader() const {
+            return db_->GetDataReader();
+        }
+
     private:
         std::shared_ptr<Database> db_;
     };
 
 }
 
-namespace transport_catalogue {
-    template <
-        typename String, typename Coordinates,
-        std::enable_if_t<
-            std::is_same_v<std::decay_t<String>, std::string> && std::is_same_v<std::decay_t<Coordinates>, transport_catalogue::Coordinates>, bool>>
-    const data::Stop& TransportCatalogue::AddStop(String&& name, Coordinates&& coordinates) {
-        return db_->AddStop(std::move(name), std::move(coordinates));
-    }
-}
+namespace transport_catalogue {}

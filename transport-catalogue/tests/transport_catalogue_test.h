@@ -44,7 +44,8 @@ namespace transport_catalogue::tests {
                                           "\n"s
                                           R"(Stop Prazhskaya: no buses)"
                                           "\n"s
-                                          R"(Stop Biryulyovo Zapadnoye: buses 256 828)""\n"s;
+                                          R"(Stop Biryulyovo Zapadnoye: buses 256 828)"
+                                          "\n"s;
 
             mainn_stream << input_add_queries.size() << '\n';
             std::for_each(input_add_queries.begin(), input_add_queries.end(), [&](const std::string_view line) {
@@ -77,13 +78,36 @@ namespace transport_catalogue::tests {
         }
 
         void TestAddBus() const {
+            {
+                TransportCatalogue catalog;
+                data::Stop stop("Stop1", {0, 0});
+                data::Route route{{}};
+                data::Bus bus("256"s, route);
+                catalog.AddBus(data::Bus{bus});
+                const data::Bus *result = catalog.GetBus(bus.name);
+                assert(result && bus == *result);
+            }
+            // Test IDbWriter
+            {
+                TransportCatalogue catalog;
+                const auto &db_writer = catalog.GetWriter();
+                data::Stop stop("Stop1", {0, 0});
+                data::Route route{{}};
+                data::Bus bus("256"s, route);
+                db_writer.AddBus(data::Bus{bus});
+                const data::Bus *result = catalog.GetBus(bus.name);
+                assert(result && bus == *result);
+            }
+        }
+
+        void TestAddStop() const {
             TransportCatalogue catalog;
-            data::Stop stop("Stop1", {0,0});
-            data::Route route{{}};
-            data::Bus bus("256"s, route);
-            catalog.AddBus(data::Bus{bus});
-            const data::Bus *result = catalog.GetBus(bus.name);
-            assert(result && bus == *result);
+            const auto &db_writer = catalog.GetWriter();
+            const auto &db_reader = catalog.GetReader();
+            data::Stop expected_result{"Stop1", {94, 54}};
+            db_writer.AddStop(expected_result.name, geo::Coordinates{expected_result.coordinates});
+            const auto* result = db_reader.GetStop(expected_result.name);
+            assert(result && expected_result == *result);
         }
 
         void TestTransportCatalogue() const {
@@ -94,6 +118,9 @@ namespace transport_catalogue::tests {
 
             TestAddBus();
             std::cerr << prefix << "TestAddBus : Done." << std::endl;
+
+            TestAddStop();
+            std::cerr << prefix << "TestAddStop : Done." << std::endl;
 
             std::cerr << std::endl << "All TransportCatalogue Tests : Done." << std::endl << std::endl;
         }

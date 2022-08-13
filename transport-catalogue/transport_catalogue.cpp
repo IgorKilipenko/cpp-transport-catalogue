@@ -26,7 +26,7 @@ namespace transport_catalogue {
         return db_->GetStop(std::move(name));
     }
 
-    const data::Bus& TransportCatalogue::AddBus(data::Bus&& bus) {
-        return db_->AddBus(std::move(bus));
+    void TransportCatalogue::AddBus(data::Bus&& bus) const {
+        db_->AddBus(std::move(bus));
     }
 }

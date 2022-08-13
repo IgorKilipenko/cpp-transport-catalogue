@@ -18,6 +18,7 @@
 #include <iterator>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
@@ -75,15 +76,19 @@ namespace transport_catalogue::data {
         std::string name;
         Coordinates coordinates;
         Stop() = default;
-        // template <
-        //     typename String=std::string, typename Coordinates = data::Coordinates,
-        //     std::enable_if_t<
-        //         std::is_same_v<std::decay_t<String>, std::string> && std::is_same_v<std::decay_t<Coordinates>, data::Coordinates>, bool> = true>
         template <
             typename String = std::string, typename Coordinates = data::Coordinates,
             detail::EnableIf<detail::IsConvertibleV<String, std::string_view> && detail::IsSameV<Coordinates, data::Coordinates>> = true>
         Stop(String&& name, Coordinates&& coordinates) : name{std::forward<String>(name)}, coordinates{std::forward<Coordinates>(coordinates)} {}
         // Stop(Stop&& other) : name{std::move(other.name)}, coordinates{std::move(other.coordinates)} {}
+
+        bool operator==(const Stop& rhs) const noexcept {
+            return this == &rhs || (name == rhs.name && coordinates == rhs.coordinates);
+        }
+
+        bool operator!=(const Stop& rhs) const noexcept {
+            return !(*this == rhs);
+        }
     };
 
     // using Route = std::vector<const Stop*>;
@@ -110,7 +115,8 @@ namespace transport_catalogue::data {
         }
     };
 
-    using BusPtr = std::unique_ptr<Bus>;
+    using ConstBusPtr = std::unique_ptr<const Bus>;
+    using ConstStopPtr = std::unique_ptr<const Stop>;
 
     struct BusStat {
         size_t total_stops{};
@@ -140,8 +146,10 @@ namespace transport_catalogue::data {
     };
 
     class ITransportDataReader {
-    protected:
-        virtual ~ITransportDataReader() = 0;
+    public:
+        virtual const Bus* GetBus(std::string_view name) const = 0;
+        virtual const Stop* GetStop(std::string_view name) const = 0;
+        virtual ~ITransportDataReader() = default;
     };
 
     class ITransportDataWriter {
@@ -149,25 +157,26 @@ namespace transport_catalogue::data {
         virtual void AddBus(Bus&& bus) const = 0;
         virtual void AddBus(std::string_view name, const std::vector<std::string_view>& stops) const = 0;
 
-        virtual const Stop& AddStop(Stop&& stop) const = 0;
+        virtual void AddStop(Stop&& stop) const = 0;
+        virtual void AddStop(std::string_view, Coordinates&& coordinates) const = 0;
 
         virtual ~ITransportDataWriter() = default;
-
-        // protected:
-        //     virtual ~ITransportDataWriter() = 0;
     };
 
     template <class Owner>
     class Database /*: public ITransportDataReader, public ITransportDataWriter*/ {
         friend Owner;
 
-    public:
+    public: /* aliases */
         using StopsTable = std::deque<Stop>;
         using BusRoutesTable = std::deque<Bus>;
         using NameToStopView = std::unordered_map<std::string_view, const data::Stop*>;
         using NameToBusRoutesView = std::unordered_map<std::string_view, const data::Bus*>;
         using StopToBusesView = std::unordered_map<const Stop*, std::set<std::string_view, std::less<>>>;
         using DistanceBetweenStopsTable = std::unordered_map<std::pair<const Stop*, const Stop*>, std::pair<double, double>, Hasher>;
+
+    public:
+        Database() : db_writer_{*this}, db_reader_{*this} {}
 
         const StopsTable& GetStopsTable() const;
 
@@ -187,7 +196,7 @@ namespace transport_catalogue::data {
 
         void SetMeasuredDistance(const std::string_view from_stop_name, const std::string_view to_stop_name, double distance);
 
-        template <typename Bus, std::enable_if_t<std::is_same_v<std::decay_t<Bus>, data::Bus>, bool> = true>
+        template <typename Bus, detail::EnableIfSame<Bus, data::Bus> = true>
         const Bus& AddBus(Bus&& bus);
 
         template <
@@ -229,6 +238,22 @@ namespace transport_catalogue::data {
 
         std::pair<double, double> GetDistanceBetweenStops(const Stop* from, const Stop* to) const;
 
+        const ITransportDataWriter& GetDataWriter() const {
+            return db_writer_;
+        }
+
+        const ITransportDataReader& GetDataReader() const {
+            return db_reader_;
+        }
+
+        explicit operator ITransportDataWriter() const {
+            return db_writer_;
+        }
+
+        explicit operator ITransportDataReader() const {
+            return db_reader_;
+        }
+
     private:
         StopsTable stops_;
         BusRoutesTable bus_routes_;
@@ -262,20 +287,43 @@ namespace transport_catalogue::data {
             DataWriter(Database& db) : db_{db} {}
 
             void AddBus(Bus&& bus) const override {
-                return db_.AddBus(std::move(bus));
+                db_.AddBus(std::move(bus));
             }
 
             void AddBus(std::string_view name, const std::vector<std::string_view>& stops) const override {
-                return db_.AddBus(name, stops);
+                db_.AddBus(static_cast<std::string>(name), stops);
             }
 
-            const Stop& AddStop(Stop&& stop) const override {
-                return db_.AddStop(std::move(stop));
+            void AddStop(Stop&& stop) const override {
+                db_.AddStop(std::move(stop));
+            }
+
+            void AddStop(std::string_view name, Coordinates&& coordinates) const override {
+                db_.AddStop(static_cast<std::string>(name), coordinates);
             }
 
         private:
             Database& db_;
         };
+
+        class DataReader : public ITransportDataReader {
+        public:
+            DataReader(Database& db) : db_{db} {}
+
+            const Bus* GetBus(std::string_view name) const override {
+                return db_.GetBus(name);
+            }
+            const Stop* GetStop(std::string_view name) const override {
+                return db_.GetStop(name);
+            }
+
+        private:
+            Database& db_;
+        };
+
+    private:
+        DataWriter db_writer_;
+        DataReader db_reader_;
     };
 }
 
@@ -310,9 +358,9 @@ namespace transport_catalogue::data {
     }
 
     template <class Owner>
-    template <typename Bus, std::enable_if_t<std::is_same_v<std::decay_t<Bus>, data::Bus>, bool>>
+    template <typename Bus, detail::EnableIfSame<Bus, data::Bus>>
     const Bus& Database<Owner>::AddBus(Bus&& bus) {
-        const Bus& new_bus = bus_routes_.emplace_back(std::move(bus));
+        const Bus& new_bus = bus_routes_.emplace_back(std::forward<Bus>(bus));
         name_to_bus_[new_bus.name] = &new_bus;
         std::for_each(new_bus.route.begin(), new_bus.route.end(), [this, &new_bus](const Stop* stop) {
             stop_to_buses_[stop].insert(new_bus.name);
