@@ -46,6 +46,12 @@ if (DEFINED CMAKE_BUILD_TYPE AND CMAKE_BUILD_TYPE STREQUAL "Debug")
     endif()
 endif()
 
+set(TESTS_DIR ${PROJECT_SOURCE_DIR}/transport-catalogue/tests)
+set(TESTS_DATA_DIR ${TESTS_DIR}/data)
+set(TESTS_DATA_FILES ${TESTS_DATA_DIR}/json_requests/)
+
+file(COPY ${TESTS_DATA_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
 add_executable(${PROJECT_NAME} ${LIBS})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 target_compile_options(${PROJECT_NAME} PRIVATE ${CFLAGS})
