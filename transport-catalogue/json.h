@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <functional>
 #include <iostream>
 #include <istream>
 #include <limits>
@@ -12,6 +13,7 @@
 #include <string_view>
 #include <type_traits>
 #include <unordered_map>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -26,10 +28,22 @@ namespace json::detail {
     using IsConvertible = std::is_convertible<std::decay_t<FromType>, ToType>;
 
     template <typename FromType, typename ToType>
+    inline constexpr bool IsConvertibleV = std::is_convertible<std::decay_t<FromType>, ToType>::value;
+
+    template <typename FromType, typename ToType>
     using IsSame = std::is_same<std::decay_t<FromType>, ToType>;
 
     template <typename FromType, typename ToType>
+    inline constexpr bool IsSameV = std::is_same<std::decay_t<FromType>, ToType>::value;
+
+    template <typename FromType, typename ToType>
     using EnableIfSame = std::enable_if_t<std::is_same_v<std::decay_t<FromType>, ToType>, bool>;
+
+    template <typename BaseType, typename DerivedType>
+    using IsBaseOf = std::is_base_of<BaseType, std::decay_t<DerivedType>>;
+
+    template <typename FromType, typename ToType>
+    inline constexpr bool IsBaseOfV = IsBaseOf<FromType, ToType>::value;
 
     template <typename BaseType, typename DerivedType>
     using EnableIfBaseOf = std::enable_if_t<std::is_base_of_v<BaseType, std::decay_t<DerivedType>>, bool>;
@@ -38,9 +52,28 @@ namespace json::detail {
 namespace json {
     class Node;
     using Array = std::vector<Node>;
-    using Dict = std::map<std::string, Node, std::less<>>;
-    using NodeValueType = std::variant<std::nullptr_t, std::string, int, double, bool, json::Array, json::Dict>;
+    using DictBase = std::map<std::string, Node, std::less<>>;
+
     using Numeric = std::variant<int, double>;
+
+    class Dict : public DictBase {
+        using DictBase::map;
+
+    public:
+        using ValueType = DictBase::mapped_type;
+        using KeyType = DictBase::key_type;
+        template <
+            typename KeyType = Dict::KeyType,
+            detail::EnableIf<
+                detail::IsSameV<KeyType, Dict::KeyType> ||
+                (detail::IsConvertibleV<KeyType, std::string_view> && detail::IsConvertibleV<KeyType, std::string_view>)> = true>
+        const ValueType* Find(KeyType&& key) const {
+            auto ptr = find(std::forward<KeyType>(key));
+            return ptr == end() ? nullptr : &ptr->second;
+        }
+    };
+
+    using NodeValueType = std::variant<std::nullptr_t, std::string, int, double, bool, json::Array, json::Dict>;
 
     class Node : private NodeValueType {
     public:
