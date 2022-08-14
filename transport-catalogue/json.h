@@ -62,13 +62,24 @@ namespace json {
     public:
         using ValueType = DictBase::mapped_type;
         using KeyType = DictBase::key_type;
+
         template <
             typename KeyType = Dict::KeyType,
             detail::EnableIf<
-                detail::IsSameV<KeyType, Dict::KeyType> ||
+                detail::IsConvertibleV<KeyType, Dict::KeyType> ||
                 (detail::IsConvertibleV<KeyType, std::string_view> && detail::IsConvertibleV<KeyType, std::string_view>)> = true>
         const ValueType* Find(KeyType&& key) const {
-            auto ptr = find(std::forward<KeyType>(key));
+            const auto ptr = find(std::forward<KeyType>(key));
+            return ptr == end() ? nullptr : &ptr->second;
+        }
+
+        template <
+            typename KeyType = Dict::KeyType,
+            detail::EnableIf<
+                detail::IsConvertibleV<KeyType, Dict::KeyType> ||
+                (detail::IsConvertibleV<KeyType, std::string_view> && detail::IsConvertibleV<KeyType, std::string_view>)> = true>
+        ValueType* Find(KeyType&& key) {
+            const auto ptr = find(std::forward<KeyType>(key));
             return ptr == end() ? nullptr : &ptr->second;
         }
     };
@@ -104,6 +115,22 @@ namespace json {
         const auto& GetValue() const;
 
         template <typename T = void, detail::EnableIf<detail::IsConvertible<T, NodeValueType>::value || detail::IsSame<T, void>::value> = true>
+        auto&& ExtractValue() {
+            /*if (!std::holds_alternative<T>(*this)) {
+                throw std::logic_error("Node don't contained this type alternative");
+            }
+            return std::get<T>(std::move(*this));*/
+            if constexpr (detail::IsConvertible<T, NodeValueType>::value == true) {
+                if (!std::holds_alternative<T>(*this)) {
+                    throw std::logic_error("Node don't contained this type alternative");
+                }
+                return std::get<T>(std::move(*this));
+            } else {
+                return static_cast<Node::ValueType&&>(std::move(*this));
+            }
+        }
+
+        template <typename T = void, detail::EnableIf<detail::IsConvertible<T, NodeValueType>::value || detail::IsSame<T, void>::value> = true>
         const auto* GetValuePtr() const noexcept;
 
         const Node::ValueType* GetValuePtr() const;
@@ -116,9 +143,28 @@ namespace json {
 
         const std::string& AsString() const;
 
+        std::string&& ExtractString() {
+            // return std::get<std::string>(std::move(*this));
+            return ExtractValue<std::string>();
+        }
+
         const json::Array& AsArray() const;
 
+        json::Array&& ExtractArray() {
+            // return std::get<json::Array>(std::move(*this));
+            return ExtractValue<json::Array>();
+        }
+
         const json::Dict& AsMap() const;
+
+        json::Dict&& ExtractMap() {
+            /*ValueType tmp;
+            ValueType::swap(tmp);
+            return std::get<json::Dict>(std::move(tmp));*/
+
+            // return std::get<json::Dict>(std::move(*this));
+            return ExtractValue<json::Dict>();
+        }
 
         bool operator==(const Node& rhs) const;
 
@@ -188,6 +234,10 @@ namespace json {
         explicit Document(Node&& root) : root_(std::forward<Node>(root)) {}
 
         const Node& GetRoot() const;
+
+        Node& GetRoot() {
+            return root_;
+        }
 
         bool operator==(const Document& rhs) const {
             return this == &rhs || root_ == rhs.root_;
@@ -302,13 +352,17 @@ namespace json /* Node class template impl */ {
 
     template <typename T, detail::EnableIf<detail::IsConvertible<T, NodeValueType>::value || detail::IsSame<T, void>::value>>
     const auto& Node::GetValue() const {
-        using namespace std::string_literals;
         if constexpr (detail::IsConvertible<T, NodeValueType>::value == true) {
-            try {
+            /*try {
                 return std::get<T>(*this);
             } catch (std::bad_variant_access const& ex) {
-                throw std::logic_error(ex.what() + ": Node don't contained this type alternative."s);
+                throw std::logic_error(ex.what() + ": Node don't contained this type alternative"s);
+            }*/
+            auto* ptr = GetValuePtr<T>();
+            if (ptr == 0) {
+                throw std::logic_error("Node don't contained this type alternative");
             }
+            return *ptr;
         } else {
             return static_cast<const Node::ValueType&>(*this);
         }
