@@ -38,7 +38,7 @@ namespace json::detail {
 namespace json {
     class Node;
     using Array = std::vector<Node>;
-    using Dict = std::map<std::string, Node>;
+    using Dict = std::map<std::string, Node, std::less<>>;
     using NodeValueType = std::variant<std::nullptr_t, std::string, int, double, bool, json::Array, json::Dict>;
     using Numeric = std::variant<int, double>;
 
