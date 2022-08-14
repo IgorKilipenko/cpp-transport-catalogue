@@ -12,6 +12,7 @@
 #include <optional>
 #include <sstream>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -57,7 +58,7 @@ namespace transport_catalogue::io {
 
     inline Request ToRequest(json::Dict map) {
         Request result;
-        std::for_each(std::make_move_iterator(map.begin()), std::make_move_iterator(map.end()), [&result](auto map_item) {
+        std::for_each(std::make_move_iterator(map.begin()), std::make_move_iterator(map.end()), [&result](auto&& map_item) {
             std::string key = std::move(map_item.first);
             assert(result.count(key) == 0);
             auto node_val = map_item.second;
@@ -65,11 +66,20 @@ namespace transport_catalogue::io {
                 json::Array array = node_val.ExtractArray();
                 std::vector<RequestArrayValueType> sub_array;
                 sub_array.reserve(array.size());
-                std::for_each(std::make_move_iterator(array.begin()), std::make_move_iterator(array.end()), [&](auto&& node) {
+                std::for_each(std::make_move_iterator(array.begin()), std::make_move_iterator(array.end()), [&sub_array](auto&& node) {
                     RequestArrayValueType value = detail::convertors::variant_cast(node.ExtractValue());
                     sub_array.emplace_back(std::move(value));
                 });
                 result.emplace(std::move(key), std::move(sub_array));
+            } else if (node_val.IsMap()) {
+                json::Dict map = node_val.ExtractMap();
+                std::unordered_map<std::string, RequestDictValueType> sub_map;
+                std::for_each(std::make_move_iterator(map.begin()), std::make_move_iterator(map.end()), [&sub_map](auto&& node) {
+                    std::string key = std::move(node.first);
+                    RequestArrayValueType value = detail::convertors::variant_cast(node.second.ExtractValue());
+                    sub_map.emplace(std::move(key), std::move(value));
+                });
+                result.emplace(std::move(key), std::move(sub_map));
             } else {
                 RequestValueType value = detail::convertors::variant_cast(node_val.ExtractValue());
                 result.emplace(std::move(key), std::move(value));
