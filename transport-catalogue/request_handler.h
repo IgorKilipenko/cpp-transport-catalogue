@@ -15,7 +15,9 @@
 // с другими подсистемами приложения.
 // См. паттерн проектирования Фасад: https://ru.wikipedia.org/wiki/Фасад_(шаблон_проектирования)
 
+#include <functional>
 #include <optional>
+#include <unordered_map>
 
 #include "domain.h"
 #include "map_renderer.h"
@@ -23,9 +25,31 @@
 #include "transport_catalogue.h"
 
 namespace transport_catalogue::io {
-    class RequestHandler {
-    public:
+    using RequestValueType = std::variant<std::monostate, std::string, int, double, bool, std::vector<std::string>>;
+    using RequestBase = std::unordered_map<std::string, RequestValueType>;
+    class Request : public RequestBase {
+        using RequestBase::unordered_map;
+    };
 
+    class IRequestObserver {
+    public:
+        virtual void OnBaseRequest(std::vector<Request>&& requests) = 0;
+        virtual void OnStatRequest(std::vector<Request>&& requests) = 0;
+        virtual ~IRequestObserver() = default;
+    //protected:
+    //    virtual ~IRequestObserver() = default;
+    };
+
+    class IRequestNotifier {
+    public:
+        virtual void SetObserver(IRequestObserver*) = 0;
+        virtual bool HasObserver() const = 0;
+        virtual void NotifyBaseRequest(std::vector<Request>&& requests) const = 0;
+        virtual void NotifyStatRequest(std::vector<Request>&& requests) const = 0;
+        virtual ~IRequestNotifier() = default;
+    };
+    class RequestHandler : public IRequestObserver {
+    public:
         // MapRenderer понадобится в следующей части итогового проекта
         RequestHandler(const data::ITransportStatDataReader& reader, const io::renderer::MapRenderer& renderer)
             : db_reader_{reader}, renderer_{renderer} {}
@@ -42,6 +66,14 @@ namespace transport_catalogue::io {
 
         // Этот метод будет нужен в следующей части итогового проекта
         svg::Document RenderMap() const;
+
+        void OnBaseRequest([[maybe_unused]] std::vector<Request>&& requests) override {
+            std::cerr << "onBaseRequest" << std::endl;
+        }
+
+        void OnStatRequest([[maybe_unused]] std::vector<Request>&& requests) override {
+            std::cerr << "onStatRequest" << std::endl;
+        }
 
     private:
         // RequestHandler использует агрегацию объектов "Транспортный Справочник" и "Визуализатор Карты"
