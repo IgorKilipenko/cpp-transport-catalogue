@@ -14,14 +14,14 @@
 #include "geo.h"
 #include "transport_catalogue.h"
 
-namespace transport_catalogue::io::detail {
+namespace transport_catalogue::obsolete::io::detail {
     size_t TrimStart(std::string_view& str, const char ch = ' ');
     size_t TrimEnd(std::string_view& str, const char ch = ' ');
     void Trim(std::string_view& str, const char ch = ' ');
     std::vector<std::string_view> SplitIntoWords(std::string_view str, const char ch = ' ', size_t max_count = 0);
 }
 
-namespace transport_catalogue::io {
+namespace transport_catalogue::obsolete::io {
     using namespace std::literals;
 
     class Parser {
@@ -132,7 +132,7 @@ namespace transport_catalogue::io {
     };
 }
 
-namespace transport_catalogue::io {
+namespace transport_catalogue::obsolete::io {
     template <typename TOut>
     TOut Reader::Read() const {
         TOut result;

@@ -59,8 +59,8 @@ namespace transport_catalogue::tests {
 
             std::ostringstream output;
             TransportCatalogue catalog;
-            const io::Reader reader(catalog.GetDataWriter(), mainn_stream);
-            const io::StatReader stat_reader(catalog.GetStatDataReader(), reader, output);
+            const obsolete::io::Reader reader(catalog.GetDataWriter(), mainn_stream);
+            const obsolete::io::StatReader stat_reader(catalog.GetStatDataReader(), reader, output);
 
             reader.PorcessRequests();
             stat_reader.PorcessRequests();

@@ -6,7 +6,7 @@
 #include <string_view>
 #include "domain.h"
 
-namespace transport_catalogue::io {
+namespace transport_catalogue::obsolete::io {
 
     void StatReader::PrintBusInfo(const std::string_view bus_name) const {
         using namespace std::string_view_literals;

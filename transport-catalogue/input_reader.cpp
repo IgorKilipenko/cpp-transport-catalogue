@@ -9,7 +9,7 @@
 
 #include "stat_reader.h"
 
-namespace transport_catalogue::io::detail {
+namespace transport_catalogue::obsolete::io::detail {
     size_t TrimStart(std::string_view& str, const char ch) {
         size_t idx = str.find_first_not_of(ch);
         if (idx != std::string::npos) {
@@ -58,7 +58,7 @@ namespace transport_catalogue::io::detail {
     }
 }
 
-namespace transport_catalogue::io {
+namespace transport_catalogue::obsolete::io {
     std::string Reader::ReadLine() const {
         std::string line;
         std::getline(in_stream_, line);
@@ -120,7 +120,7 @@ namespace transport_catalogue::io {
     }
 }
 
-namespace transport_catalogue::io {
+namespace transport_catalogue::obsolete::io {
     Parser::StopRequest Parser::ParseStop(const RawRequest& req) const {
         assert(!req.value.empty() && !req.args.empty() && req.command == Names::STOP);
 

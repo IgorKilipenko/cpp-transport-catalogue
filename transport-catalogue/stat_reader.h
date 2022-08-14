@@ -8,7 +8,7 @@
 #include "input_reader.h"
 #include "transport_catalogue.h"
 
-namespace transport_catalogue::io {
+namespace transport_catalogue::obsolete::io {
     class StatReader {
     public:
         StatReader(const data::ITransportStatDataReader &db_stat_reader, const Reader &reader, std::ostream &out_stream = std::cout)
