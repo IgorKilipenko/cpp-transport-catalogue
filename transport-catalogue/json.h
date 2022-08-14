@@ -90,6 +90,8 @@ namespace json {
         bool operator==(const Node& rhs) const;
 
         bool operator!=(const Node& rhs) const;
+
+        static Node LoadNode(std::istream& stream);
     };
 
     struct PrintContext {
@@ -161,6 +163,12 @@ namespace json {
         bool operator!=(const Document& rhs) const {
             return !(*this == rhs);
         }
+
+        void Print(std::ostream& output) const;
+
+        static void Print(const Document& doc, std::ostream& output);
+
+        static Document Load(std::istream& stream);
 
     private:
         Node root_;

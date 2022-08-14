@@ -6,21 +6,35 @@ using namespace std;
 
 namespace json {
 
+    Node LoadNode(std::istream& input) {
+        return Parser(input).Parse();
+    }
+
+    Document Load(std::istream& input) {
+        return Document::Load(input);
+    }
+
+    void Print(const Document& doc, std::ostream& output) {
+        Document::Print(doc, output);
+    }
+}
+
+namespace json /* Document */ {
     const Node& Document::GetRoot() const {
         return root_;
     }
 
-    Node LoadNode(istream& input) {
-        return Parser(input).Parse();
-    }
-
-    Document Load(istream& input) {
-        return Document{LoadNode(input)};
-    }
-
-    void Print(const Document& doc, std::ostream& output) {
-        auto node_json = doc.GetRoot().GetValue();
+    void Document::Print(std::ostream& output) const {
+        auto node_json = GetRoot().GetValue();
         std::visit(NodePrinter{output}, node_json);
+    }
+
+    Document Document::Load(std::istream& stream) {
+        return Document{Node::LoadNode(stream)};
+    }
+
+    void Document::Print(const Document& doc, std::ostream& output) {
+        doc.Print(output);
     }
 }
 
@@ -378,5 +392,9 @@ namespace json /* Node */ {
 
     bool Node::operator!=(const Node& rhs) const {
         return !(*this == rhs);
+    }
+
+    Node Node::LoadNode(std::istream& input) {
+        return Parser(input).Parse();
     }
 }
