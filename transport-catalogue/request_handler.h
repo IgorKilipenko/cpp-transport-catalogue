@@ -26,7 +26,8 @@
 
 namespace transport_catalogue::io {
     using RequestArrayValueType = std::variant<std::monostate, std::string, int, double, bool>;
-    using RequestValueType = std::variant<std::monostate, std::string, int, double, bool, std::vector<RequestArrayValueType>>;
+    using RequestDictValueType = std::variant<std::monostate, std::string, int, double, bool>;
+    using RequestValueType = std::variant<std::monostate, std::string, int, double, bool, std::vector<RequestArrayValueType>, std::unordered_map<std::string, RequestDictValueType>>;
     using RequestBase = std::unordered_map<std::string, RequestValueType>;
     class Request : public RequestBase {
         using RequestBase::unordered_map;
