@@ -30,7 +30,7 @@ namespace transport_catalogue::exceptions {
 
 namespace transport_catalogue::detail::convertors {
     template <class... Args>
-    struct variant_cast_proxy {
+    struct VariantCastProxy {
         std::variant<Args...> v;
 
         template <class... ToArgs>
@@ -49,15 +49,15 @@ namespace transport_catalogue::detail::convertors {
     };
 
     template <class... Args>
-    auto variant_cast(std::variant<Args...>&& v) -> variant_cast_proxy<Args...> {
+    auto VariantCast(std::variant<Args...>&& v) -> VariantCastProxy<Args...> {
         return {v};
     }
 }
 
 namespace transport_catalogue::io {
 
-    inline Request ToRequest(json::Dict map) {
-        Request result;
+    inline RawRequest JsonToRawRequest(json::Dict map) {
+        RawRequest result;
         std::for_each(std::make_move_iterator(map.begin()), std::make_move_iterator(map.end()), [&result](auto&& map_item) {
             std::string key = std::move(map_item.first);
             assert(result.count(key) == 0);
@@ -67,7 +67,7 @@ namespace transport_catalogue::io {
                 std::vector<RequestArrayValueType> sub_array;
                 sub_array.reserve(array.size());
                 std::for_each(std::make_move_iterator(array.begin()), std::make_move_iterator(array.end()), [&sub_array](auto&& node) {
-                    RequestArrayValueType value = detail::convertors::variant_cast(node.ExtractValue());
+                    RequestArrayValueType value = detail::convertors::VariantCast(node.ExtractValue());
                     sub_array.emplace_back(std::move(value));
                 });
                 result.emplace(std::move(key), std::move(sub_array));
@@ -76,31 +76,15 @@ namespace transport_catalogue::io {
                 std::unordered_map<std::string, RequestDictValueType> sub_map;
                 std::for_each(std::make_move_iterator(map.begin()), std::make_move_iterator(map.end()), [&sub_map](auto&& node) {
                     std::string key = std::move(node.first);
-                    RequestArrayValueType value = detail::convertors::variant_cast(node.second.ExtractValue());
+                    RequestArrayValueType value = detail::convertors::VariantCast(node.second.ExtractValue());
                     sub_map.emplace(std::move(key), std::move(value));
                 });
                 result.emplace(std::move(key), std::move(sub_map));
             } else {
-                RequestValueType value = detail::convertors::variant_cast(node_val.ExtractValue());
+                RequestValueType value = detail::convertors::VariantCast(node_val.ExtractValue());
                 result.emplace(std::move(key), std::move(value));
             }
         });
-        return result;
-    }
-    inline std::optional<Request> ToRequest(json::Node&& node) {
-        if (!node.IsMap()) {
-            return std::nullopt;
-        }
-
-        Request result;
-
-        const json::Dict map = node.ExtractMap();
-        std::for_each(std::make_move_iterator(map.begin()), std::make_move_iterator(map.end()), [&result](auto&& map_item) {
-            if constexpr (std::is_convertible_v<std::decay_t<decltype(map_item.second)>, RequestValueType>) {
-                result.emplace(std::move(map_item.first), std::move(map_item.second));
-            }
-        });
-
         return result;
     }
 }
@@ -162,14 +146,14 @@ namespace transport_catalogue::io {
             observer_ = observer;
         }
 
-        void NotifyBaseRequest(std::vector<Request>&& requests) const override {
+        void NotifyBaseRequest(std::vector<RawRequest>&& requests) const override {
             if (!HasObserver()) {
                 return;
             }
             observer_->OnBaseRequest(std::move(requests));
         }
 
-        void NotifyStatRequest(std::vector<Request>&& requests) const override {
+        void NotifyStatRequest(std::vector<RawRequest>&& requests) const override {
             if (!HasObserver()) {
                 return;
             }
@@ -183,10 +167,10 @@ namespace transport_catalogue::io {
         void ReadDocument() {
             const auto extract = [](json::Dict::ValueType* req_ptr) {
                 auto array = req_ptr->ExtractArray();
-                std::vector<Request> requests;
+                std::vector<RawRequest> requests;
                 requests.reserve(array.size());
                 std::for_each(std::make_move_iterator(array.begin()), std::make_move_iterator(array.end()), [&requests](json::Node&& node) {
-                    requests.push_back(ToRequest(node.ExtractMap()));
+                    requests.push_back(JsonToRawRequest(node.ExtractMap()));
                 });
                 return requests;
             };
@@ -200,11 +184,11 @@ namespace transport_catalogue::io {
 
             if (base_req_ptr != nullptr && base_req_ptr->IsArray()) {
                 // NotifyBaseRequest(ToRequest(json::Dict(base_req_ptr->AsMap())));
-                std::vector<Request> requests = extract(base_req_ptr);
+                std::vector<RawRequest> requests = extract(base_req_ptr);
                 NotifyBaseRequest(std::move(requests));
             }
             if (stat_req_ptr != nullptr && stat_req_ptr->IsMap()) {
-                std::vector<Request> requests = extract(base_req_ptr);
+                std::vector<RawRequest> requests = extract(base_req_ptr);
                 NotifyBaseRequest(std::move(requests));
             }
         }

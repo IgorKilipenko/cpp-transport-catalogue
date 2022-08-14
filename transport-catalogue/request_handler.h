@@ -29,14 +29,14 @@ namespace transport_catalogue::io {
     using RequestDictValueType = std::variant<std::monostate, std::string, int, double, bool>;
     using RequestValueType = std::variant<std::monostate, std::string, int, double, bool, std::vector<RequestArrayValueType>, std::unordered_map<std::string, RequestDictValueType>>;
     using RequestBase = std::unordered_map<std::string, RequestValueType>;
-    class Request : public RequestBase {
+    class RawRequest : public RequestBase {
         using RequestBase::unordered_map;
     };
 
     class IRequestObserver {
     public:
-        virtual void OnBaseRequest(std::vector<Request>&& requests) = 0;
-        virtual void OnStatRequest(std::vector<Request>&& requests) = 0;
+        virtual void OnBaseRequest(std::vector<RawRequest>&& requests) = 0;
+        virtual void OnStatRequest(std::vector<RawRequest>&& requests) = 0;
         virtual ~IRequestObserver() = default;
     //protected:
     //    virtual ~IRequestObserver() = default;
@@ -46,8 +46,8 @@ namespace transport_catalogue::io {
     public:
         virtual void SetObserver(IRequestObserver*) = 0;
         virtual bool HasObserver() const = 0;
-        virtual void NotifyBaseRequest(std::vector<Request>&& requests) const = 0;
-        virtual void NotifyStatRequest(std::vector<Request>&& requests) const = 0;
+        virtual void NotifyBaseRequest(std::vector<RawRequest>&& requests) const = 0;
+        virtual void NotifyStatRequest(std::vector<RawRequest>&& requests) const = 0;
         virtual ~IRequestNotifier() = default;
     };
     class RequestHandler : public IRequestObserver {
@@ -69,11 +69,11 @@ namespace transport_catalogue::io {
         // Этот метод будет нужен в следующей части итогового проекта
         svg::Document RenderMap() const;
 
-        void OnBaseRequest([[maybe_unused]] std::vector<Request>&& requests) override {
+        void OnBaseRequest([[maybe_unused]] std::vector<RawRequest>&& requests) override {
             std::cerr << "onBaseRequest" << std::endl;
         }
 
-        void OnStatRequest([[maybe_unused]] std::vector<Request>&& requests) override {
+        void OnStatRequest([[maybe_unused]] std::vector<RawRequest>&& requests) override {
             std::cerr << "onStatRequest" << std::endl;
         }
 
@@ -81,5 +81,11 @@ namespace transport_catalogue::io {
         // RequestHandler использует агрегацию объектов "Транспортный Справочник" и "Визуализатор Карты"
         const data::ITransportStatDataReader& db_reader_;
         const renderer::MapRenderer& renderer_;
+    };
+}
+
+namespace transport_catalogue::io {
+    class RequestParser {
+
     };
 }
