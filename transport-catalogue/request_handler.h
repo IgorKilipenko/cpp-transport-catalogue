@@ -25,7 +25,8 @@
 #include "transport_catalogue.h"
 
 namespace transport_catalogue::io {
-    using RequestValueType = std::variant<std::monostate, std::string, int, double, bool, std::vector<std::string>>;
+    using RequestArrayValueType = std::variant<std::monostate, std::string, int, double, bool>;
+    using RequestValueType = std::variant<std::monostate, std::string, int, double, bool, std::vector<RequestArrayValueType>>;
     using RequestBase = std::unordered_map<std::string, RequestValueType>;
     class Request : public RequestBase {
         using RequestBase::unordered_map;

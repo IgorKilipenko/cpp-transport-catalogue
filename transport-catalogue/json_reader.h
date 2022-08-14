@@ -27,7 +27,7 @@ namespace transport_catalogue::exceptions {
     };
 }
 
-namespace transport_catalogue::detail {
+namespace transport_catalogue::detail::convertors {
     template <class... Args>
     struct variant_cast_proxy {
         std::variant<Args...> v;
@@ -36,7 +36,8 @@ namespace transport_catalogue::detail {
         operator std::variant<ToArgs...>() const {
             return std::visit(
                 [](auto&& arg) -> std::variant<ToArgs...> {
-                    if constexpr (detail::IsConvertibleV<std::decay_t<decltype(arg)>, std::variant<ToArgs...>>) {
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (detail::IsConvertibleV<T, std::variant<ToArgs...>>) {
                         return std::move(arg);
                     } else {
                         return std::monostate();
@@ -58,16 +59,21 @@ namespace transport_catalogue::io {
         Request result;
         std::for_each(std::make_move_iterator(map.begin()), std::make_move_iterator(map.end()), [&result](auto map_item) {
             std::string key = std::move(map_item.first);
-            RequestValueType value = detail::variant_cast(map_item.second.ExtractValue());
-            result.emplace(std::move(key), std::move(value));
-            /*auto value = map_item.second.ExtractValue();
-            if constexpr (std::is_convertible_v<std::decay_t<decltype(value)>, RequestValueType>) {
-                result.emplace(std::move(map_item.first), std::move(value));
-            }*/
-            /*auto key = std::move(map_item.first);
-            json::NodeValueType value = map_item.second.ExtractValue();
-
-            std::visit([](int value)->void{}, value);*/
+            assert(result.count(key) == 0);
+            auto node_val = map_item.second;
+            if (node_val.IsArray()) {
+                json::Array array = node_val.ExtractArray();
+                std::vector<RequestArrayValueType> sub_array;
+                sub_array.reserve(array.size());
+                std::for_each(std::make_move_iterator(array.begin()), std::make_move_iterator(array.end()), [&](auto&& node) {
+                    RequestArrayValueType value = detail::convertors::variant_cast(node.ExtractValue());
+                    sub_array.emplace_back(std::move(value));
+                });
+                result.emplace(std::move(key), std::move(sub_array));
+            } else {
+                RequestValueType value = detail::convertors::variant_cast(node_val.ExtractValue());
+                result.emplace(std::move(key), std::move(value));
+            }
         });
         return result;
     }
