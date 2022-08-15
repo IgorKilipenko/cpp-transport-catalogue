@@ -84,7 +84,7 @@ namespace transport_catalogue::tests {
                 data::Route route{{}};
                 data::Bus bus("256"s, route);
                 catalog.AddBus(data::Bus{bus});
-                const data::Bus *result = catalog.GetBus(bus.name);
+                [[maybe_unused]]const data::Bus *result = catalog.GetBus(bus.name);
                 assert(result && bus == *result);
             }
             // Test IDbWriter
@@ -95,7 +95,7 @@ namespace transport_catalogue::tests {
                 data::Route route{{}};
                 data::Bus bus("256"s, route);
                 db_writer.AddBus(data::Bus{bus});
-                const data::Bus *result = catalog.GetBus(bus.name);
+                [[maybe_unused]]const data::Bus *result = catalog.GetBus(bus.name);
                 assert(result && bus == *result);
             }
         }
@@ -106,7 +106,7 @@ namespace transport_catalogue::tests {
             const auto &db_reader = catalog.GetDataReader();
             data::Stop expected_result{"Stop1", {94, 54}};
             db_writer.AddStop(expected_result.name, geo::Coordinates{expected_result.coordinates});
-            const auto* result = db_reader.GetStop(expected_result.name);
+            [[maybe_unused]]const auto* result = db_reader.GetStop(expected_result.name);
             assert(result && expected_result == *result);
         }
 
