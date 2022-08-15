@@ -5,8 +5,6 @@
  * а также код обработки запросов к базе и формирование массива ответов в формате JSON
  */
 
-#include <sys/types.h>
-
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -116,11 +114,11 @@ namespace transport_catalogue::io {
         JsonReader(std::istream& input_stream) noexcept : input_stream_{input_stream} {}
 
         void AddObserver(std::shared_ptr<IRequestObserver> observer) override {
-            observers_.emplace(observer, observer);
+            observers_.emplace(haher_(observer.get()), observer);
         }
 
         void RemoveObserver(std::shared_ptr<IRequestObserver> observer) override {
-            observers_.erase(observer);
+            observers_.erase(haher_(observer.get()));
         }
 
         void NotifyBaseRequest(std::vector<RawRequest>&& requests) override {
@@ -154,7 +152,8 @@ namespace transport_catalogue::io {
         void ReadDocument() {
             [[maybe_unused]] char ch = input_stream_.peek();
             if (input_stream_.peek() != json::Parser::Token::START_OBJ) {
-                input_stream_.ignore(std::numeric_limits<std::streamsize>::max(), json::Parser::Token::START_OBJ).putback(json::Parser::Token::START_OBJ);
+                input_stream_.ignore(std::numeric_limits<std::streamsize>::max(), json::Parser::Token::START_OBJ)
+                    .putback(json::Parser::Token::START_OBJ);
             }
             ch = input_stream_.peek();
 
@@ -176,7 +175,8 @@ namespace transport_catalogue::io {
 
     private:
         std::istream& input_stream_;
-        std::unordered_map<std::shared_ptr<IRequestObserver>, std::weak_ptr<IRequestObserver>> observers_;
+        std::unordered_map<size_t, std::weak_ptr<IRequestObserver>> observers_;
+        std::hash<void*> haher_;
         constexpr static const std::string_view BASE_REQUESTS_LITERAL = "base_requests"sv;
         constexpr static const std::string_view STAT_REQUESTS_LITERAL = "stat_requests"sv;
 
