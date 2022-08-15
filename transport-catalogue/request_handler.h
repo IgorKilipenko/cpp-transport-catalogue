@@ -24,6 +24,14 @@
 #include "svg.h"
 #include "transport_catalogue.h"
 
+namespace transport_catalogue::exceptions {
+    class RequestParsingException : public std::logic_error {
+    public:
+        template <typename String = std::string>
+        RequestParsingException(String&& message) : std::runtime_error(std::forward<String>(message)) {}
+    };
+}
+
 namespace transport_catalogue::io {
     using RequestArrayValueType = std::variant<std::monostate, std::string, int, double, bool>;
     using RequestDictValueType = std::variant<std::monostate, std::string, int, double, bool>;
