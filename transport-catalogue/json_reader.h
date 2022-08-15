@@ -114,11 +114,11 @@ namespace transport_catalogue::io {
         JsonReader(std::istream& input_stream) noexcept : input_stream_{input_stream} {}
 
         void AddObserver(std::shared_ptr<IRequestObserver> observer) override {
-            observers_.emplace(haher_(observer.get()), observer);
+            observers_.emplace(observer.get(), observer);
         }
 
         void RemoveObserver(std::shared_ptr<IRequestObserver> observer) override {
-            observers_.erase(haher_(observer.get()));
+            observers_.erase(observer.get());
         }
 
         void NotifyBaseRequest(std::vector<RawRequest>&& requests) override {
@@ -174,9 +174,17 @@ namespace transport_catalogue::io {
         }
 
     private:
+        struct Hasher {
+            size_t operator()(const IRequestObserver* ptr) const {
+                return hasher_(ptr);
+            }
+            private:
+            std::hash<const void*> hasher_;
+        };
+
+    private:
         std::istream& input_stream_;
-        std::unordered_map<size_t, std::weak_ptr<IRequestObserver>> observers_;
-        std::hash<void*> haher_;
+        std::unordered_map<const IRequestObserver*, std::weak_ptr<IRequestObserver>, Hasher> observers_;
         constexpr static const std::string_view BASE_REQUESTS_LITERAL = "base_requests"sv;
         constexpr static const std::string_view STAT_REQUESTS_LITERAL = "stat_requests"sv;
 
