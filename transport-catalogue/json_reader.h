@@ -5,15 +5,20 @@
  * а также код обработки запросов к базе и формирование массива ответов в формате JSON
  */
 
+#include <sys/types.h>
+
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <fstream>
+#include <functional>
 #include <iterator>
 #include <memory>
 #include <optional>
 #include <sstream>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -81,6 +86,8 @@ namespace transport_catalogue::io {
     using namespace std::literals;
 
     class JsonReader : public IRequestNotifier {
+        enum class RequestType : u_int8_t { BASE, STAT };
+
     public:
         class JsonToRequestConvertor {
             const int def_indent_step = 4;
@@ -108,29 +115,49 @@ namespace transport_catalogue::io {
     public:
         JsonReader(std::istream& input_stream) noexcept : input_stream_{input_stream} {}
 
-        void SetObserver(std::shared_ptr<IRequestObserver> observer) override {
-            observer_ = std::weak_ptr<IRequestObserver>(observer);
+        void AddObserver(std::shared_ptr<IRequestObserver> observer) override {
+            observers_.emplace(observer, observer);
         }
 
-        void NotifyBaseRequest(std::vector<RawRequest>&& requests) const override {
-            if (!HasObserver()) {
-                return;
-            }
-            observer_.lock()->OnBaseRequest(std::move(requests));
+        void RemoveObserver(std::shared_ptr<IRequestObserver> observer) override {
+            observers_.erase(observer);
         }
 
-        void NotifyStatRequest(std::vector<RawRequest>&& requests) const override {
-            if (!HasObserver()) {
-                return;
-            }
-            observer_.lock()->OnStatRequest(std::move(requests));
+        void NotifyBaseRequest(std::vector<RawRequest>&& requests) override {
+            NotifyObservers(RequestType::BASE, std::move(requests));
+        }
+
+        void NotifyStatRequest(std::vector<RawRequest>&& requests) override {
+            NotifyObservers(RequestType::STAT, std::move(requests));
         }
 
         bool HasObserver() const override {
-            return !observer_.expired();
+            return std::any_of(observers_.begin(), observers_.end(), [](const auto& map_item) {
+                return !map_item.second.expired();
+            });
+        }
+
+        void NotifyObservers(RequestType type, std::vector<RawRequest>&& requests) {
+            for (auto ptr = observers_.begin(); ptr != observers_.end();) {
+                if (ptr->second.expired()) {
+                    ptr = observers_.erase(ptr);
+                }
+                if (type == RequestType::BASE) {
+                    ptr->second.lock()->OnBaseRequest(std::move(requests));
+                } else {
+                    ptr->second.lock()->OnStatRequest(std::move(requests));
+                }
+                ++ptr;
+            }
         }
 
         void ReadDocument() {
+            [[maybe_unused]] char ch = input_stream_.peek();
+            if (input_stream_.peek() != json::Parser::Token::START_OBJ) {
+                input_stream_.ignore(std::numeric_limits<std::streamsize>::max(), json::Parser::Token::START_OBJ).putback(json::Parser::Token::START_OBJ);
+            }
+            ch = input_stream_.peek();
+
             json::Document doc = json::Document::Load(input_stream_);
             json::Node& root = doc.GetRoot();
             assert(root.IsMap());
@@ -149,7 +176,7 @@ namespace transport_catalogue::io {
 
     private:
         std::istream& input_stream_;
-        std::weak_ptr<IRequestObserver> observer_;
+        std::unordered_map<std::shared_ptr<IRequestObserver>, std::weak_ptr<IRequestObserver>> observers_;
         constexpr static const std::string_view BASE_REQUESTS_LITERAL = "base_requests"sv;
         constexpr static const std::string_view STAT_REQUESTS_LITERAL = "stat_requests"sv;
 

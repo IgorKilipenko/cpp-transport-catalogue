@@ -53,12 +53,14 @@ namespace transport_catalogue::io {
 
     class IRequestNotifier {
     public:
-        virtual void SetObserver(std::shared_ptr<IRequestObserver> observer) = 0;
+        virtual void AddObserver(std::shared_ptr<IRequestObserver> observer) = 0;
+        virtual void RemoveObserver(std::shared_ptr<IRequestObserver> observer) = 0;
         virtual bool HasObserver() const = 0;
-        virtual void NotifyBaseRequest(std::vector<RawRequest>&& requests) const = 0;
-        virtual void NotifyStatRequest(std::vector<RawRequest>&& requests) const = 0;
+        virtual void NotifyBaseRequest(std::vector<RawRequest>&& requests) = 0;
+        virtual void NotifyStatRequest(std::vector<RawRequest>&& requests) = 0;
         virtual ~IRequestNotifier() = default;
     };
+
     class RequestHandler : public IRequestObserver {
     public:
         // MapRenderer понадобится в следующей части итогового проекта

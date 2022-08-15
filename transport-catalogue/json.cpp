@@ -1,6 +1,7 @@
 #include "json.h"
 
 #include <cstddef>
+#include <unordered_set>
 
 using namespace std;
 
@@ -41,22 +42,50 @@ namespace json /* Document */ {
 namespace json /* Parser */ {
 
     Node Parser::Parse() const {
-        char c;
-        input_ >> c;
+        auto it = std::istreambuf_iterator<char>(input_);
+        auto end = std::istreambuf_iterator<char>();
+        if (it == end) {
+            return {};
+        }
+        size_t skip_count = 0;
+        char ch = *it;
+        for (; it != end; ++it) {
+            ch = *it;
+            ++skip_count;
+            if (start_literals.count(ch) || std::isdigit(ch)) {
+                // input_.putback(ch);
+                break;
+            }
+            
+        }
+        if (it == end) {
+            // Поток закончился до того, как встретили закрывающую кавычку?
+            throw ParsingError("String parsing error");
+        }
+        input_.seekg(skip_count);
+        [[maybe_unused]]char yyyy = input_.peek();
+        /*char ch;
+        input_ >> ch;
+        for (; ch != input_.eof(); input_ >> ch) {
+            if (start_literals.count(ch) || std::isdigit(ch)) {
+                // input_.putback(ch);
+                break;
+            }
+        }*/
 
-        if (c && c == Token::START_ARRAY) {
+        if (ch == Token::START_ARRAY) {
             return ParseArray();
-        } else if (c == Token::START_OBJ) {
+        } else if (ch == Token::START_OBJ) {
             return ParseDict();
-        } else if (c == Token::START_STRING) {
+        } else if (ch == Token::START_STRING) {
             return ParseString();
         } else {
-            input_.putback(c);
-            if (c == Token::START_TRUE || c == Token::START_FALSE) {
+            input_.putback(ch);
+            if (ch == Token::START_TRUE || ch == Token::START_FALSE) {
                 return ParseBool();
-            } else if (c == Token::START_NULL) {
+            } else if (ch == Token::START_NULL) {
                 return ParseNull();
-            } else if (std::isdigit(c) || c == Token::SIGN_LITERAL) {
+            } else if (std::isdigit(ch) || ch == Token::SIGN_LITERAL) {
                 const Numeric result = ParseNumber();
                 if (holds_alternative<int>(result)) {
                     return get<int>(result);
@@ -121,21 +150,28 @@ namespace json /* Parser */ {
 
         Dict result;
         char ch = '\0';
-
-        for (; input_ >> ch && ch != Token::END_OBJ;) {
-            if (ch == Token::VALUE_SEPARATOR) {
-                input_ >> ch;
+        input_ >> ch;
+        for (; ch != input_.eof() && ch != Token::END_OBJ; input_ >> ch) {
+            if (ch != Token::START_STRING) {
+                // input_ >> ch;
+                continue;
             }
 
             const std::string key = ParseString();
             Ignore(Token::DICT_SEPARATOR);
-            if (!input_.peek()) {
+            if (input_.peek() == input_.eof()) {
                 throw ParsingError("Dict parsing error. Not found dictionary key/value separator character : ["s + Token::DICT_SEPARATOR + "]"s);
             }
             result.emplace(move(key), Parse());
 
-            [[maybe_unused]] char ppp = +input_.peek();
-            ppp = input_.peek();
+            [[maybe_unused]] char ppp = +input_.peek();  //!!!!!!!!!
+            ppp = input_.peek();                         //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        }
+
+        if (!input_.peek()) {
+            char ppp;
+            input_ >> ppp;
+            throw std::logic_error("Array parsing error");
         }
 
         if (ch != Token::END_OBJ) {
@@ -285,6 +321,9 @@ namespace json /* Parser::StringParser */ {
                 }
             } else if (ch == '\n' || ch == '\r') {
                 // Строковый литерал внутри- JSON не может прерываться символами \r или \n
+                input_.putback(ch); //!!!!!!!!!!!!!!
+                std::string line;
+                std::getline(input_, line, '\r');
                 throw ParsingError("Unexpected end of line"s);
             } else {
                 // Просто считываем очередной символ и помещаем его в результирующую строку

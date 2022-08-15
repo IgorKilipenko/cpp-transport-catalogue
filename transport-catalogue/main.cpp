@@ -1,10 +1,11 @@
 #include <memory>
 #include <sstream>
+
 #include "./tests/json_test.h"
 #include "./tests/svg_test.h"
 #include "./tests/transport_catalogue_test.h"
-#include "request_handler.h"
 #include "json_reader.h"
+#include "request_handler.h"
 #include "transport_catalogue.h"
 
 /*
@@ -28,17 +29,25 @@ int main() {
     JsonTester json_tester;
     json_tester.TestJsonlib();
 
-    TransportCatalogueTester tester;
+    /*TransportCatalogueTester tester;
     tester.TestTransportCatalogue();
-
+    std::shared_ptr<io::RequestHandler> main_request_handler_ptr;
     std::string json_file = io::FileReader::Read("/home/igor/Documents/test1.json");
     std::stringstream istream{json_file};
     io::JsonReader json_reader{istream};
     TransportCatalogue catalog;
     io::renderer::MapRenderer renderer;
-    const auto request_handler_ptr = std::make_shared<io::RequestHandler>(catalog.GetStatDataReader(), renderer);
-    json_reader.SetObserver(request_handler_ptr);
+    main_request_handler_ptr = std::make_shared<io::RequestHandler>(catalog.GetStatDataReader(), renderer);
+    json_reader.AddObserver(main_request_handler_ptr);
     json_reader.ReadDocument();
+    {
+        istream << json_file;
+        //std::cerr << istream.str() << std::endl;
+        const auto request_handler_ptr = std::make_shared<io::RequestHandler>(catalog.GetStatDataReader(), renderer);
+        json_reader.AddObserver(request_handler_ptr);
+        json_reader.ReadDocument();
+    }*/
+
     return 0;
 }
 
@@ -70,5 +79,5 @@ int main() {
     { "id": 1, "type": "Stop", "name": "Ривьерский мост" },
     { "id": 2, "type": "Bus", "name": "114" }
   ]
-} 
+}
 */

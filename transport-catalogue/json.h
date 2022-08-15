@@ -13,6 +13,7 @@
 #include <string_view>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -259,7 +260,7 @@ namespace json {
 
     class Parser {
     public:
-        class ParsingError : public std::runtime_error {
+        class ParsingError : public std::runtime_error {    //!!!!!!!!!!
         public:
             using runtime_error::runtime_error;
         };
@@ -282,6 +283,11 @@ namespace json {
             static const char DICT_SEPARATOR = ':';
         };
 
+        const std::unordered_set<char> start_literals{Token::START_OBJ, Token::START_ARRAY,  Token::START_STRING, Token::START_TRUE,
+                                                      Token::START_FALSE, Token::START_NULL,   Token::SIGN_LITERAL};
+        const std::unordered_set<char> end_literals{Token::END_OBJ, Token::END_ARRAY,  Token::START_STRING, Token::START_TRUE,
+                                                      Token::START_FALSE, Token::START_NULL,   Token::SIGN_LITERAL};
+
     public:
         explicit Parser(std::istream& input_stream) : input_(input_stream), numeric_parser_(input_), string_parser_(input_) {}
 
@@ -302,6 +308,17 @@ namespace json {
         void Ignore(const char character) const {
             static const std::streamsize max_count = std::numeric_limits<std::streamsize>::max();
             input_.ignore(max_count, character);
+        }
+
+        void Skip(const char character) const {
+            char ch;
+
+            if (input_ >> ch && ch != character) {
+                input_.putback(ch);
+                return;
+            }
+            for (; input_ >> ch && ch == character;) {
+            }
         }
 
     private:
