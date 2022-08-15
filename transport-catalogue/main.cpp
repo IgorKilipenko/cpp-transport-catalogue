@@ -29,12 +29,13 @@ int main() {
     JsonTester json_tester;
     json_tester.TestJsonlib();
 
-    /*TransportCatalogueTester tester;
+    TransportCatalogueTester tester;
     tester.TestTransportCatalogue();
     std::shared_ptr<io::RequestHandler> main_request_handler_ptr;
     std::string json_file = io::FileReader::Read("/home/igor/Documents/test1.json");
-    std::stringstream istream{json_file};
+    std::stringstream istream;
     io::JsonReader json_reader{istream};
+    istream << json_file << std::endl;
     TransportCatalogue catalog;
     io::renderer::MapRenderer renderer;
     main_request_handler_ptr = std::make_shared<io::RequestHandler>(catalog.GetStatDataReader(), renderer);
@@ -46,7 +47,9 @@ int main() {
         const auto request_handler_ptr = std::make_shared<io::RequestHandler>(catalog.GetStatDataReader(), renderer);
         json_reader.AddObserver(request_handler_ptr);
         json_reader.ReadDocument();
-    }*/
+    }
+    istream << json_file;
+    json_reader.ReadDocument();
 
     return 0;
 }

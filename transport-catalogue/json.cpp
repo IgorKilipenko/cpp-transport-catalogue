@@ -42,28 +42,25 @@ namespace json /* Document */ {
 namespace json /* Parser */ {
 
     Node Parser::Parse() const {
-        auto it = std::istreambuf_iterator<char>(input_);
-        auto end = std::istreambuf_iterator<char>();
+        auto it = std::istream_iterator<char>(input_);
+        auto end = std::istream_iterator<char>();
         if (it == end) {
             return {};
         }
-        size_t skip_count = 0;
-        char ch = *it;
+        char ch;
         for (; it != end; ++it) {
             ch = *it;
-            ++skip_count;
             if (start_literals.count(ch) || std::isdigit(ch)) {
                 // input_.putback(ch);
                 break;
             }
-            
         }
         if (it == end) {
             // Поток закончился до того, как встретили закрывающую кавычку?
             throw ParsingError("String parsing error");
         }
-        input_.seekg(skip_count);
-        [[maybe_unused]]char yyyy = input_.peek();
+        //! input_.seekg(skip_count);
+        [[maybe_unused]] char yyyy = input_.peek();  //!
         /*char ch;
         input_ >> ch;
         for (; ch != input_.eof(); input_ >> ch) {
@@ -129,7 +126,7 @@ namespace json /* Parser */ {
         using namespace std::string_literals;
 
         Array result;
-        char ch = '\0';
+        char ch;
 
         for (; input_ >> ch && ch != Token::END_ARRAY;) {
             if (ch != Token::VALUE_SEPARATOR) {
@@ -149,33 +146,32 @@ namespace json /* Parser */ {
         using namespace std::string_literals;
 
         Dict result;
-        char ch = '\0';
-        input_ >> ch;
-        for (; ch != input_.eof() && ch != Token::END_OBJ; input_ >> ch) {
+
+        auto ptr = std::istream_iterator<char>(input_);
+        auto end = std::istream_iterator<char>();
+        if (ptr == end) {
+            throw ParsingError("Dict parsing error. Stream is empty");
+        }
+        char ch = *ptr;
+        for (; ptr != end && ch != Token::END_OBJ; ++ptr, ch = *ptr) {
             if (ch != Token::START_STRING) {
                 // input_ >> ch;
                 continue;
             }
 
             const std::string key = ParseString();
-            Ignore(Token::DICT_SEPARATOR);
-            if (input_.peek() == input_.eof()) {
-                throw ParsingError("Dict parsing error. Not found dictionary key/value separator character : ["s + Token::DICT_SEPARATOR + "]"s);
-            }
+            Ignore(Token::KEYVAL_SEPARATOR);
+            /*if (input_.peek() == input_.eof()) {
+                throw ParsingError("Dict parsing error. Not found dictionary key/value separator character : ["s + Token::KEYVAL_SEPARATOR + "]"s);
+            }*/
             result.emplace(move(key), Parse());
 
             [[maybe_unused]] char ppp = +input_.peek();  //!!!!!!!!!
             ppp = input_.peek();                         //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         }
 
-        if (!input_.peek()) {
-            char ppp;
-            input_ >> ppp;
-            throw std::logic_error("Array parsing error");
-        }
-
         if (ch != Token::END_OBJ) {
-            throw ParsingError("Dict parsing error");
+            throw ParsingError ("Dict parsing error. Not found dictionary close brace");
         }
 
         return result;
@@ -321,7 +317,7 @@ namespace json /* Parser::StringParser */ {
                 }
             } else if (ch == '\n' || ch == '\r') {
                 // Строковый литерал внутри- JSON не может прерываться символами \r или \n
-                input_.putback(ch); //!!!!!!!!!!!!!!
+                input_.putback(ch);  //!!!!!!!!!!!!!!
                 std::string line;
                 std::getline(input_, line, '\r');
                 throw ParsingError("Unexpected end of line"s);

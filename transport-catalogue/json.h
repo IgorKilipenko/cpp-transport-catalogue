@@ -280,7 +280,7 @@ namespace json {
             static const char END_STRING = START_STRING;
             static const char VALUE_SEPARATOR = ',';
             static const char SIGN_LITERAL = '-';
-            static const char DICT_SEPARATOR = ':';
+            static const char KEYVAL_SEPARATOR = ':';
         };
 
         const std::unordered_set<char> start_literals{Token::START_OBJ, Token::START_ARRAY,  Token::START_STRING, Token::START_TRUE,
@@ -402,7 +402,7 @@ namespace json /* NodePrinter class template impl */ {
         context_.out << Parser::Token::START_OBJ;
         static const std::string sep{Parser::Token::VALUE_SEPARATOR};
         std::for_each(dict.begin(), dict.end(), [this, &size](const auto& item) {
-            context_.out << Parser::Token::START_STRING << item.first << Parser::Token::END_STRING << Parser::Token::DICT_SEPARATOR << ' ';
+            context_.out << Parser::Token::START_STRING << item.first << Parser::Token::END_STRING << Parser::Token::KEYVAL_SEPARATOR << ' ';
             PrintValue(item.second);
             context_.out << (--size > 0 ? sep : "");
         });
