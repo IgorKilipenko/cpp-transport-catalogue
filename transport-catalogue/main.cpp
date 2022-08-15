@@ -1,3 +1,4 @@
+#include <memory>
 #include <sstream>
 #include "./tests/json_test.h"
 #include "./tests/svg_test.h"
@@ -35,8 +36,8 @@ int main() {
     io::JsonReader json_reader{istream};
     TransportCatalogue catalog;
     io::renderer::MapRenderer renderer;
-    io::RequestHandler request_handler{catalog.GetStatDataReader(), renderer};
-    json_reader.SetObserver(&request_handler);
+    const auto request_handler_ptr = std::make_shared<io::RequestHandler>(catalog.GetStatDataReader(), renderer);
+    json_reader.SetObserver(request_handler_ptr);
     json_reader.ReadDocument();
     return 0;
 }

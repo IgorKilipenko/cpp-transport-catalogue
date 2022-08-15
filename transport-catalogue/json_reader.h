@@ -9,6 +9,7 @@
 #include <cassert>
 #include <fstream>
 #include <iterator>
+#include <memory>
 #include <optional>
 #include <sstream>
 #include <type_traits>
@@ -107,26 +108,26 @@ namespace transport_catalogue::io {
     public:
         JsonReader(std::istream& input_stream) noexcept : input_stream_{input_stream} {}
 
-        void SetObserver(IRequestObserver* observer) override {
-            observer_ = observer;
+        void SetObserver(std::shared_ptr<IRequestObserver> observer) override {
+            observer_ = std::weak_ptr<IRequestObserver>(observer);
         }
 
         void NotifyBaseRequest(std::vector<RawRequest>&& requests) const override {
             if (!HasObserver()) {
                 return;
             }
-            observer_->OnBaseRequest(std::move(requests));
+            observer_.lock()->OnBaseRequest(std::move(requests));
         }
 
         void NotifyStatRequest(std::vector<RawRequest>&& requests) const override {
             if (!HasObserver()) {
                 return;
             }
-            observer_->OnStatRequest(std::move(requests));
+            observer_.lock()->OnStatRequest(std::move(requests));
         }
 
         bool HasObserver() const override {
-            return observer_ != nullptr;
+            return !observer_.expired();
         }
 
         void ReadDocument() {
@@ -148,7 +149,7 @@ namespace transport_catalogue::io {
 
     private:
         std::istream& input_stream_;
-        IRequestObserver* observer_ = nullptr;
+        std::weak_ptr<IRequestObserver> observer_;
         constexpr static const std::string_view BASE_REQUESTS_LITERAL = "base_requests"sv;
         constexpr static const std::string_view STAT_REQUESTS_LITERAL = "stat_requests"sv;
 

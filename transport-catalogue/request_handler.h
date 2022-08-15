@@ -35,7 +35,8 @@ namespace transport_catalogue::exceptions {
 namespace transport_catalogue::io {
     using RequestArrayValueType = std::variant<std::monostate, std::string, int, double, bool>;
     using RequestDictValueType = std::variant<std::monostate, std::string, int, double, bool>;
-    using RequestValueType = std::variant<std::monostate, std::string, int, double, bool, std::vector<RequestArrayValueType>, std::unordered_map<std::string, RequestDictValueType>>;
+    using RequestValueType = std::variant<
+        std::monostate, std::string, int, double, bool, std::vector<RequestArrayValueType>, std::unordered_map<std::string, RequestDictValueType>>;
     using RequestBase = std::unordered_map<std::string, RequestValueType>;
     class RawRequest : public RequestBase {
         using RequestBase::unordered_map;
@@ -45,14 +46,14 @@ namespace transport_catalogue::io {
     public:
         virtual void OnBaseRequest(std::vector<RawRequest>&& requests) = 0;
         virtual void OnStatRequest(std::vector<RawRequest>&& requests) = 0;
+        // virtual ~IRequestObserver() = default;
+    protected:
         virtual ~IRequestObserver() = default;
-    //protected:
-    //    virtual ~IRequestObserver() = default;
     };
 
     class IRequestNotifier {
     public:
-        virtual void SetObserver(IRequestObserver*) = 0;
+        virtual void SetObserver(std::shared_ptr<IRequestObserver> observer) = 0;
         virtual bool HasObserver() const = 0;
         virtual void NotifyBaseRequest(std::vector<RawRequest>&& requests) const = 0;
         virtual void NotifyStatRequest(std::vector<RawRequest>&& requests) const = 0;
@@ -63,6 +64,8 @@ namespace transport_catalogue::io {
         // MapRenderer понадобится в следующей части итогового проекта
         RequestHandler(const data::ITransportStatDataReader& reader, const io::renderer::MapRenderer& renderer)
             : db_reader_{reader}, renderer_{renderer} {}
+
+        ~RequestHandler() = default;
 
         // Возвращает информацию о маршруте (запрос Bus)
         std::optional<data::BusStat> GetBusStat(const std::string_view bus_name) const {
@@ -93,7 +96,5 @@ namespace transport_catalogue::io {
 }
 
 namespace transport_catalogue::io {
-    class RequestParser {
-
-    };
+    class RequestParser {};
 }
