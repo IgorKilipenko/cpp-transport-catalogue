@@ -120,7 +120,7 @@ namespace json /* Parser */ {
         using namespace std::string_literals;
 
         Array result;
-        char ch;
+        char ch = '\0';
 
         for (; input_ >> ch && ch != Token::END_ARRAY;) {
             if (ch != Token::VALUE_SEPARATOR) {
@@ -302,9 +302,6 @@ namespace json /* Parser::StringParser */ {
                 }
             } else if (ch == '\n' || ch == '\r') {
                 // Строковый литерал внутри- JSON не может прерываться символами \r или \n
-                input_.putback(ch);  //!!!!!!!!!!!!!!
-                std::string line;
-                std::getline(input_, line, '\r');
                 throw ParsingError("Unexpected end of line"s);
             } else {
                 // Просто считываем очередной символ и помещаем его в результирующую строку

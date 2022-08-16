@@ -132,10 +132,6 @@ namespace json {
 
         template <typename T = void, detail::EnableIf<detail::IsConvertible<T, NodeValueType>::value || detail::IsSame<T, void>::value> = true>
         auto&& ExtractValue() {
-            /*if (!std::holds_alternative<T>(*this)) {
-                throw std::logic_error("Node don't contained this type alternative");
-            }
-            return std::get<T>(std::move(*this));*/
             if constexpr (detail::IsConvertible<T, NodeValueType>::value == true) {
                 if (!std::holds_alternative<T>(*this)) {
                     throw std::logic_error("Node don't contained this type alternative");
@@ -160,25 +156,18 @@ namespace json {
         const std::string& AsString() const;
 
         std::string&& ExtractString() {
-            // return std::get<std::string>(std::move(*this));
             return ExtractValue<std::string>();
         }
 
         const json::Array& AsArray() const;
 
         json::Array&& ExtractArray() {
-            // return std::get<json::Array>(std::move(*this));
             return ExtractValue<json::Array>();
         }
 
         const json::Dict& AsMap() const;
 
         json::Dict&& ExtractMap() {
-            /*ValueType tmp;
-            ValueType::swap(tmp);
-            return std::get<json::Dict>(std::move(tmp));*/
-
-            // return std::get<json::Dict>(std::move(*this));
             return ExtractValue<json::Dict>();
         }
 
@@ -405,11 +394,6 @@ namespace json /* Node class template impl */ {
     template <typename T, detail::EnableIf<detail::IsConvertible<T, NodeValueType>::value || detail::IsSame<T, void>::value>>
     const auto& Node::GetValue() const {
         if constexpr (detail::IsConvertible<T, NodeValueType>::value == true) {
-            /*try {
-                return std::get<T>(*this);
-            } catch (std::bad_variant_access const& ex) {
-                throw std::logic_error(ex.what() + ": Node don't contained this type alternative"s);
-            }*/
             auto* ptr = GetValuePtr<T>();
             if (ptr == 0) {
                 throw std::logic_error("Node don't contained this type alternative");
