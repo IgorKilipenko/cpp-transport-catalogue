@@ -186,7 +186,7 @@ namespace json {
 
         bool operator!=(const Node& rhs) const;
 
-        static Node LoadNode(std::istream& stream);
+        static Node LoadNode(std::istream& stream, const std::function<void(const Node&, const void*)>* = nullptr);
     };
 
     struct PrintContext {
@@ -338,8 +338,9 @@ namespace json {
 
         void AddListener(
             const void* listener, const std::function<void(const Node&, const void*)> on_data,
-            std::optional<const std::function<void(const std::exception&, const void*)>> /*on_error*/) override {
+            std::optional<const std::function<void(const std::exception&, const void*)>> /*on_error*/ = nullptr) override {
             listener_ = listener;
+            listener_on_data = &on_data;
         }
 
         void RemoveListener(const void* /*listener*/) override {
@@ -347,15 +348,15 @@ namespace json {
         }
 
     protected:
+        bool HasListeners() const {
+            return !(listener_ == nullptr);
+        }
+
         void Notify(const Node& node) const noexcept override {
             if (!HasListeners()) {
                 return;
             }
-            listener_on_data(node, this);
-        }
-
-        bool HasListeners() const {
-            return !(listener_ == nullptr);
+            (*listener_on_data)(node, this);
         }
 
     private:
@@ -390,7 +391,7 @@ namespace json {
         NumericParser numeric_parser_;
         StringParser string_parser_;
         const void* listener_ = nullptr;
-        const std::function<void(const Node&, const void*)> listener_on_data;
+        const std::function<void(const Node&, const void*)>* listener_on_data;
     };
 
     using ParsingError = Parser::ParsingError;

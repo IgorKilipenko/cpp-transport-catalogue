@@ -1,6 +1,8 @@
 #include "json.h"
 
 #include <cstddef>
+#include <iostream>
+#include <memory>
 #include <unordered_set>
 
 using namespace std;
@@ -31,7 +33,10 @@ namespace json /* Document */ {
     }
 
     Document Document::Load(std::istream& stream) {
-        return Document{Node::LoadNode(stream)};
+        const std::function<void(const Node&, const void*)> on_node = [&](const Node& node, const void*) -> void {
+            std::visit(NodePrinter{std::cerr}, node.GetValue());
+        };
+        return Document{Node::LoadNode(stream, &on_node)};
     }
 
     void Document::Print(const Document& doc, std::ostream& output) {
@@ -442,7 +447,12 @@ namespace json /* Node */ {
         return !(*this == rhs);
     }
 
-    Node Node::LoadNode(std::istream& input) {
-        return Parser(input).Parse();
+    Node Node::LoadNode(std::istream& stream, const std::function<void(const Node&, const void*)>* on_node_loaded) {
+        Parser parser(stream);
+        auto listener = std::shared_ptr<std::string>(new std::string("handler"));
+        if (on_node_loaded != nullptr) {
+            parser.AddListener(listener.get(), *on_node_loaded);
+        }
+        return parser.Parse();
     }
 }
