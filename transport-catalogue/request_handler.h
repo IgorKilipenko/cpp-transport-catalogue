@@ -15,8 +15,10 @@
 // с другими подсистемами приложения.
 // См. паттерн проектирования Фасад: https://ru.wikipedia.org/wiki/Фасад_(шаблон_проектирования)
 
+#include <cassert>
 #include <functional>
 #include <optional>
+#include <string_view>
 #include <unordered_map>
 
 #include "domain.h"
@@ -42,11 +44,12 @@ namespace transport_catalogue::io {
         using RequestBase::unordered_map;
     };
 
+    class IRequestNotifier;
     class IRequestObserver {
     public:
         virtual void OnBaseRequest(std::vector<RawRequest>&& requests) = 0;
         virtual void OnStatRequest(std::vector<RawRequest>&& requests) = 0;
-        // virtual ~IRequestObserver() = default;
+
     protected:
         virtual ~IRequestObserver() = default;
     };
@@ -55,10 +58,12 @@ namespace transport_catalogue::io {
     public:
         virtual void AddObserver(std::shared_ptr<IRequestObserver> observer) = 0;
         virtual void RemoveObserver(std::shared_ptr<IRequestObserver> observer) = 0;
+        virtual ~IRequestNotifier() = default;
+
+    protected:
         virtual bool HasObserver() const = 0;
         virtual void NotifyBaseRequest(std::vector<RawRequest>&& requests) = 0;
         virtual void NotifyStatRequest(std::vector<RawRequest>&& requests) = 0;
-        virtual ~IRequestNotifier() = default;
     };
 
     class RequestHandler : public IRequestObserver {
@@ -67,7 +72,9 @@ namespace transport_catalogue::io {
         RequestHandler(const data::ITransportStatDataReader& reader, const io::renderer::MapRenderer& renderer)
             : db_reader_{reader}, renderer_{renderer} {}
 
-        ~RequestHandler() = default;
+        ~RequestHandler() {
+            std::cerr << "Stop request handler" << std::endl;  //!!! FOR DEBUG
+        };
 
         // Возвращает информацию о маршруте (запрос Bus)
         std::optional<data::BusStat> GetBusStat(const std::string_view bus_name) const {
@@ -98,5 +105,21 @@ namespace transport_catalogue::io {
 }
 
 namespace transport_catalogue::io {
-    class RequestParser {};
+    class RequestParser {
+    public:
+        inline static const std::string TYPE_FIELD = "type";
+        inline static const std::string NAME_FIELD = "name";
+
+        void ParseRawRequest(std::vector<RawRequest>&& requests) const {
+            assert(!requests.empty());
+        }
+        void ParseBaseRequest(RawRequest&& request) const {
+            assert(!request.empty());
+            assert(request.count(TYPE_FIELD));
+            assert(request.count(NAME_FIELD));
+        }
+        bool CheckScheme(const RawRequest& request) const {
+            return request.count(TYPE_FIELD) && request.count(NAME_FIELD);
+        }
+    };
 }
