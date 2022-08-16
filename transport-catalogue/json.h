@@ -3,11 +3,13 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <exception>
 #include <functional>
 #include <iostream>
 #include <istream>
 #include <limits>
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -48,6 +50,19 @@ namespace json::detail {
 
     template <typename BaseType, typename DerivedType>
     using EnableIfBaseOf = std::enable_if_t<std::is_base_of_v<BaseType, std::decay_t<DerivedType>>, bool>;
+}
+namespace json /* Interfaces */ {
+
+    template <typename Data>
+    class INotifier {
+        virtual void AddListener(
+            const void* listener, const std::function<void(const Data&, const void* sender)> on_data,
+            std::optional<const std::function<void(const std::exception&, const void* sender)>> on_error = std::nullopt) = 0;
+        virtual void RemoveListener(const void* listener) = 0;
+
+    protected:
+        virtual void Notify(const Data&) const = 0;
+    };
 }
 
 namespace json {
@@ -258,9 +273,9 @@ namespace json {
         Node root_;
     };
 
-    class Parser {
+    class Parser : public INotifier<Node> {
     public:
-        class ParsingError : public std::runtime_error {    //!!!!!!!!!!
+        class ParsingError : public std::runtime_error {  //!!!!!!!!!!
         public:
             using runtime_error::runtime_error;
         };
@@ -283,10 +298,10 @@ namespace json {
             static const char KEYVAL_SEPARATOR = ':';
         };
 
-        const std::unordered_set<char> start_literals{Token::START_OBJ, Token::START_ARRAY,  Token::START_STRING, Token::START_TRUE,
-                                                      Token::START_FALSE, Token::START_NULL,   Token::SIGN_LITERAL};
-        const std::unordered_set<char> end_literals{Token::END_OBJ, Token::END_ARRAY,  Token::START_STRING, Token::START_TRUE,
-                                                      Token::START_FALSE, Token::START_NULL,   Token::SIGN_LITERAL};
+        const std::unordered_set<char> start_literals{Token::START_OBJ,   Token::START_ARRAY, Token::START_STRING, Token::START_TRUE,
+                                                      Token::START_FALSE, Token::START_NULL,  Token::SIGN_LITERAL};
+        const std::unordered_set<char> end_literals{Token::END_OBJ,     Token::END_ARRAY,  Token::START_STRING, Token::START_TRUE,
+                                                    Token::START_FALSE, Token::START_NULL, Token::SIGN_LITERAL};
 
     public:
         explicit Parser(std::istream& input_stream) : input_(input_stream), numeric_parser_(input_), string_parser_(input_) {}
@@ -310,7 +325,7 @@ namespace json {
             input_.ignore(max_count, character);
         }
 
-        void Skip(const char character) const {
+        void Skip(const char character) const {  //!! FOR DEBUG
             char ch;
 
             if (input_ >> ch && ch != character) {
@@ -319,6 +334,28 @@ namespace json {
             }
             for (; input_ >> ch && ch == character;) {
             }
+        }
+
+        void AddListener(
+            const void* listener, const std::function<void(const Node&, const void*)> on_data,
+            std::optional<const std::function<void(const std::exception&, const void*)>> /*on_error*/) override {
+            listener_ = listener;
+        }
+
+        void RemoveListener(const void* /*listener*/) override {
+            listener_ = nullptr;
+        }
+
+    protected:
+        void Notify(const Node& node) const noexcept override {
+            if (!HasListeners()) {
+                return;
+            }
+            listener_on_data(node, this);
+        }
+
+        bool HasListeners() const {
+            return !(listener_ == nullptr);
         }
 
     private:
@@ -352,6 +389,8 @@ namespace json {
         std::istream& input_;
         NumericParser numeric_parser_;
         StringParser string_parser_;
+        const void* listener_ = nullptr;
+        const std::function<void(const Node&, const void*)> listener_on_data;
     };
 
     using ParsingError = Parser::ParsingError;

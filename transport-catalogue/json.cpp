@@ -71,23 +71,37 @@ namespace json /* Parser */ {
         }*/
 
         if (ch == Token::START_ARRAY) {
-            return ParseArray();
+            Node result(ParseArray());
+            Notify(result);
+            return result;
         } else if (ch == Token::START_OBJ) {
-            return ParseDict();
+            Node result(ParseDict());
+            Notify(result);
+            return result;
         } else if (ch == Token::START_STRING) {
-            return ParseString();
+            Node result(ParseString());
+            Notify(result);
+            return result;
         } else {
             input_.putback(ch);
             if (ch == Token::START_TRUE || ch == Token::START_FALSE) {
-                return ParseBool();
+                Node result(ParseBool());
+                Notify(result);
+                return result;
             } else if (ch == Token::START_NULL) {
-                return ParseNull();
+                Node result(ParseNull());
+                Notify(result);
+                return result;
             } else if (std::isdigit(ch) || ch == Token::SIGN_LITERAL) {
-                const Numeric result = ParseNumber();
-                if (holds_alternative<int>(result)) {
-                    return get<int>(result);
+                const Numeric num = ParseNumber();
+                if (holds_alternative<int>(num)) {
+                    Node result(get<int>(num));
+                    Notify(result);
+                    return result;
                 } else {
-                    return get<double>(result);
+                    Node result(get<double>(num));
+                    Notify(result);
+                    return result;
                 }
             }
         }
@@ -171,7 +185,7 @@ namespace json /* Parser */ {
         }
 
         if (ch != Token::END_OBJ) {
-            throw ParsingError ("Dict parsing error. Not found dictionary close brace");
+            throw ParsingError("Dict parsing error. Not found dictionary close brace");
         }
 
         return result;
