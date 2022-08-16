@@ -47,33 +47,8 @@ namespace json /* Document */ {
 namespace json /* Parser */ {
 
     Node Parser::Parse() const {
-        auto it = std::istream_iterator<char>(input_);
-        auto end = std::istream_iterator<char>();
-        if (it == end) {
-            return {};
-        }
         char ch;
-        for (; it != end; ++it) {
-            ch = *it;
-            if (start_literals.count(ch) || std::isdigit(ch)) {
-                // input_.putback(ch);
-                break;
-            }
-        }
-        if (it == end) {
-            // Поток закончился до того, как встретили закрывающую кавычку?
-            throw ParsingError("String parsing error");
-        }
-        //! input_.seekg(skip_count);
-        [[maybe_unused]] char yyyy = input_.peek();  //!
-        /*char ch;
         input_ >> ch;
-        for (; ch != input_.eof(); input_ >> ch) {
-            if (start_literals.count(ch) || std::isdigit(ch)) {
-                // input_.putback(ch);
-                break;
-            }
-        }*/
 
         if (ch == Token::START_ARRAY) {
             Node result(ParseArray());
@@ -165,28 +140,19 @@ namespace json /* Parser */ {
         using namespace std::string_literals;
 
         Dict result;
+        char ch = '\0';
 
-        auto ptr = std::istream_iterator<char>(input_);
-        auto end = std::istream_iterator<char>();
-        if (ptr == end) {
-            throw ParsingError("Dict parsing error. Stream is empty");
-        }
-        char ch = *ptr;
-        for (; ptr != end && ch != Token::END_OBJ; ++ptr, ch = *ptr) {
-            if (ch != Token::START_STRING) {
-                // input_ >> ch;
-                continue;
+        for (; input_ >> ch && ch != Token::END_OBJ;) {
+            if (ch == Token::VALUE_SEPARATOR) {
+                input_ >> ch;
             }
 
             const std::string key = ParseString();
             Ignore(Token::KEYVAL_SEPARATOR);
-            /*if (input_.peek() == input_.eof()) {
+            if (!input_.good()) {
                 throw ParsingError("Dict parsing error. Not found dictionary key/value separator character : ["s + Token::KEYVAL_SEPARATOR + "]"s);
-            }*/
+            }
             result.emplace(move(key), Parse());
-
-            [[maybe_unused]] char ppp = +input_.peek();  //!!!!!!!!!
-            ppp = input_.peek();                         //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         }
 
         if (ch != Token::END_OBJ) {

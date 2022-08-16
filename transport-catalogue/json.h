@@ -298,11 +298,6 @@ namespace json {
             static const char KEYVAL_SEPARATOR = ':';
         };
 
-        const std::unordered_set<char> start_literals{Token::START_OBJ,   Token::START_ARRAY, Token::START_STRING, Token::START_TRUE,
-                                                      Token::START_FALSE, Token::START_NULL,  Token::SIGN_LITERAL};
-        const std::unordered_set<char> end_literals{Token::END_OBJ,     Token::END_ARRAY,  Token::START_STRING, Token::START_TRUE,
-                                                    Token::START_FALSE, Token::START_NULL, Token::SIGN_LITERAL};
-
     public:
         explicit Parser(std::istream& input_stream) : input_(input_stream), numeric_parser_(input_), string_parser_(input_) {}
 
