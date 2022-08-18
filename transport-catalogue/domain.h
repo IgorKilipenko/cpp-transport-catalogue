@@ -137,9 +137,14 @@ namespace transport_catalogue::data {
         double measured_distance = 0.;
     };
 
-    struct MeasuredRoadDistance{
-        std::array<std::string, 2> stops;
+    struct MeasuredRoadDistance {
+        std::string from_stop;
+        std::string to_stop;
         double distance = 0.;
+
+        template <typename String= std::string, detail::EnableIfSame<String, std::string> = true>
+        MeasuredRoadDistance(String&& from_stop, String&& to_stop, double distance)
+            : from_stop(std::move(from_stop)), to_stop(std::move(to_stop)), distance(distance) {}
     };
 
     struct BusStat {
