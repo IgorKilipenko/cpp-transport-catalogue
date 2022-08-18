@@ -122,11 +122,11 @@ namespace transport_catalogue::io {
             observers_.erase(observer.get());
         }
 
-        void NotifyBaseRequest(std::vector<Request>&& requests) override {
+        void NotifyBaseRequest(std::vector<RawRequest>&& requests) override {
             NotifyObservers(RequestType::BASE, std::move(requests));
         }
 
-        void NotifyStatRequest(std::vector<Request>&& requests) override {
+        void NotifyStatRequest(std::vector<RawRequest>&& requests) override {
             NotifyObservers(RequestType::STAT, std::move(requests));
         }
 
@@ -136,7 +136,7 @@ namespace transport_catalogue::io {
             });
         }
 
-        void NotifyObservers(RequestType type, std::vector<Request>&& requests) {
+        void NotifyObservers(RequestType type, std::vector<RawRequest>&& requests) {
             assert(is_broadcast_ || observers_.size() == 1);
 
             for (auto ptr = observers_.begin(); ptr != observers_.end();) {
@@ -171,12 +171,12 @@ namespace transport_catalogue::io {
             auto end = std::move_iterator(raw_requests.end());
             assert(base_req_ptr != end || stat_req_ptr != end);
 
-            if (base_req_ptr != std::move_iterator(raw_requests.end()) && base_req_ptr->second.IsArray()) {
+            if (base_req_ptr != end && base_req_ptr->second.IsArray()) {
                 json::Array array = base_req_ptr->second.ExtractArray();
                 auto req = JsonToRequest(std::move(array), RequestType::BASE);
                 NotifyBaseRequest(std::move(req));
             }
-            if (stat_req_ptr != std::move_iterator(raw_requests.end()) && stat_req_ptr->second.IsArray()) {
+            if (stat_req_ptr != end && stat_req_ptr->second.IsArray()) {
                 json::Array array = stat_req_ptr->second.ExtractArray();
                 NotifyBaseRequest(JsonToRequest(std::move(array), RequestType::STAT));
             }
@@ -200,7 +200,7 @@ namespace transport_catalogue::io {
         constexpr static const std::string_view STAT_REQUESTS_LITERAL = "stat_requests"sv;
 
     public: /* Helpers */
-        static Request JsonToRequest(json::Dict&& map, RequestType type) {
+        static RawRequest JsonToRequest(json::Dict&& map, RequestType type) {
             RawRequest result;
             std::for_each(std::make_move_iterator(map.begin()), std::make_move_iterator(map.end()), [&result](auto&& map_item) {
                 std::string key = std::move(map_item.first);
@@ -229,11 +229,12 @@ namespace transport_catalogue::io {
                     result.emplace(std::move(key), std::move(value));
                 }
             });
-            return type == RequestType::BASE ? BaseRequest(std::move(result)) : Request(std::move(result));
+            return result;
+            //!!return type == RequestType::BASE ? static_cast<Request>(BaseRequest(std::move(result))) : static_cast<Request>(StatRequest(std::move(result)));
         }
 
-        static std::vector<Request> JsonToRequest(json::Array&& array, RequestType type) {
-            std::vector<Request> requests;
+        static std::vector<RawRequest> JsonToRequest(json::Array&& array, RequestType type) {
+            std::vector<RawRequest> requests;
             requests.reserve(array.size());
             std::for_each(std::make_move_iterator(array.begin()), std::make_move_iterator(array.end()), [&requests, type](json::Node&& node) {
                 requests.emplace_back(JsonToRequest(node.ExtractMap(), type));
