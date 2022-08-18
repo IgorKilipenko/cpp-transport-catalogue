@@ -19,6 +19,7 @@
 #include <cassert>
 #include <functional>
 #include <iostream>
+#include <iterator>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
@@ -51,8 +52,8 @@ namespace transport_catalogue::io /* Requests */ {
         using RequestBase::unordered_map;
 
     public:
-        RawRequest(const RawRequest& other) = delete;
-        RawRequest& operator=(const RawRequest& other) = delete;
+        RawRequest(const RawRequest& other) = default;
+        RawRequest& operator=(const RawRequest& other) = default;
         RawRequest(RawRequest&& other) = default;
         RawRequest& operator=(RawRequest&& other) = default;
     };
@@ -69,7 +70,8 @@ namespace transport_catalogue::io /* Requests */ {
         RequestCommand type = RequestCommand::UNDEFINED;
         std::string name;
 
-        Request(RequestCommand type, std::string&& name, RequestArgsMap&& args) : type{std::move(type)}, name{std::move(name)}, args_{std::move(args)} {}
+        Request(RequestCommand type, std::string&& name, RequestArgsMap&& args)
+            : type{std::move(type)}, name{std::move(name)}, args_{std::move(args)} {}
         Request(std::string&& type, std::string&& name, RequestArgsMap&& args)
             : Request(
                   (assert(type == TypeValues::BUS || type == TypeValues::STOP),
@@ -99,8 +101,8 @@ namespace transport_catalogue::io /* Requests */ {
             return *this;
         }*/
 
-        Request(const Request& other) = delete;
-        Request& operator=(const Request& other) = delete;
+        Request(const Request& other) = default;
+        Request& operator=(const Request& other) = default;
         Request(Request&& other) = default;
         Request& operator=(Request&& other) = default;
 
@@ -131,8 +133,8 @@ namespace transport_catalogue::io /* Requests */ {
         std::optional<data::Coordinates> coordinates;
         std::optional<data::MeasuredRoadDistance> road_distances;
 
-        BaseRequest(const BaseRequest& other) = delete;
-        BaseRequest& operator=(const BaseRequest& other) = delete;
+        BaseRequest(const BaseRequest& other) = default;
+        BaseRequest& operator=(const BaseRequest& other) = default;
         BaseRequest(BaseRequest&& other) = default;
         BaseRequest& operator=(BaseRequest&& other) = default;
 
@@ -182,7 +184,9 @@ namespace transport_catalogue::io /* Interfaces */ {
     class IRequestObserver {
     public:
         virtual void OnBaseRequest(std::vector<Request>&& requests) = 0;
+        virtual void OnBaseRequest(const std::vector<Request>& requests) = 0;
         virtual void OnStatRequest(std::vector<Request>&& requests) = 0;
+        virtual void OnStatRequest(const std::vector<Request>& requests) = 0;
 
     protected:
         virtual ~IRequestObserver() = default;
@@ -232,10 +236,27 @@ namespace transport_catalogue::io {
                 assert(lhs.type != RequestCommand::UNDEFINED && rhs.type != RequestCommand::UNDEFINED);
                 return (lhs.type) < (rhs.type);
             });
+            std::vector<Request> reqs;
+            reqs.reserve(requests.size());
+            std::for_each(std::make_move_iterator(requests.begin()), std::make_move_iterator(requests.end()), [&reqs](Request&& req) {
+                // auto& base_req = dynamic_cast<BaseRequest&>(req);
+                req.Build();
+                reqs.emplace_back(std::move(req));
+            });
+        }
+
+        void OnBaseRequest(const std::vector<Request>& requests) override {
+            std::vector<Request> requests_tmp(requests);
+            OnBaseRequest(std::move(requests_tmp));
         }
 
         void OnStatRequest([[maybe_unused]] std::vector<Request>&& requests) override {
             std::cerr << "onStatRequest" << std::endl;
+        }
+        
+        void OnStatRequest([[maybe_unused]] const std::vector<Request>& requests) override {
+            std::vector<Request> requests_tmp(requests);
+            OnStatRequest(std::move(requests_tmp));
         }
 
     private:

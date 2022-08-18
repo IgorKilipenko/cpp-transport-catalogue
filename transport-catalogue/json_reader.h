@@ -109,7 +109,7 @@ namespace transport_catalogue::io {
         };
 
     public:
-        JsonReader(std::istream& input_stream) noexcept : input_stream_{input_stream} {}
+        JsonReader(std::istream& input_stream, bool broadcast_mode = true) noexcept : input_stream_{input_stream}, is_broadcast_(broadcast_mode) {}
 
         void AddObserver(std::shared_ptr<IRequestObserver> observer) override {
             observers_.emplace(observer.get(), observer);
@@ -134,27 +134,31 @@ namespace transport_catalogue::io {
         }
 
         void NotifyObservers(RequestType type, std::vector<Request>&& requests) {
+            assert(is_broadcast_ || observers_.size() == 1);
+
             for (auto ptr = observers_.begin(); ptr != observers_.end();) {
                 if (ptr->second.expired()) {
                     ptr = observers_.erase(ptr);
+                    continue;
                 }
                 if (type == RequestType::BASE) {
-                    ptr->second.lock()->OnBaseRequest(std::move(requests));
-                    [[maybe_unused]] bool jj = false;
+                    ptr->second.lock()->OnBaseRequest(is_broadcast_ && observers_.size() > 1 ? requests : std::move(requests));
+                    [[maybe_unused]] bool jj = false;  //!!! FOR DEBUG ONLY
                 } else {
-                    ptr->second.lock()->OnStatRequest(std::move(requests));
+                    ptr->second.lock()->OnStatRequest(is_broadcast_ && observers_.size() > 1 ? requests : std::move(requests));
                 }
-                ++ptr;
+
+                ptr = is_broadcast_ ? ++ptr : observers_.end();
             }
         }
 
         void ReadDocument() {
-            [[maybe_unused]] char ch = input_stream_.peek();    //!!!!!!!!!!!
+            [[maybe_unused]] char ch = input_stream_.peek();  //!!!!!!!!!!! FOR DEBUG ONLY
             if (input_stream_.peek() != json::Parser::Token::START_OBJ) {
                 input_stream_.ignore(std::numeric_limits<std::streamsize>::max(), json::Parser::Token::START_OBJ)
                     .putback(json::Parser::Token::START_OBJ);
             }
-            ch = input_stream_.peek();  //!!!!!!!!!!!
+            ch = input_stream_.peek();  //!!!!!!!!!!! FOR DEBUG ONLY
 
             json::Document doc = json::Document::Load(input_stream_);
             json::Node& root = doc.GetRoot();
