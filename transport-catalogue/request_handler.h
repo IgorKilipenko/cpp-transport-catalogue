@@ -73,11 +73,24 @@ namespace transport_catalogue::io /* Requests */ {
             inline static const std::string_view BUS = "Bus";
         };
 
-        RequestCommand command = RequestCommand::UNDEFINED;
-        std::string name;
+        RequestCommand& GetCommand() {
+            return command_;
+        }
+
+        const RequestCommand& GetCommand() const {
+            return command_;
+        }
+
+        std::string& GetName() {
+            return name_;
+        }
+
+        const std::string& GetName() const {
+            return name_;
+        }
 
         Request(RequestCommand type, std::string&& name, RequestArgsMap&& args)
-            : command{std::move(type)}, name{std::move(name)}, args_{std::move(args)} {}
+            : command_{std::move(type)}, name_{std::move(name)}, args_{std::move(args)} {}
 
         Request(std::string&& type, std::string&& name, RequestArgsMap&& args)
             : Request(
@@ -124,8 +137,12 @@ namespace transport_catalogue::io /* Requests */ {
         virtual ~Request() = default;
 
     protected:
-        Request() = default;
+        RequestCommand command_ = RequestCommand::UNDEFINED;
+        std::string name_;
         RequestArgsMap args_;
+
+    protected:
+        Request() = default;
         virtual void Build() {}
     };
 
@@ -149,15 +166,42 @@ namespace transport_catalogue::io /* Requests */ {
             Build();
         }
 
-        std::vector<std::string> stops;
-        std::optional<bool> is_roundtrip;
-        std::optional<data::Coordinates> coordinates;
-        std::vector<data::MeasuredRoadDistance> road_distances;
-
         BaseRequest(const BaseRequest& other) = default;
         BaseRequest& operator=(const BaseRequest& other) = default;
         BaseRequest(BaseRequest&& other) = default;
         BaseRequest& operator=(BaseRequest&& other) = default;
+
+        const std::vector<std::string>& GetStops() const {
+            return stops_;
+        }
+
+        std::vector<std::string>& GetStops() {
+            return stops_;
+        }
+
+        const std::optional<bool>& IsRoundtrip() const {
+            return is_roundtrip_;
+        }
+
+        std::optional<bool>& IsRoundtrip() {
+            return is_roundtrip_;
+        }
+
+        const std::optional<data::Coordinates>& GetCoordinates() const {
+            return coordinates_;
+        }
+
+        std::optional<data::Coordinates>& GetCoordinates() {
+            return coordinates_;
+        }
+
+        const std::vector<data::MeasuredRoadDistance>& GetroadDistances() const {
+            return road_distances_;
+        }
+
+        std::vector<data::MeasuredRoadDistance>& GetroadDistances() {
+            return road_distances_;
+        }
 
         bool IsBaseRequest() const override {
             return true;
@@ -169,14 +213,20 @@ namespace transport_catalogue::io /* Requests */ {
     protected:
         void Build() override {
             assert(!args_.empty());
-            assert(command == RequestCommand::BUS || command == RequestCommand::STOP);
+            assert(command_ == RequestCommand::BUS || command_ == RequestCommand::STOP);
 
-            if (command == RequestCommand::BUS) {
+            if (command_ == RequestCommand::BUS) {
                 FillBus();
             } else {
                 FillStop();
             }
         }
+
+    private:
+        std::vector<std::string> stops_;
+        std::optional<bool> is_roundtrip_;
+        std::optional<data::Coordinates> coordinates_;
+        std::vector<data::MeasuredRoadDistance> road_distances_;
 
     private:
         void FillBus() {
@@ -195,8 +245,8 @@ namespace transport_catalogue::io /* Requests */ {
                 stops_ptr == args_.end()
                     ? Array{}
                     : std::get<Array>((assert(std::holds_alternative<Array>(stops_ptr->second)), std::move(args_.extract(stops_ptr).mapped())));
-            stops.resize(stops_tmp.size());
-            std::transform(stops_tmp.begin(), stops_tmp.end(), stops.begin(), [&](auto&& stop_name) {
+            stops_.resize(stops_tmp.size());
+            std::transform(stops_tmp.begin(), stops_tmp.end(), stops_.begin(), [&](auto&& stop_name) {
                 assert(std::holds_alternative<std::string>(stop_name));
                 return std::get<std::string>(stop_name);
             });
@@ -204,10 +254,10 @@ namespace transport_catalogue::io /* Requests */ {
 
         void FillRoundtrip() {
             auto is_roundtrip_ptr = args_.find("is_roundtrip");
-            is_roundtrip = is_roundtrip_ptr != args_.end() ? std::optional<bool>(
-                                                                 (assert(std::holds_alternative<bool>(is_roundtrip_ptr->second)),
-                                                                  std::get<bool>(std::move(args_.extract(is_roundtrip_ptr).mapped()))))
-                                                           : std::nullopt;
+            is_roundtrip_ = is_roundtrip_ptr != args_.end() ? std::optional<bool>(
+                                                                  (assert(std::holds_alternative<bool>(is_roundtrip_ptr->second)),
+                                                                   std::get<bool>(std::move(args_.extract(is_roundtrip_ptr).mapped()))))
+                                                            : std::nullopt;
         }
 
         void FillCoordinates() {
@@ -222,7 +272,7 @@ namespace transport_catalogue::io /* Requests */ {
                                                                                   std::get<double>(std::move(args_.extract(longitude_ptr).mapped()))))
                                                                            : std::nullopt;
             assert((latitude.has_value() && longitude.has_value()) || !(latitude.has_value() && longitude.has_value()));
-            coordinates = !latitude.has_value() ? std::nullopt : std::optional<Coordinates>({longitude.value(), latitude.value()});
+            coordinates_ = !latitude.has_value() ? std::nullopt : std::optional<Coordinates>({longitude.value(), latitude.value()});
         }
 
         void FillRoadDistances() {
@@ -239,7 +289,7 @@ namespace transport_catalogue::io /* Requests */ {
                     std::string to_stop = std::move(item.first);
                     double distance = std::holds_alternative<int>(item.second) ? std::get<int>(std::move(item.second))
                                                                                : std::holds_alternative<double>(item.second);
-                    road_distances.emplace_back(std::string(name), std::move(to_stop), std::move(distance));
+                    road_distances_.emplace_back(std::string(name_), std::move(to_stop), std::move(distance));
                 }
             }
         }
@@ -295,7 +345,7 @@ namespace transport_catalogue::io {
             : db_reader_{reader}, renderer_{renderer} {}
 
         ~RequestHandler() {
-#if (REQUEST_TRACE && TRACE_CTR)
+#if (TRACE && REQUEST_TRACE && TRACE_CTR)
             std::cerr << "Stop request handler" << std::endl;
 #endif
         };
@@ -314,7 +364,9 @@ namespace transport_catalogue::io {
         svg::Document RenderMap() const;
 
         void OnBaseRequest(std::vector<RawRequest>&& requests) override {
+#if (TRACE && REQUEST_TRACE)
             std::cerr << "onBaseRequest" << std::endl;  //! FOR DEBUG ONLY
+#endif
             std::vector<BaseRequest> reqs;
             reqs.reserve(requests.size());
 
@@ -324,8 +376,8 @@ namespace transport_catalogue::io {
             });
 
             std::sort(reqs.begin(), reqs.end(), [](const BaseRequest& lhs, const BaseRequest& rhs) {
-                assert(lhs.command != RequestCommand::UNDEFINED && rhs.command != RequestCommand::UNDEFINED);
-                return static_cast<uint8_t>(lhs.command) < static_cast<uint8_t>(rhs.command);
+                assert(lhs.GetCommand() != RequestCommand::UNDEFINED && rhs.GetCommand() != RequestCommand::UNDEFINED);
+                return static_cast<uint8_t>(lhs.GetCommand()) < static_cast<uint8_t>(rhs.GetCommand());
             });
         }
 
@@ -335,7 +387,9 @@ namespace transport_catalogue::io {
         }
 
         void OnStatRequest([[maybe_unused]] std::vector<RawRequest>&& requests) override {
+#if (TRACE && REQUEST_TRACE)
             std::cerr << "onStatRequest" << std::endl;  //! FOR DEBUG ONLY
+#endif
         }
 
         void OnStatRequest([[maybe_unused]] const std::vector<RawRequest>& requests) override {
