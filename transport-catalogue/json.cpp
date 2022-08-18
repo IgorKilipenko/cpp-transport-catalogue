@@ -32,11 +32,10 @@ namespace json /* Document */ {
     }
 
     Document Document::Load(std::istream& stream) {
-        /*const std::function<void(const Node&, const void*)> on_node = [&](const Node& node, const void*) -> void {
+        const std::function<void(const Node&, const void*)> on_node = [](const Node& node, const void*) -> void {
             std::visit(NodePrinter{std::cerr}, node.GetValue());
         };
-        return Document{Node::LoadNode(stream, &on_node)};*///!!!!!!!
-        return Document{Node::LoadNode(stream)};
+        return Document{Node::LoadNode(stream, &on_node)};
     }
 
     void Document::Print(const Document& doc, std::ostream& output) {
@@ -52,35 +51,35 @@ namespace json /* Parser */ {
 
         if (ch == Token::START_ARRAY) {
             Node result(ParseArray());
-            //Notify(result);
+            Notify(result);
             return result;
         } else if (ch == Token::START_OBJ) {
             Node result(ParseDict());
-            //Notify(result);
+            Notify(result);
             return result;
         } else if (ch == Token::START_STRING) {
             Node result(ParseString());
-            //Notify(result);
+            Notify(result);
             return result;
         } else {
             input_.putback(ch);
             if (ch == Token::START_TRUE || ch == Token::START_FALSE) {
                 Node result(ParseBool());
-                //Notify(result);
+                Notify(result);
                 return result;
             } else if (ch == Token::START_NULL) {
                 Node result(ParseNull());
-                //Notify(result);
+                Notify(result);
                 return result;
             } else if (std::isdigit(ch) || ch == Token::SIGN_LITERAL) {
                 const Numeric num = ParseNumber();
                 if (holds_alternative<int>(num)) {
                     Node result(get<int>(num));
-                    //Notify(result);
+                    Notify(result);
                     return result;
                 } else {
                     Node result(get<double>(num));
-                    //Notify(result);
+                    Notify(result);
                     return result;
                 }
             }
@@ -412,11 +411,11 @@ namespace json /* Node */ {
 
     Node Node::LoadNode(std::istream& stream, const std::function<void(const Node&, const void*)>* on_node_loaded) {
         Parser parser(stream);
-        ///!!!!!!1
-        /*auto listener = std::shared_ptr<std::string>(new std::string("handler"));
+        //auto listener = std::shared_ptr<std::string>(new std::string("handler"));
+        auto listener = std::shared_ptr<int>(new int(1));
         if (on_node_loaded != nullptr) {
             parser.AddListener(listener.get(), *on_node_loaded);
-        }*/
+        }
         return parser.Parse();
     }
 }

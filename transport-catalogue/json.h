@@ -337,7 +337,7 @@ namespace json {
         void AddListener(
             const void* listener, const std::function<void(const Node&, const void*)> on_data,
             std::optional<const std::function<void(const std::exception&, const void*)>> /*on_error*/ = nullptr) override {
-                if (!is_broadcast_ && listener != nullptr) {
+                if (!is_broadcast_ && listener_ != nullptr) {
                     throw std::logic_error("Duplicate listener. This instance supports only one listener");
                 }
             listener_ = listener;

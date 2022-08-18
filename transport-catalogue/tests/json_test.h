@@ -243,10 +243,12 @@ namespace json::tests {
         }
 
         void TestJsonlib() const {
+            /*
             std::stringstream strm;
             strm << "[0,0,10,[0,0]]";
             Node node = json::Node::LoadNode(strm);
             auto arr = node.ExtractArray();
+            */
 
             const std::string prefix = "[JSONT] ";
             TestNull();
