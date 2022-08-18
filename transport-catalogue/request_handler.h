@@ -16,15 +16,18 @@
 // См. паттерн проектирования Фасад: https://ru.wikipedia.org/wiki/Фасад_(шаблон_проектирования)
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cstdint>
 #include <functional>
 #include <iostream>
 #include <iterator>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <unordered_map>
 #include <variant>
+#include <vector>
 
 #include "domain.h"
 #include "map_renderer.h"
@@ -62,6 +65,8 @@ namespace transport_catalogue::io /* Requests */ {
     struct Request {
     public:
         using RequestArgsMap = RawRequest;
+        using Array = std::vector<RequestArrayValueType>;
+        using Dict = std::unordered_map<std::string, RequestDictValueType>;
 
         struct TypeValues {
             inline static const std::string_view STOP = "Stop";
@@ -147,7 +152,7 @@ namespace transport_catalogue::io /* Requests */ {
         std::vector<std::string> stops;
         std::optional<bool> is_roundtrip;
         std::optional<data::Coordinates> coordinates;
-        std::optional<data::MeasuredRoadDistance> road_distances;
+        std::vector<data::MeasuredRoadDistance> road_distances;
 
         BaseRequest(const BaseRequest& other) = default;
         BaseRequest& operator=(const BaseRequest& other) = default;
@@ -163,41 +168,80 @@ namespace transport_catalogue::io /* Requests */ {
 
     protected:
         void Build() override {
-            assert(args_.size());
+            assert(!args_.empty());
             assert(command == RequestCommand::BUS || command == RequestCommand::STOP);
 
             if (command == RequestCommand::BUS) {
-                auto stops_ptr = args_.find("stops");
-                std::vector<RequestArrayValueType> stops_tmp =
-                    stops_ptr == args_.end() ? std::vector<RequestArrayValueType>{}
-                                             : std::get<std::vector<RequestArrayValueType>>(
-                                                   (assert(std::holds_alternative<std::vector<RequestArrayValueType>>(stops_ptr->second)),
-                                                    std::move(args_.extract(stops_ptr).mapped())));
-                stops.resize(stops_tmp.size());
-                std::transform(stops_tmp.begin(), stops_tmp.end(), stops.begin(), [&](auto&& stop_name) {
-                    assert(std::holds_alternative<std::string>(stop_name));
-                    return std::get<std::string>(stop_name);
-                });
-
-                auto is_roundtrip_ptr = args_.find("is_roundtrip");
-                is_roundtrip = is_roundtrip_ptr != args_.end() ? std::optional<bool>(
-                                                                     (assert(std::holds_alternative<bool>(is_roundtrip_ptr->second)),
-                                                                      std::get<bool>(std::move(args_.extract(is_roundtrip_ptr).mapped()))))
-                                                               : std::nullopt;
+                FillBus();
             } else {
-                auto latitude_ptr = args_.find("latitude");
-                std::optional<double> latitude = latitude_ptr != args_.end() ? std::optional<double>((
-                                                                                   assert(std::holds_alternative<double>(latitude_ptr->second)),
-                                                                                   std::get<double>(std::move(args_.extract(latitude_ptr).mapped()))))
-                                                                             : std::nullopt;
-                auto longitude_ptr = args_.find("longitude");
-                std::optional<double> longitude = longitude_ptr != args_.end()
-                                                      ? std::optional<double>(
-                                                            (assert(std::holds_alternative<double>(longitude_ptr->second)),
-                                                             std::get<double>(std::move(args_.extract(longitude_ptr).mapped()))))
-                                                      : std::nullopt;
-                assert((latitude.has_value() && longitude.has_value()) || !(latitude.has_value() && longitude.has_value()));
-                coordinates = !latitude.has_value() ? std::nullopt : std::optional<Coordinates>({longitude.value(), latitude.value()});
+                FillStop();
+            }
+        }
+
+    private:
+        void FillBus() {
+            FillStops();
+            FillRoundtrip();
+        }
+
+        void FillStop() {
+            FillCoordinates();
+            FillRoadDistances();
+        }
+
+        void FillStops() {
+            auto stops_ptr = args_.find("stops");
+            Array stops_tmp =
+                stops_ptr == args_.end()
+                    ? Array{}
+                    : std::get<Array>((assert(std::holds_alternative<Array>(stops_ptr->second)), std::move(args_.extract(stops_ptr).mapped())));
+            stops.resize(stops_tmp.size());
+            std::transform(stops_tmp.begin(), stops_tmp.end(), stops.begin(), [&](auto&& stop_name) {
+                assert(std::holds_alternative<std::string>(stop_name));
+                return std::get<std::string>(stop_name);
+            });
+        }
+
+        void FillRoundtrip() {
+            auto is_roundtrip_ptr = args_.find("is_roundtrip");
+            is_roundtrip = is_roundtrip_ptr != args_.end() ? std::optional<bool>(
+                                                                 (assert(std::holds_alternative<bool>(is_roundtrip_ptr->second)),
+                                                                  std::get<bool>(std::move(args_.extract(is_roundtrip_ptr).mapped()))))
+                                                           : std::nullopt;
+        }
+
+        void FillCoordinates() {
+            auto latitude_ptr = args_.find("latitude");
+            std::optional<double> latitude = latitude_ptr != args_.end() ? std::optional<double>(
+                                                                               (assert(std::holds_alternative<double>(latitude_ptr->second)),
+                                                                                std::get<double>(std::move(args_.extract(latitude_ptr).mapped()))))
+                                                                         : std::nullopt;
+            auto longitude_ptr = args_.find("longitude");
+            std::optional<double> longitude = longitude_ptr != args_.end() ? std::optional<double>(
+                                                                                 (assert(std::holds_alternative<double>(longitude_ptr->second)),
+                                                                                  std::get<double>(std::move(args_.extract(longitude_ptr).mapped()))))
+                                                                           : std::nullopt;
+            assert((latitude.has_value() && longitude.has_value()) || !(latitude.has_value() && longitude.has_value()));
+            coordinates = !latitude.has_value() ? std::nullopt : std::optional<Coordinates>({longitude.value(), latitude.value()});
+        }
+
+        void FillRoadDistances() {
+            auto road_distance_ptr = args_.find("road_distances");
+            Dict road_distances_tmp =
+                road_distance_ptr == args_.end()
+                    ? Dict{}
+                    : std::get<Dict>(
+                          (assert(std::holds_alternative<Dict>(road_distance_ptr->second)), std::move(args_.extract(road_distance_ptr).mapped())));
+            if (!road_distances_tmp.empty()) {
+                assert(road_distances_tmp.size() <= 2);
+                for (auto&& item : road_distances_tmp) {
+                    assert(std::holds_alternative<int>(item.second) || std::holds_alternative<double>(item.second));
+                    std::string to_stop = std::move(item.first);
+                    double distance = std::holds_alternative<int>(item.second) ? std::get<int>(std::move(item.second))
+                                                                               : std::holds_alternative<double>(item.second);
+                    //data::MeasuredRoadDistance dist(std::string(name), std::move(to_stop), std::move(distance));
+                    road_distances.emplace_back(std::string(name), std::move(to_stop), std::move(distance));
+                }
             }
         }
     };
@@ -272,7 +316,7 @@ namespace transport_catalogue::io {
             std::cerr << "onBaseRequest" << std::endl;  //! FOR DEBUG ONLY
             std::vector<BaseRequest> reqs;
             reqs.reserve(requests.size());
-            
+
             std::for_each(std::make_move_iterator(requests.begin()), std::make_move_iterator(requests.end()), [&reqs](RawRequest&& raw_req) {
                 BaseRequest base_req(std::move(raw_req));
                 reqs.emplace_back(std::move(base_req));
