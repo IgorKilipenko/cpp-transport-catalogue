@@ -5,7 +5,7 @@
             "includePath": [
                 "${workspaceFolder}/**"
             ],
-            "defines": ["-Wall", "-Werror"],
+            "defines": ["-Wall", "-Werror", "-DTRACE", "-DREQUEST_TRACE", "-DTRACE_CTR"],
             "compilerPath": "/usr/bin/clang",
             "cStandard": "c17",
             "cppStandard": "c++20",

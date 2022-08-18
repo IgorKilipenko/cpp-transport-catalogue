@@ -10,7 +10,12 @@
         //"UNIT_TESTING_MOCKS" : "OFF",
         //"TRANSPORT_PAHO" : "ON",
         //"PRECONDITIONS" : "ON",
-        "LOGGING" : "ON"
+        "LOGGING" : "ON",
+        // DEBUG TRACEING
+        "TRACE" : 1,
+        "JSONLIB_TRACE" : 0,
+        "REQUEST_TRACE" : 1, 
+        "TRACE_CTR" : 1
     },
     "[cpp]": {
         "editor.suggestSelection": "recentlyUsedByPrefix",

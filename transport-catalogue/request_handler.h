@@ -239,7 +239,6 @@ namespace transport_catalogue::io /* Requests */ {
                     std::string to_stop = std::move(item.first);
                     double distance = std::holds_alternative<int>(item.second) ? std::get<int>(std::move(item.second))
                                                                                : std::holds_alternative<double>(item.second);
-                    //data::MeasuredRoadDistance dist(std::string(name), std::move(to_stop), std::move(distance));
                     road_distances.emplace_back(std::string(name), std::move(to_stop), std::move(distance));
                 }
             }
@@ -296,7 +295,9 @@ namespace transport_catalogue::io {
             : db_reader_{reader}, renderer_{renderer} {}
 
         ~RequestHandler() {
-            std::cerr << "Stop request handler" << std::endl;  //!!! FOR DEBUG
+#if (REQUEST_TRACE && TRACE_CTR)
+            std::cerr << "Stop request handler" << std::endl;
+#endif
         };
 
         // Возвращает информацию о маршруте (запрос Bus)
