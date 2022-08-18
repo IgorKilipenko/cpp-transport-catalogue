@@ -212,7 +212,6 @@ namespace transport_catalogue::data {
         using DistanceBetweenStopsTableBase = std::unordered_map<std::pair<const Stop*, const Stop*>, DistanceBetweenStopsRecord, Hasher>;
         using NameToStopViewBase = std::unordered_map<std::string_view, const data::Stop*>;
         using NameToBusRoutesViewBase = std::unordered_map<std::string_view, const data::Bus*>;
-        // using StopToBusesViewBase = std::unordered_map<const Stop*, std::set<std::string_view, std::less<>>>;
         using StopToBusesViewBase = std::unordered_map<StopRecord, BusRecordSet>;
 
     public: /* DB scheme */

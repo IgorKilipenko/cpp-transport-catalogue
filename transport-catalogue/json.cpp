@@ -411,7 +411,6 @@ namespace json /* Node */ {
 
     Node Node::LoadNode(std::istream& stream, const std::function<void(const Node&, const void*)>* on_node_loaded) {
         Parser parser(stream);
-        //auto listener = std::shared_ptr<std::string>(new std::string("handler"));
         auto listener = std::shared_ptr<int>(new int(1));
         if (on_node_loaded != nullptr) {
             parser.AddListener(listener.get(), *on_node_loaded);

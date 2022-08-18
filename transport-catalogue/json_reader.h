@@ -146,7 +146,6 @@ namespace transport_catalogue::io {
                 }
                 if (type == RequestType::BASE) {
                     ptr->second.lock()->OnBaseRequest(is_broadcast_ && observers_.size() > 1 ? requests : std::move(requests));
-                    [[maybe_unused]] bool jj = false;  //!!! FOR DEBUG ONLY
                 } else {
                     ptr->second.lock()->OnStatRequest(is_broadcast_ && observers_.size() > 1 ? requests : std::move(requests));
                 }
@@ -156,12 +155,12 @@ namespace transport_catalogue::io {
         }
 
         void ReadDocument() {
-            [[maybe_unused]] char ch = input_stream_.peek();  //!!!!!!!!!!! FOR DEBUG ONLY
+            /*[[maybe_unused]] char ch = input_stream_.peek();  //!!!!!!!!!!! FOR DEBUG ONLY
             if (input_stream_.peek() != json::Parser::Token::START_OBJ) {
                 input_stream_.ignore(std::numeric_limits<std::streamsize>::max(), json::Parser::Token::START_OBJ)
                     .putback(json::Parser::Token::START_OBJ);
             }
-            ch = input_stream_.peek();  //!!!!!!!!!!! FOR DEBUG ONLY
+            ch = input_stream_.peek();  //!!!!!!!!!!! FOR DEBUG ONLY*/
 
             json::Document doc = json::Document::Load(input_stream_);
             json::Node& root = doc.GetRoot();
