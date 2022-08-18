@@ -7,6 +7,7 @@
 #include <functional>
 #include <iostream>
 #include <istream>
+#include <iterator>
 #include <limits>
 #include <map>
 #include <memory>
@@ -67,8 +68,18 @@ namespace json /* Interfaces */ {
 
 namespace json {
     class Node;
-    using Array = std::vector<Node>;
+    using ArrayBase = std::vector<Node>;
     using DictBase = std::map<std::string, Node, std::less<>>;
+
+    class Array : public ArrayBase {
+        using ArrayBase::vector;
+
+    public:
+        Array(const Array& other) = delete;
+        Array& operator=(const Array& other) = delete;
+        Array(Array&& other) = default;
+        Array& operator=(Array&& other) = default;
+    };
 
     using Numeric = std::variant<int, double>;
 
@@ -107,6 +118,11 @@ namespace json {
         // Делаем доступными все конструкторы родительского класса variant
         using variant::variant;
         using ValueType = variant;
+
+        Node(const Node& other) = delete;
+        Node& operator=(const Node& other) = delete;
+        Node(Node&& other) = default;
+        Node& operator=(Node&& other) = default;
 
         bool IsNull() const;
 
@@ -235,8 +251,8 @@ namespace json {
 
     class Document {
     public:
-        template <typename Node, detail::EnableIfConvertible<Node, json::Node> = true>
-        explicit Document(Node&& root) : root_(std::forward<Node>(root)) {}
+        //!! template <typename Node, detail::EnableIfConvertible<Node, json::Node> = true>
+        explicit Document(Node&& root) : root_(std::move(root)) {}  //! root_(std::forward<Node>(root)) {}
 
         const Node& GetRoot() const;
 
@@ -262,7 +278,7 @@ namespace json {
         Node root_;
     };
 
-    class Parser : public INotifier<Node> {
+    class Parser /*: public INotifier<Node> */ {
     public:
         class ParsingError : public std::runtime_error {  //!!!!!!!!!!
         public:
@@ -319,7 +335,7 @@ namespace json {
             for (; input_ >> ch && ch == character;) {
             }
         }
-
+#if (0)
         void AddListener(
             const void* listener, const std::function<void(const Node&, const void*)> on_data,
             std::optional<const std::function<void(const std::exception&, const void*)>> /*on_error*/ = nullptr) override {
@@ -330,9 +346,9 @@ namespace json {
         void RemoveListener(const void* /*listener*/) override {
             listener_ = nullptr;
         }
-
+#endif
     protected:
-        bool HasListeners() const {
+        /*bool HasListeners() const {
             return !(listener_ == nullptr);
         }
 
@@ -341,7 +357,7 @@ namespace json {
                 return;
             }
             (*listener_on_data)(node, this);
-        }
+        }*/
 
     private:
         class NumericParser {
@@ -374,8 +390,8 @@ namespace json {
         std::istream& input_;
         NumericParser numeric_parser_;
         StringParser string_parser_;
-        const void* listener_ = nullptr;
-        const std::function<void(const Node&, const void*)>* listener_on_data;
+        //!! const void* listener_ = nullptr;
+        //!! const std::function<void(const Node&, const void*)>* listener_on_data;
     };
 
     using ParsingError = Parser::ParsingError;

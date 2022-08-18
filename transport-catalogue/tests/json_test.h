@@ -8,7 +8,7 @@
 
 namespace json::tests {
     using namespace std::literals;
-
+/*
     class JsonTester {
     public:
         json::Document LoadJSON(const std::string& s) const {
@@ -244,6 +244,11 @@ namespace json::tests {
         }
 
         void TestJsonlib() const {
+            std::stringstream strm;
+            strm << "[0,0,10,[0,0]]";
+            Node node = json::Node::LoadNode(strm);
+            auto arr = node.ExtractArray();
+
             const std::string prefix = "[JSONT] ";
             TestNull();
             std::cerr << prefix << "TestNull : Done." << std::endl;
@@ -272,4 +277,5 @@ namespace json::tests {
             std::cerr << std::endl << "All JSON Tests : Done." << std::endl << std::endl;
         }
     };
+    */
 }

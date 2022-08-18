@@ -137,6 +137,11 @@ namespace transport_catalogue::data {
         double measured_distance = 0.;
     };
 
+    struct MeasuredRoadDistance{
+        std::array<std::string, 2> stops;
+        double distance = 0.;
+    };
+
     struct BusStat {
         size_t total_stops{};
         size_t unique_stops{};

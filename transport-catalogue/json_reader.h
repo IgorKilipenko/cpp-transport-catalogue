@@ -54,7 +54,7 @@ namespace transport_catalogue::detail::convertors {
 
     template <class... Args>
     auto VariantCast(std::variant<Args...>&& v) -> VariantCastProxy<Args...> {
-        return {v};
+        return {std::move(v)};
     }
 }
 
@@ -84,8 +84,6 @@ namespace transport_catalogue::io {
     using namespace std::literals;
 
     class JsonReader : public IRequestNotifier {
-        enum class RequestType : u_int8_t { BASE, STAT };
-
     public:
         class JsonToRequestConvertor {
             const int def_indent_step = 4;
@@ -121,11 +119,11 @@ namespace transport_catalogue::io {
             observers_.erase(observer.get());
         }
 
-        void NotifyBaseRequest(std::vector<RawRequest>&& requests) override {
+        void NotifyBaseRequest(std::vector<Request>&& requests) override {
             NotifyObservers(RequestType::BASE, std::move(requests));
         }
 
-        void NotifyStatRequest(std::vector<RawRequest>&& requests) override {
+        void NotifyStatRequest(std::vector<Request>&& requests) override {
             NotifyObservers(RequestType::STAT, std::move(requests));
         }
 
@@ -135,13 +133,14 @@ namespace transport_catalogue::io {
             });
         }
 
-        void NotifyObservers(RequestType type, std::vector<RawRequest>&& requests) {
+        void NotifyObservers(RequestType type, std::vector<Request>&& requests) {
             for (auto ptr = observers_.begin(); ptr != observers_.end();) {
                 if (ptr->second.expired()) {
                     ptr = observers_.erase(ptr);
                 }
                 if (type == RequestType::BASE) {
                     ptr->second.lock()->OnBaseRequest(std::move(requests));
+                    [[maybe_unused]] bool jj = false;
                 } else {
                     ptr->second.lock()->OnStatRequest(std::move(requests));
                 }
@@ -150,26 +149,30 @@ namespace transport_catalogue::io {
         }
 
         void ReadDocument() {
-            [[maybe_unused]] char ch = input_stream_.peek();
+            [[maybe_unused]] char ch = input_stream_.peek();    //!!!!!!!!!!!
             if (input_stream_.peek() != json::Parser::Token::START_OBJ) {
                 input_stream_.ignore(std::numeric_limits<std::streamsize>::max(), json::Parser::Token::START_OBJ)
                     .putback(json::Parser::Token::START_OBJ);
             }
-            ch = input_stream_.peek();
+            ch = input_stream_.peek();  //!!!!!!!!!!!
 
             json::Document doc = json::Document::Load(input_stream_);
             json::Node& root = doc.GetRoot();
             assert(root.IsMap());
             json::Dict raw_requests = root.ExtractMap();
-            auto* base_req_ptr = raw_requests.Find(BASE_REQUESTS_LITERAL);
-            auto* stat_req_ptr = raw_requests.Find(STAT_REQUESTS_LITERAL);
-            assert(base_req_ptr != nullptr || stat_req_ptr != nullptr);
+            auto base_req_ptr = std::move_iterator(raw_requests.find(BASE_REQUESTS_LITERAL));
+            auto stat_req_ptr = std::move_iterator(raw_requests.find(STAT_REQUESTS_LITERAL));
+            auto end = std::move_iterator(raw_requests.end());
+            assert(base_req_ptr != end || stat_req_ptr != end);
 
-            if (base_req_ptr != nullptr && base_req_ptr->IsArray()) {
-                NotifyBaseRequest(JsonToRawRequest(base_req_ptr->ExtractArray()));
+            if (base_req_ptr != std::move_iterator(raw_requests.end()) && base_req_ptr->second.IsArray()) {
+                json::Array array = base_req_ptr->second.ExtractArray();
+                auto req = JsonToRequest(std::move(array), RequestType::BASE);
+                NotifyBaseRequest(std::move(req));
             }
-            if (stat_req_ptr != nullptr && stat_req_ptr->IsArray()) {
-                NotifyStatRequest(JsonToRawRequest(base_req_ptr->ExtractArray()));
+            if (stat_req_ptr != std::move_iterator(raw_requests.end()) && stat_req_ptr->second.IsArray()) {
+                json::Array array = stat_req_ptr->second.ExtractArray();
+                NotifyBaseRequest(JsonToRequest(std::move(array), RequestType::STAT));
             }
         }
 
@@ -178,23 +181,25 @@ namespace transport_catalogue::io {
             size_t operator()(const IRequestObserver* ptr) const {
                 return hasher_(ptr);
             }
-            private:
+
+        private:
             std::hash<const void*> hasher_;
         };
 
     private:
         std::istream& input_stream_;
         std::unordered_map<const IRequestObserver*, std::weak_ptr<IRequestObserver>, Hasher> observers_;
+        bool is_broadcast_ = true;
         constexpr static const std::string_view BASE_REQUESTS_LITERAL = "base_requests"sv;
         constexpr static const std::string_view STAT_REQUESTS_LITERAL = "stat_requests"sv;
 
     public: /* Helpers */
-        static RawRequest JsonToRawRequest(json::Dict&& map) {
+        static Request JsonToRequest(json::Dict&& map, RequestType type) {
             RawRequest result;
             std::for_each(std::make_move_iterator(map.begin()), std::make_move_iterator(map.end()), [&result](auto&& map_item) {
                 std::string key = std::move(map_item.first);
                 assert(result.count(key) == 0);
-                auto node_val = map_item.second;
+                auto node_val = std::move(map_item.second);
                 if (node_val.IsArray()) {
                     json::Array array = node_val.ExtractArray();
                     std::vector<RequestArrayValueType> sub_array;
@@ -218,14 +223,14 @@ namespace transport_catalogue::io {
                     result.emplace(std::move(key), std::move(value));
                 }
             });
-            return result;
+            return type == RequestType::BASE ? BaseRequest(std::move(result)) : Request(std::move(result));
         }
 
-        static std::vector<RawRequest> JsonToRawRequest(json::Array&& array) {
-            std::vector<RawRequest> requests;
+        static std::vector<Request> JsonToRequest(json::Array&& array, RequestType type) {
+            std::vector<Request> requests;
             requests.reserve(array.size());
-            std::for_each(std::make_move_iterator(array.begin()), std::make_move_iterator(array.end()), [&requests](json::Node&& node) {
-                requests.emplace_back(JsonToRawRequest(node.ExtractMap()));
+            std::for_each(std::make_move_iterator(array.begin()), std::make_move_iterator(array.end()), [&requests, type](json::Node&& node) {
+                requests.emplace_back(JsonToRequest(node.ExtractMap(), type));
             });
             return requests;
         }
