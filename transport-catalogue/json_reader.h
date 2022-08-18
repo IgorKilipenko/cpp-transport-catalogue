@@ -112,6 +112,9 @@ namespace transport_catalogue::io {
         JsonReader(std::istream& input_stream, bool broadcast_mode = true) noexcept : input_stream_{input_stream}, is_broadcast_(broadcast_mode) {}
 
         void AddObserver(std::shared_ptr<IRequestObserver> observer) override {
+            if (!is_broadcast_ && !observers_.empty()) {
+                throw std::logic_error("Duplicate listener. This instance supports only one listener, (not supports broadcast mode)");
+            }
             observers_.emplace(observer.get(), observer);
         }
 

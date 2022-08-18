@@ -26,8 +26,8 @@ int main() {
     SvgTester svg_tester;
     svg_tester.TestSvglib();
 
-    //!JsonTester json_tester;
-    //!json_tester.TestJsonlib();
+    JsonTester json_tester;
+    json_tester.TestJsonlib();
 
     TransportCatalogueTester tester;
     tester.TestTransportCatalogue();

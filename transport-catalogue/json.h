@@ -12,6 +12,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -75,8 +76,8 @@ namespace json {
         using ArrayBase::vector;
 
     public:
-        Array(const Array& other) = delete;
-        Array& operator=(const Array& other) = delete;
+        Array(const Array& other) = default;
+        Array& operator=(const Array& other) = default;
         Array(Array&& other) = default;
         Array& operator=(Array&& other) = default;
     };
@@ -109,6 +110,12 @@ namespace json {
             const auto ptr = find(std::forward<KeyType>(key));
             return ptr == end() ? nullptr : &ptr->second;
         }
+
+    public:
+        Dict(const Dict& other) = default;
+        Dict& operator=(const Dict& other) = default;
+        Dict(Dict&& other) = default;
+        Dict& operator=(Dict&& other) = default;
     };
 
     using NodeValueType = std::variant<std::nullptr_t, std::string, int, double, bool, json::Array, json::Dict>;
@@ -119,11 +126,13 @@ namespace json {
         using variant::variant;
         using ValueType = variant;
 
-        Node(const Node& other) = delete;
-        Node& operator=(const Node& other) = delete;
+    public:
+        Node(const Node& other) = default;
+        Node& operator=(const Node& other) = default;
         Node(Node&& other) = default;
         Node& operator=(Node&& other) = default;
 
+    public:
         bool IsNull() const;
 
         bool IsBool() const;
@@ -251,8 +260,8 @@ namespace json {
 
     class Document {
     public:
-        //!! template <typename Node, detail::EnableIfConvertible<Node, json::Node> = true>
-        explicit Document(Node&& root) : root_(std::move(root)) {}  //! root_(std::forward<Node>(root)) {}
+        template <typename Node, detail::EnableIfConvertible<Node, json::Node> = true>
+        explicit Document(Node&& root) : root_(std::forward<Node>(root)) {}
 
         const Node& GetRoot() const;
 
@@ -278,7 +287,7 @@ namespace json {
         Node root_;
     };
 
-    class Parser /*: public INotifier<Node> */ {
+    class Parser : public INotifier<Node> {
     public:
         class ParsingError : public std::runtime_error {  //!!!!!!!!!!
         public:
@@ -304,7 +313,7 @@ namespace json {
         };
 
     public:
-        explicit Parser(std::istream& input_stream) : input_(input_stream), numeric_parser_(input_), string_parser_(input_) {}
+        explicit Parser(std::istream& input_stream) : input_(input_stream), numeric_parser_(input_), string_parser_(input_), is_broadcast_{false} {}
 
         Node Parse() const;
 
@@ -325,20 +334,12 @@ namespace json {
             input_.ignore(max_count, character);
         }
 
-        void Skip(const char character) const {  //!! FOR DEBUG
-            char ch;
-
-            if (input_ >> ch && ch != character) {
-                input_.putback(ch);
-                return;
-            }
-            for (; input_ >> ch && ch == character;) {
-            }
-        }
-#if (0)
         void AddListener(
             const void* listener, const std::function<void(const Node&, const void*)> on_data,
             std::optional<const std::function<void(const std::exception&, const void*)>> /*on_error*/ = nullptr) override {
+                if (!is_broadcast_ && listener != nullptr) {
+                    throw std::logic_error("Duplicate listener. This instance supports only one listener");
+                }
             listener_ = listener;
             listener_on_data = &on_data;
         }
@@ -346,9 +347,9 @@ namespace json {
         void RemoveListener(const void* /*listener*/) override {
             listener_ = nullptr;
         }
-#endif
+
     protected:
-        /*bool HasListeners() const {
+        bool HasListeners() const {
             return !(listener_ == nullptr);
         }
 
@@ -357,7 +358,7 @@ namespace json {
                 return;
             }
             (*listener_on_data)(node, this);
-        }*/
+        }
 
     private:
         class NumericParser {
@@ -390,8 +391,9 @@ namespace json {
         std::istream& input_;
         NumericParser numeric_parser_;
         StringParser string_parser_;
-        //!! const void* listener_ = nullptr;
-        //!! const std::function<void(const Node&, const void*)>* listener_on_data;
+        const void* listener_ = nullptr;
+        const std::function<void(const Node&, const void*)>* listener_on_data;
+        bool is_broadcast_ = false;
     };
 
     using ParsingError = Parser::ParsingError;

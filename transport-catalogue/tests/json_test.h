@@ -8,7 +8,6 @@
 
 namespace json::tests {
     using namespace std::literals;
-/*
     class JsonTester {
     public:
         json::Document LoadJSON(const std::string& s) const {
@@ -277,5 +276,4 @@ namespace json::tests {
             std::cerr << std::endl << "All JSON Tests : Done." << std::endl << std::endl;
         }
     };
-    */
 }
