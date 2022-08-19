@@ -178,7 +178,7 @@ namespace transport_catalogue::io {
             }
             if (stat_req_ptr != end && stat_req_ptr->second.IsArray()) {
                 json::Array array = stat_req_ptr->second.ExtractArray();
-                NotifyBaseRequest(JsonToRequest(std::move(array), RequestType::STAT));
+                NotifyStatRequest(JsonToRequest(std::move(array), RequestType::STAT));
             }
         }
 
