@@ -157,16 +157,7 @@ namespace json {
         const auto& GetValue() const;
 
         template <typename T = void, detail::EnableIf<detail::IsConvertible<T, NodeValueType>::value || detail::IsSame<T, void>::value> = true>
-        auto&& ExtractValue() {
-            if constexpr (detail::IsConvertible<T, NodeValueType>::value == true) {
-                if (!std::holds_alternative<T>(*this)) {
-                    throw std::logic_error("Node don't contained this type alternative");
-                }
-                return std::get<T>(std::move(*this));
-            } else {
-                return static_cast<Node::ValueType&&>(std::move(*this));
-            }
-        }
+        auto&& ExtractValue();
 
         template <typename T = void, detail::EnableIf<detail::IsConvertible<T, NodeValueType>::value || detail::IsSame<T, void>::value> = true>
         const auto* GetValuePtr() const noexcept;
@@ -181,21 +172,15 @@ namespace json {
 
         const std::string& AsString() const;
 
-        std::string&& ExtractString() {
-            return ExtractValue<std::string>();
-        }
+        std::string&& ExtractString();
 
         const json::Array& AsArray() const;
 
-        json::Array&& ExtractArray() {
-            return ExtractValue<json::Array>();
-        }
+        json::Array&& ExtractArray();
 
         const json::Dict& AsMap() const;
 
-        json::Dict&& ExtractMap() {
-            return ExtractValue<json::Dict>();
-        }
+        json::Dict&& ExtractMap();
 
         bool operator==(const Node& rhs) const;
 
@@ -230,7 +215,7 @@ namespace json {
 
     public:
         NodePrinter(std::ostream& out_stream, bool pretty_print = true)
-            : context_{out_stream, pretty_print ? NodePrinter::def_indent_step : 0, pretty_print ? def_indent : 0} {}
+            : context_{out_stream, pretty_print ? def_indent_step : 0, pretty_print ? def_indent : 0} {}
 
         template <typename Node, detail::EnableIfSame<Node, json::Node> = true>
         void PrintValue(Node&& value) const;
@@ -266,17 +251,11 @@ namespace json {
 
         const Node& GetRoot() const;
 
-        Node& GetRoot() {
-            return root_;
-        }
+        Node& GetRoot();
 
-        bool operator==(const Document& rhs) const {
-            return this == &rhs || root_ == rhs.root_;
-        }
+        bool operator==(const Document& rhs) const;
 
-        bool operator!=(const Document& rhs) const {
-            return !(*this == rhs);
-        }
+        bool operator!=(const Document& rhs) const ;
 
         void Print(std::ostream& output) const;
 
@@ -330,36 +309,18 @@ namespace json {
 
         Numeric ParseNumber() const;
 
-        void Ignore(const char character) const {
-            static const std::streamsize max_count = std::numeric_limits<std::streamsize>::max();
-            input_.ignore(max_count, character);
-        }
+        void Ignore(const char character) const;
 
         void AddListener(
             const void* listener, const std::function<void(const Node&, const void*)> on_data,
-            std::optional<const std::function<void(const std::exception&, const void*)>> /*on_error*/ = nullptr) override {
-                if (!is_broadcast_ && listener_ != nullptr) {
-                    throw std::logic_error("Duplicate listener. This instance supports only one listener");
-                }
-            listener_ = listener;
-            listener_on_data = &on_data;
-        }
+            std::optional<const std::function<void(const std::exception&, const void*)>> /*on_error*/ = nullptr) override;
 
-        void RemoveListener(const void* /*listener*/) override {
-            listener_ = nullptr;
-        }
+        void RemoveListener(const void* /*listener*/) override;
 
     protected:
-        bool HasListeners() const {
-            return !(listener_ == nullptr);
-        }
+        bool HasListeners() const;
 
-        void Notify(const Node& node) const noexcept override {
-            if (!HasListeners()) {
-                return;
-            }
-            (*listener_on_data)(node, this);
-        }
+        void Notify(const Node& node) const noexcept override;
 
     private:
         class NumericParser {
@@ -429,6 +390,18 @@ namespace json /* Node class template impl */ {
             return std::get_if<T>(this);
         } else {
             return static_cast<const Node::ValueType*>(this);
+        }
+    }
+
+    template <typename T, detail::EnableIf<detail::IsConvertible<T, NodeValueType>::value || detail::IsSame<T, void>::value>>
+    auto&& Node::ExtractValue() {
+        if constexpr (detail::IsConvertible<T, NodeValueType>::value == true) {
+            if (!std::holds_alternative<T>(*this)) {
+                throw std::logic_error("Node don't contained this type alternative");
+            }
+            return std::get<T>(std::move(*this));
+        } else {
+            return static_cast<Node::ValueType&&>(std::move(*this));
         }
     }
 }

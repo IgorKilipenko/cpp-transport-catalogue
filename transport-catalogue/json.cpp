@@ -27,6 +27,18 @@ namespace json /* Document */ {
         return root_;
     }
 
+    Node& Document::GetRoot() {
+        return root_;
+    }
+
+    bool Document::operator==(const Document& rhs) const {
+        return this == &rhs || root_ == rhs.root_;
+    }
+
+    bool Document::operator!=(const Document& rhs) const {
+        return !(*this == rhs);
+    }
+
     void Document::Print(std::ostream& output) const {
         std::visit(NodePrinter{output}, GetRoot().GetValue());
     }
@@ -167,6 +179,36 @@ namespace json /* Parser */ {
 
     Numeric Parser::ParseNumber() const {
         return numeric_parser_.Parse();
+    }
+
+    void Parser::Ignore(const char character) const {
+        static const std::streamsize max_count = std::numeric_limits<std::streamsize>::max();
+        input_.ignore(max_count, character);
+    }
+
+    void Parser::AddListener(
+        const void* listener, const std::function<void(const Node&, const void*)> on_data,
+        std::optional<const std::function<void(const std::exception&, const void*)>> /*on_error*/) {
+        if (!is_broadcast_ && listener_ != nullptr) {
+            throw std::logic_error("Duplicate listener. This instance supports only one listener");
+        }
+        listener_ = listener;
+        listener_on_data = &on_data;
+    }
+
+    void Parser::RemoveListener(const void* /*listener*/) {
+        listener_ = nullptr;
+    }
+
+    bool Parser::HasListeners() const {
+        return !(listener_ == nullptr);
+    }
+
+    void Parser::Notify(const Node& node) const noexcept {
+        if (!HasListeners()) {
+            return;
+        }
+        (*listener_on_data)(node, this);
     }
 }
 
@@ -399,6 +441,18 @@ namespace json /* Node */ {
 
     const json::Dict& Node::AsMap() const {
         return GetValue<json::Dict>();
+    }
+
+    std::string&& Node::ExtractString() {
+        return ExtractValue<std::string>();
+    }
+
+    json::Array&& Node::ExtractArray() {
+        return ExtractValue<json::Array>();
+    }
+
+    json::Dict&& Node::ExtractMap() {
+        return ExtractValue<json::Dict>();
     }
 
     bool Node::operator==(const Node& rhs) const {
