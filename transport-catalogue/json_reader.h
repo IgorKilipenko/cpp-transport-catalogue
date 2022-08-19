@@ -13,7 +13,9 @@
 #include <iterator>
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <sstream>
+#include <string_view>
 #include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
@@ -58,7 +60,7 @@ namespace transport_catalogue::detail::convertors {
     }
 }
 
-namespace transport_catalogue::io {
+namespace transport_catalogue::detail::io /* FileReader */ {
     class FileReader {
     public:
         template <typename String = std::string>
@@ -80,7 +82,81 @@ namespace transport_catalogue::io {
     };
 }
 
-namespace transport_catalogue::io {
+namespace transport_catalogue::io /* JsonResponseSender */ {
+    class JsonResponseSender : public IStatResponseSender {
+    public:
+        struct StatFields {
+            inline static const std::string ERROR_MESSAGE{"error_message"};
+            inline static const std::string CURVATURE{"curvature"};
+            inline static const std::string ROUTE_LENGTH{"route_length"};
+            inline static const std::string STOP_COUNT{"stop_count"};
+            inline static const std::string UNIQUE_STOP_COUNT{"unique_stop_count"};
+            inline static const std::string BUSES{"buses"};
+        };
+
+        JsonResponseSender(std::ostream& output_stream) : output_stream_(output_stream) {}
+
+        bool Send(StatResponse&& response) const override {
+            json::Document doc = BuildStatResponse({std::move(response)});
+            doc.Print(output_stream_);
+            return true;
+        }
+
+        size_t Send(std::vector<StatResponse>&& responses) const override {
+            if (responses.empty()) {
+                return 0;
+            }
+            json::Document doc = BuildStatResponse(std::move(responses));
+            doc.Print(output_stream_);
+            return doc.GetRoot().AsArray().size();
+        }
+
+    private:
+        std::ostream& output_stream_;
+
+    private:
+        json::Dict BuildStatMessage(StatResponse&& response) const {
+            static const json::Dict::ItemType ERROR_MESSAGE_ITEM{StatFields::ERROR_MESSAGE, "not found"};
+            json::Dict map;
+            map["request_id"] = response.GetRequestId();
+            if (response.IsBusResponse()) {
+                auto stat = std::move(response.GetBusInfo());
+                if (!stat.has_value()) {
+                    map.insert(ERROR_MESSAGE_ITEM);
+                } else {
+                    map[StatFields::CURVATURE] = stat->route_curvature;
+                    map[StatFields::ROUTE_LENGTH] = static_cast<int>(stat->route_length);
+                    map[StatFields::STOP_COUNT] = static_cast<int>(stat->total_stops);
+                    map[StatFields::UNIQUE_STOP_COUNT] = static_cast<int>(stat->unique_stops);
+                }
+            } else if (response.IsStopResponse()) {
+                auto stat = std::move(response.GetStopInfo());
+                if (!stat.has_value()) {
+                    map.insert(ERROR_MESSAGE_ITEM);
+                } else {
+                    map[StatFields::BUSES] = json::Array(std::make_move_iterator(stat->buses.begin()), std::make_move_iterator(stat->buses.end()));
+                }
+            } else {
+                throw exceptions::ReadingException("Invalid response (Is not stat response). Response does not contain stat info");
+            }
+            return map;
+        };
+
+        json::Document BuildStatResponse(std::vector<StatResponse>&& responses) const {
+            json::Array json_response;
+            std::for_each(
+                std::move_iterator(responses.begin()), std::move_iterator(responses.end()), [this, &json_response](StatResponse&& response) {
+                    json::Dict resp_value = BuildStatMessage(std::move(response));
+                    json_response.emplace_back(std::move(resp_value));
+                });
+            json::Document doc(std::move(json_response));
+            return doc;
+        }
+    };
+
+}
+
+namespace transport_catalogue::io /* JsonReader */ {
     using namespace std::literals;
 
     class JsonReader : public IRequestNotifier {
@@ -230,7 +306,6 @@ namespace transport_catalogue::io {
                 }
             });
             return result;
-            //!!return type == RequestType::BASE ? static_cast<Request>(BaseRequest(std::move(result))) : static_cast<Request>(StatRequest(std::move(result)));
         }
 
         static std::vector<RawRequest> JsonToRequest(json::Array&& array, RequestType type) {

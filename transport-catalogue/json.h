@@ -89,6 +89,7 @@ namespace json {
 
     public:
         using ValueType = DictBase::mapped_type;
+        using ItemType = DictBase::value_type;
         using KeyType = DictBase::key_type;
 
         template <
