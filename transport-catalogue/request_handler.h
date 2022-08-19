@@ -73,66 +73,28 @@ namespace transport_catalogue::io /* Requests */ {
             inline static const std::string_view BUS = "Bus";
         };
 
-        RequestCommand& GetCommand() {
-            return command_;
-        }
-
-        const RequestCommand& GetCommand() const {
-            return command_;
-        }
-
-        std::string& GetName() {
-            return name_;
-        }
-
-        const std::string& GetName() const {
-            return name_;
-        }
-
         Request(RequestCommand type, std::string&& name, RequestArgsMap&& args)
             : command_{std::move(type)}, name_{std::move(name)}, args_{std::move(args)} {}
 
-        Request(std::string&& type, std::string&& name, RequestArgsMap&& args)
-            : Request(
-                  (assert(type == TypeValues::BUS || type == TypeValues::STOP),
-                   TypeValues::BUS == std::move(type) ? RequestCommand::BUS : RequestCommand::STOP),
-                  std::move(name), std::move(args)) {}
+        Request(std::string&& type, std::string&& name, RequestArgsMap&& args);
 
-        explicit Request(RawRequest&& raw_request)
-            : Request(
-                  (assert(raw_request.count("type") && std::holds_alternative<std::string>(raw_request.at("type"))),
-                   std::get<std::string>(std::move(raw_request.extract("type").mapped()))),
-                  (assert(raw_request.count("name")), std::get<std::string>(std::move(raw_request.extract("name").mapped()))),
-                  ((assert(raw_request.size() > 0), std::move(raw_request)))) {}
-
-        /*Request(Request&& other) : Request(std::move(other.type), std::move(other.name), std::move(other.args_)) {
-            std::cerr << "Request move constructor" << std::endl;
-        }
-        Request& operator=(Request&& other) {
-            if (this == &other) {
-                return *this;
-            }
-            RequestArgsMap args_tmp;
-            args_tmp.swap(other.args_);
-
-            type = other.type;
-            name = std::move(other.name);
-
-            return *this;
-        }*/
+        explicit Request(RawRequest&& raw_request);
 
         Request(const Request& other) = default;
         Request& operator=(const Request& other) = default;
         Request(Request&& other) = default;
         Request& operator=(Request&& other) = default;
 
-        virtual bool IsBaseRequest() const {
-            return false;
-        }
+        virtual bool IsBaseRequest() const;
+        virtual bool IsStatRequest() const;
 
-        virtual bool IsStatRequest() const {
-            return false;
-        }
+        RequestCommand& GetCommand();
+
+        const RequestCommand& GetCommand() const;
+
+        std::string& GetName();
+
+        const std::string& GetName() const;
 
         virtual ~Request() = default;
 
@@ -150,15 +112,6 @@ namespace transport_catalogue::io /* Requests */ {
         using Request::Request;
 
     public:
-        // BaseRequest() = default;
-        // BaseRequest(Type type, std::string&& name, RequestArgsMap&& args) : Request(type, std::move(name), std::move(args)) {}
-        // BaseRequest(RawRequest&& raw_request)
-        //    : Request(
-        //          (assert(raw_request.count("type") && std::holds_alternative<std::string>(raw_request.at("type"))),
-        //           std::get<std::string>(std::move(raw_request.extract("type").mapped()))),
-        //          (assert(raw_request.count("name")), std::get<std::string>(std::move(raw_request.extract("name").mapped())))),
-        //      args_((assert(raw_request.size() > 0), std::move(raw_request))) {}
-
         BaseRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args) : Request(std::move(type), std::move(name), std::move(args)) {
             Build();
         }
@@ -171,65 +124,32 @@ namespace transport_catalogue::io /* Requests */ {
         BaseRequest(BaseRequest&& other) = default;
         BaseRequest& operator=(BaseRequest&& other) = default;
 
-        const std::vector<std::string>& GetStops() const {
-            return stops_;
-        }
+        const std::vector<std::string>& GetStops() const;
 
-        std::vector<std::string>& GetStops() {
-            return stops_;
-        }
+        std::vector<std::string>& GetStops();
 
-        const std::optional<bool>& IsRoundtrip() const {
-            return is_roundtrip_;
-        }
+        const std::optional<bool>& IsRoundtrip() const;
 
-        std::optional<bool>& IsRoundtrip() {
-            return is_roundtrip_;
-        }
+        std::optional<bool>& IsRoundtrip();
 
-        const std::optional<data::Coordinates>& GetCoordinates() const {
-            return coordinates_;
-        }
+        const std::optional<data::Coordinates>& GetCoordinates() const;
 
-        std::optional<data::Coordinates>& GetCoordinates() {
-            return coordinates_;
-        }
+        std::optional<data::Coordinates>& GetCoordinates();
 
-        const std::vector<data::MeasuredRoadDistance>& GetroadDistances() const {
-            return road_distances_;
-        }
+        const std::vector<data::MeasuredRoadDistance>& GetroadDistances() const;
 
-        std::vector<data::MeasuredRoadDistance>& GetroadDistances() {
-            return road_distances_;
-        }
+        std::vector<data::MeasuredRoadDistance>& GetroadDistances();
 
-        bool IsBaseRequest() const override {
-            return true;
-        }
+        bool IsBaseRequest() const override;
 
-        bool IsStatRequest() const override {
-            return false;
-        }
+        bool IsStatRequest() const override;
 
-        bool IsStopCommand() const {
-            return command_ == RequestCommand::STOP;
-        }
+        bool IsStopCommand() const;
 
-        bool IsBusCommand() const {
-            return command_ == RequestCommand::BUS;
-        }
+        bool IsBusCommand() const;
 
     protected:
-        void Build() override {
-            assert(!args_.empty());
-            assert(command_ == RequestCommand::BUS || command_ == RequestCommand::STOP);
-
-            if (command_ == RequestCommand::BUS) {
-                FillBus();
-            } else {
-                FillStop();
-            }
-        }
+        void Build() override;
 
     private:
         std::vector<std::string> stops_;
@@ -238,82 +158,29 @@ namespace transport_catalogue::io /* Requests */ {
         std::vector<data::MeasuredRoadDistance> road_distances_;
 
     private:
-        void FillBus() {
-            FillStops();
-            FillRoundtrip();
-        }
+        void FillBus();
 
-        void FillStop() {
-            FillCoordinates();
-            FillRoadDistances();
-        }
+        void FillStop();
 
-        void FillStops() {
-            auto stops_ptr = args_.find("stops");
-            Array stops_tmp =
-                stops_ptr == args_.end()
-                    ? Array{}
-                    : std::get<Array>((assert(std::holds_alternative<Array>(stops_ptr->second)), std::move(args_.extract(stops_ptr).mapped())));
-            stops_.resize(stops_tmp.size());
-            std::transform(stops_tmp.begin(), stops_tmp.end(), stops_.begin(), [&](auto&& stop_name) {
-                assert(std::holds_alternative<std::string>(stop_name));
-                return std::get<std::string>(stop_name);
-            });
-        }
+        void FillStops();
 
-        void FillRoundtrip() {
-            auto is_roundtrip_ptr = args_.find("is_roundtrip");
-            is_roundtrip_ = is_roundtrip_ptr != args_.end() ? std::optional<bool>(
-                                                                  (assert(std::holds_alternative<bool>(is_roundtrip_ptr->second)),
-                                                                   std::get<bool>(std::move(args_.extract(is_roundtrip_ptr).mapped()))))
-                                                            : std::nullopt;
-        }
+        void FillRoundtrip();
 
-        void FillCoordinates() {
-            auto latitude_ptr = args_.find("latitude");
-            std::optional<double> latitude = latitude_ptr != args_.end() ? std::optional<double>(
-                                                                               (assert(std::holds_alternative<double>(latitude_ptr->second)),
-                                                                                std::get<double>(std::move(args_.extract(latitude_ptr).mapped()))))
-                                                                         : std::nullopt;
-            auto longitude_ptr = args_.find("longitude");
-            std::optional<double> longitude = longitude_ptr != args_.end() ? std::optional<double>(
-                                                                                 (assert(std::holds_alternative<double>(longitude_ptr->second)),
-                                                                                  std::get<double>(std::move(args_.extract(longitude_ptr).mapped()))))
-                                                                           : std::nullopt;
-            assert((latitude.has_value() && longitude.has_value()) || !(latitude.has_value() && longitude.has_value()));
-            coordinates_ = !latitude.has_value() ? std::nullopt : std::optional<Coordinates>({longitude.value(), latitude.value()});
-            assert(coordinates_.has_value());
-        }
+        void FillCoordinates();
 
-        void FillRoadDistances() {
-            auto road_distance_ptr = args_.find("road_distances");
-            Dict road_distances_tmp =
-                road_distance_ptr == args_.end()
-                    ? Dict{}
-                    : std::get<Dict>(
-                          (assert(std::holds_alternative<Dict>(road_distance_ptr->second)), std::move(args_.extract(road_distance_ptr).mapped())));
-            if (!road_distances_tmp.empty()) {
-                //! assert(road_distances_tmp.size() <= 2);
-                for (auto&& item : road_distances_tmp) {
-                    assert(std::holds_alternative<int>(item.second) || std::holds_alternative<double>(item.second));
-                    std::string to_stop = std::move(item.first);
-                    double distance = std::holds_alternative<int>(item.second) ? std::get<int>(std::move(item.second))
-                                                                               : std::holds_alternative<double>(item.second);
-                    road_distances_.emplace_back(std::string(name_), std::move(to_stop), std::move(distance));
-                }
-            }
-        }
+        void FillRoadDistances();
     };
 
     class StatRequest : public Request {
         using Request::Request;
 
+    public:
         bool IsBaseRequest() const override {
-            return false;
+            return command_ == RequestCommand::BUS;
         }
 
         bool IsStatRequest() const override {
-            return true;
+            return command_ == RequestCommand::STOP;
         }
 
         int GetRequestId() const {
@@ -325,6 +192,46 @@ namespace transport_catalogue::io /* Requests */ {
 
     private:
         int request_id_;
+    };
+}
+
+namespace transport_catalogue::io /* Response */ {
+    using ResponseBase = RequestBase;
+    class RawResponse : public ResponseBase {
+        using ResponseBase::unordered_map;
+    };
+
+    class Response {
+        using ResponseArgsMap = RawResponse;
+
+    public:
+        Response(std::optional<int>&& request_id, ResponseArgsMap&& args) : request_id_{std::move(request_id)}, args_{std::move(args)} {}
+
+        std::optional<int>& GetRequestId() {
+            return request_id_;
+        }
+
+        const std::optional<int>& GetRequestId() const {
+            return request_id_;
+        }
+
+        ResponseArgsMap& GetArgs() {
+            return args_;
+        }
+
+        const ResponseArgsMap& GetArgs() const {
+            return args_;
+        }
+
+        void Print() const {}
+
+    protected:
+        std::optional<int> request_id_;
+        ResponseArgsMap args_;
+    };
+
+    class StatResponse : public Response {
+        using Response::Response;
     };
 }
 
@@ -352,6 +259,12 @@ namespace transport_catalogue::io /* Interfaces */ {
         virtual void NotifyBaseRequest(std::vector<RawRequest>&& requests) = 0;
         virtual void NotifyStatRequest(std::vector<RawRequest>&& requests) = 0;
     };
+
+    class IStatResponseSender {
+    public:
+        virtual bool Send(StatResponse&& response) const = 0;
+        virtual ~IStatResponseSender() = default;
+    };
 }
 
 namespace transport_catalogue::io {
@@ -360,8 +273,9 @@ namespace transport_catalogue::io {
     public:
         // MapRenderer понадобится в следующей части итогового проекта
         RequestHandler(
-            const data::ITransportStatDataReader& reader, const data::ITransportDataWriter& writer, const io::renderer::MapRenderer& renderer)
-            : db_reader_{reader}, db_writer_{writer}, renderer_{renderer} {}
+            const data::ITransportStatDataReader& reader, const data::ITransportDataWriter& writer, const IStatResponseSender& response_sender,
+            const io::renderer::MapRenderer& renderer)
+            : db_reader_{reader}, db_writer_{writer}, response_sender_{response_sender}, renderer_{renderer} {}
 
         ~RequestHandler() {
 #if (TRACE && REQUEST_TRACE && TRACE_CTR)
@@ -370,87 +284,37 @@ namespace transport_catalogue::io {
         };
 
         // Возвращает информацию о маршруте (запрос Bus)
-        std::optional<data::BusStat> GetBusStat(const std::string_view bus_name) const {
-            return db_reader_.GetBusInfo(bus_name);
-        }
+        std::optional<data::BusStat> GetBusStat(const std::string_view bus_name) const;
 
         // Возвращает маршруты, проходящие через
-        const data::BusRecordSet& GetBusesByStop(const std::string_view& stop_name) const {
-            return db_reader_.GetDataReader().GetBuses(stop_name);
-        }
+        const data::BusRecordSet& GetBusesByStop(const std::string_view& stop_name) const;
 
         // Этот метод будет нужен в следующей части итогового проекта
         svg::Document RenderMap() const;
 
-        void OnBaseRequest(std::vector<RawRequest>&& requests) override {
-#if (TRACE && REQUEST_TRACE)
-            std::cerr << "onBaseRequest" << std::endl;  //! FOR DEBUG ONLY
-#endif
-            std::vector<BaseRequest> reqs;
-            reqs.reserve(requests.size());
+        void OnBaseRequest(std::vector<RawRequest>&& requests) override;
 
-            std::for_each(std::make_move_iterator(requests.begin()), std::make_move_iterator(requests.end()), [&reqs](RawRequest&& raw_req) {
-                BaseRequest base_req(std::move(raw_req));
-                reqs.emplace_back(std::move(base_req));
-            });
+        void OnBaseRequest(const std::vector<RawRequest>& requests) override;
 
-            std::sort(reqs.begin(), reqs.end(), [](const BaseRequest& lhs, const BaseRequest& rhs) {
-                assert(lhs.GetCommand() != RequestCommand::UNDEFINED && rhs.GetCommand() != RequestCommand::UNDEFINED);
-                return static_cast<uint8_t>(lhs.GetCommand()) < static_cast<uint8_t>(rhs.GetCommand());
-            });
+        void OnStatRequest([[maybe_unused]] std::vector<RawRequest>&& requests) override;
 
-            ExecuteRequest(std::move(reqs));
-        }
+        void OnStatRequest([[maybe_unused]] const std::vector<RawRequest>& requests) override;
 
-        void OnBaseRequest(const std::vector<RawRequest>& requests) override {
-            std::vector<RawRequest> requests_tmp(requests);
-            OnBaseRequest(std::move(requests_tmp));
-        }
+        /// Execute Basic (Insert) request
+        void ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const;
 
-        void OnStatRequest([[maybe_unused]] std::vector<RawRequest>&& requests) override {
-#if (TRACE && REQUEST_TRACE)
-            std::cerr << "onStatRequest" << std::endl;  //! FOR DEBUG ONLY
-#endif
-        }
+        /// Execute Basic (Insert) requests
+        void ExecuteRequest(std::vector<BaseRequest>&& base_req) const;
 
-        void OnStatRequest([[maybe_unused]] const std::vector<RawRequest>& requests) override {
-            std::vector<RawRequest> requests_tmp(requests);
-            OnStatRequest(std::move(requests_tmp));
-        }
+        void ExecuteRequest(StatRequest&& stat_req) const;
 
-        void ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const {
-            if (raw_req.IsStopCommand()) {
-                assert(raw_req.GetCoordinates().has_value());
-                db_writer_.AddStop(data::Stop{std::move(raw_req.GetName()), std::move(raw_req.GetCoordinates().value())});
-                std::move(raw_req.GetroadDistances().begin(), raw_req.GetroadDistances().end(), std::back_inserter(out_distances));
-
-            } else if (raw_req.IsBusCommand()) {
-                db_writer_.AddBus(std::move(raw_req.GetName()), std::move(raw_req.GetStops()));
-            }
-        }
-
-        void ExecuteRequest(std::vector<BaseRequest>&& base_req) const {
-            std::vector<data::MeasuredRoadDistance> out_distances;
-            out_distances.reserve(base_req.size());
-
-            std::for_each(
-                std::make_move_iterator(base_req.begin()), std::make_move_iterator(base_req.end()), [this, &out_distances](BaseRequest&& req) {
-                    ExecuteRequest(std::move(req), out_distances);
-                });
-
-            std::for_each(
-                std::make_move_iterator(out_distances.begin()), std::make_move_iterator(out_distances.end()),
-                [this](data::MeasuredRoadDistance&& dist) {
-                    db_writer_.SetMeasuredDistance(std::move(dist));
-                });
-
-            //!out_distances.shrink_to_fit();
-        }
+        void SendStatResponse(StatResponse&& response) const;
 
     private:
         // RequestHandler использует агрегацию объектов "Транспортный Справочник" и "Визуализатор Карты"
         const data::ITransportStatDataReader& db_reader_;
         const data::ITransportDataWriter& db_writer_;
+        const IStatResponseSender& response_sender_;
         const renderer::MapRenderer& renderer_;
     };
 }
