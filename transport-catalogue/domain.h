@@ -116,7 +116,7 @@ namespace transport_catalogue::data {
         Bus() = default;
         template <
             typename String = std::string, typename Route = data::Route,
-            detail::EnableIf<detail::IsConvertibleV<String, std::string_view> && detail::IsSameV<Route, data::Route>> = true>
+            detail::EnableIf<detail::IsConvertibleV<String, std::string> && detail::IsSameV<Route, data::Route>> = true>
         Bus(String&& name, Route&& route) : name{std::forward<String>(name)}, route{std::forward<Route>(route)} {}
         // Bus(Bus&& other) : name{std::move(other.name)}, route{std::move(other.route)} {}
 
@@ -142,7 +142,7 @@ namespace transport_catalogue::data {
         std::string to_stop;
         double distance = 0.;
 
-        template <typename String= std::string, detail::EnableIfSame<String, std::string> = true>
+        template <typename String = std::string, detail::EnableIfSame<String, std::string> = true>
         MeasuredRoadDistance(String&& from_stop, String&& to_stop, double distance)
             : from_stop(std::move(from_stop)), to_stop(std::move(to_stop)), distance(distance) {}
     };
@@ -188,12 +188,14 @@ namespace transport_catalogue::data {
     class ITransportDataWriter {
     public:
         virtual void AddBus(Bus&& bus) const = 0;
-        virtual void AddBus(std::string_view name, const std::vector<std::string_view>& stops) const = 0;
+        virtual void AddBus(std::string&& name, const std::vector<std::string_view>& stops) const = 0;
+        virtual void AddBus(std::string&& name, std::vector<std::string>&& stops) const = 0;
 
         virtual void AddStop(Stop&& stop) const = 0;
-        virtual void AddStop(std::string_view, Coordinates&& coordinates) const = 0;
+        virtual void AddStop(std::string&&, Coordinates&& coordinates) const = 0;
 
         virtual void SetMeasuredDistance(const std::string_view from_stop_name, const std::string_view to_stop_name, double distance) const = 0;
+        virtual void SetMeasuredDistance(data::MeasuredRoadDistance&& distance) const = 0;
 
         virtual ~ITransportDataWriter() = default;
     };
@@ -288,13 +290,14 @@ namespace transport_catalogue::data {
 
         template <
             typename String = std::string, typename Route = data::Route,
-            detail::EnableIf<detail::IsSameV<String, std::string> && detail::IsConvertibleV<Route, data::Route>> = true>
+            detail::EnableIf<detail::IsSameV<String, std::string> && detail::IsSameV<Route, data::Route>> = true>
         const Bus& AddBus(String&& name, Route&& route);
 
         template <
             typename String = std::string, typename StopsNameContainer = std::vector<std::string_view>,
-            detail::EnableIf<detail::IsConvertibleV<String, std::string> && detail::IsSameV<StopsNameContainer, std::vector<std::string_view>>> =
-                true>
+            detail::EnableIf<
+                detail::IsConvertibleV<String, std::string> && (detail::IsSameV<StopsNameContainer, std::vector<std::string>> ||
+                                                                detail::IsSameV<StopsNameContainer, std::vector<std::string_view>>)> = true>
         const Bus& AddBus(String&& name, StopsNameContainer&& route);
 
         template <
@@ -358,20 +361,28 @@ namespace transport_catalogue::data {
                 db_.AddBus(std::move(bus));
             }
 
-            void AddBus(std::string_view name, const std::vector<std::string_view>& stops) const override {
-                db_.AddBus(static_cast<std::string>(name), stops);
+            void AddBus(std::string&& name, const std::vector<std::string_view>& stops) const override {
+                db_.AddBus(std::move(name), stops);
+            }
+
+            void AddBus(std::string&& name, std::vector<std::string>&& stops) const override {
+                db_.AddBus(std::move(name), std::move(stops));
             }
 
             void AddStop(Stop&& stop) const override {
                 db_.AddStop(std::move(stop));
             }
 
-            void AddStop(std::string_view name, Coordinates&& coordinates) const override {
-                db_.AddStop(static_cast<std::string>(name), coordinates);
+            void AddStop(std::string&& name, Coordinates&& coordinates) const override {
+                db_.AddStop(std::move(name), std::move(coordinates));
             }
 
             void SetMeasuredDistance(const std::string_view from_stop_name, const std::string_view to_stop_name, double distance) const override {
                 db_.AddMeasuredDistance(from_stop_name, to_stop_name, distance);
+            }
+
+            void SetMeasuredDistance(data::MeasuredRoadDistance&& distance) const override {
+                db_.AddMeasuredDistance(std::move(distance.from_stop), std::move(distance.to_stop), std::move(distance.distance));
             }
 
         private:
@@ -463,7 +474,7 @@ namespace transport_catalogue::data {
     }
 
     template <class Owner>
-    template <typename String, typename Route, detail::EnableIf<detail::IsSameV<String, std::string> && detail::IsConvertibleV<Route, data::Route>>>
+    template <typename String, typename Route, detail::EnableIf<detail::IsSameV<String, std::string> && detail::IsSameV<Route, data::Route>>>
     const Bus& Database<Owner>::AddBus(String&& name, Route&& route) {
         return AddBus(Bus{std::forward<String>(name), std::forward<Route>(route)});
     }
@@ -471,7 +482,9 @@ namespace transport_catalogue::data {
     template <class Owner>
     template <
         typename String, typename StopsNameContainer,
-        detail::EnableIf<detail::IsConvertibleV<String, std::string> && detail::IsSameV<StopsNameContainer, std::vector<std::string_view>>>>
+        detail::EnableIf<
+            detail::IsConvertibleV<String, std::string> &&
+            (detail::IsSameV<StopsNameContainer, std::vector<std::string>> || detail::IsSameV<StopsNameContainer, std::vector<std::string_view>>)>>
     const Bus& Database<Owner>::AddBus(String&& name, StopsNameContainer&& stops) {
         Route route{stops.size()};
         std::transform(stops.begin(), stops.end(), route.begin(), [&](const std::string_view stop) {

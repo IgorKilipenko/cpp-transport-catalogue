@@ -22,20 +22,28 @@ namespace transport_catalogue {
             db_writer_.AddStop(std::move(stop));
         }
 
-        void AddStop(std::string_view name, Coordinates&& coordinates) const override {
-            db_writer_.AddStop(name, std::move(coordinates));
+        void AddStop(std::string&& name, Coordinates&& coordinates) const override {
+            db_writer_.AddStop(std::move(name), std::move(coordinates));
         }
 
         void AddBus(data::Bus&& bus) const override {
             db_->AddBus(std::move(bus));
         }
 
-        void AddBus(std::string_view name, const std::vector<std::string_view>& stops) const override {
-            db_writer_.AddBus(static_cast<std::string>(name), stops);
+        void AddBus(std::string&& name, const std::vector<std::string_view>& stops) const override {
+            db_writer_.AddBus(std::move(name), stops);
+        }
+
+        void AddBus(std::string&& name, std::vector<std::string>&& stops) const override {
+            db_writer_.AddBus(std::move(name), std::move(stops));
         }
 
         void SetMeasuredDistance(const std::string_view from_stop_name, const std::string_view to_stop_name, double distance) const override {
             db_writer_.SetMeasuredDistance(from_stop_name, to_stop_name, distance);
+        }
+
+        void SetMeasuredDistance(data::MeasuredRoadDistance&& distance) const override {
+            db_writer_.SetMeasuredDistance(std::move(distance));
         }
 
         data::BusRecord GetBus(const std::string_view name) const override;
@@ -58,11 +66,11 @@ namespace transport_catalogue {
 
         const std::shared_ptr<const Database> GetDatabaseReadOnly() const;
 
-        const  data::BusStat GetBusInfo(data::BusRecord bus) const override {
+        const data::BusStat GetBusInfo(data::BusRecord bus) const override {
             return db_stat_reader_.GetBusInfo(bus);
         }
 
-        const  std::optional<data::BusStat> GetBusInfo(const std::string_view bus_name) const override {
+        const std::optional<data::BusStat> GetBusInfo(const std::string_view bus_name) const override {
             return db_stat_reader_.GetBusInfo(bus_name);
         }
 

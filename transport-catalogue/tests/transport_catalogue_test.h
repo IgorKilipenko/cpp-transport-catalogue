@@ -105,7 +105,7 @@ namespace transport_catalogue::tests {
             const auto &db_writer = catalog.GetDataWriter();
             const auto &db_reader = catalog.GetDataReader();
             data::Stop expected_result{"Stop1", {94, 54}};
-            db_writer.AddStop(expected_result.name, geo::Coordinates{expected_result.coordinates});
+            db_writer.AddStop(static_cast<std::string>(expected_result.name), geo::Coordinates{expected_result.coordinates});
             [[maybe_unused]]const auto* result = db_reader.GetStop(expected_result.name);
             assert(result && expected_result == *result);
         }

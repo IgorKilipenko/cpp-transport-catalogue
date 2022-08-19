@@ -38,13 +38,13 @@ int main() {
     istream << json_file << std::endl;
     TransportCatalogue catalog;
     io::renderer::MapRenderer renderer;
-    main_request_handler_ptr = std::make_shared<io::RequestHandler>(catalog.GetStatDataReader(), renderer);
+    main_request_handler_ptr = std::make_shared<io::RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), renderer);
     json_reader.AddObserver(main_request_handler_ptr);
     json_reader.ReadDocument();
     {
         istream << json_file;
         //std::cerr << istream.str() << std::endl;
-        const auto request_handler_ptr = std::make_shared<io::RequestHandler>(catalog.GetStatDataReader(), renderer);
+        const auto request_handler_ptr = std::make_shared<io::RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), renderer);
         json_reader.AddObserver(request_handler_ptr);
         json_reader.ReadDocument();
     }

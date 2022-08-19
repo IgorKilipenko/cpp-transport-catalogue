@@ -159,7 +159,7 @@ namespace transport_catalogue::io /* Requests */ {
         //          (assert(raw_request.count("name")), std::get<std::string>(std::move(raw_request.extract("name").mapped())))),
         //      args_((assert(raw_request.size() > 0), std::move(raw_request))) {}
 
-        BaseRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args) : Request(type, std::move(name), std::move(args)) {
+        BaseRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args) : Request(std::move(type), std::move(name), std::move(args)) {
             Build();
         }
         explicit BaseRequest(RawRequest&& raw_request) : Request(std::move(raw_request)) {
@@ -206,8 +206,17 @@ namespace transport_catalogue::io /* Requests */ {
         bool IsBaseRequest() const override {
             return true;
         }
+
         bool IsStatRequest() const override {
             return false;
+        }
+
+        bool IsStopCommand() const {
+            return command_ == RequestCommand::STOP;
+        }
+
+        bool IsBusCommand() const {
+            return command_ == RequestCommand::BUS;
         }
 
     protected:
@@ -273,6 +282,7 @@ namespace transport_catalogue::io /* Requests */ {
                                                                            : std::nullopt;
             assert((latitude.has_value() && longitude.has_value()) || !(latitude.has_value() && longitude.has_value()));
             coordinates_ = !latitude.has_value() ? std::nullopt : std::optional<Coordinates>({longitude.value(), latitude.value()});
+            assert(coordinates_.has_value());
         }
 
         void FillRoadDistances() {
@@ -283,7 +293,7 @@ namespace transport_catalogue::io /* Requests */ {
                     : std::get<Dict>(
                           (assert(std::holds_alternative<Dict>(road_distance_ptr->second)), std::move(args_.extract(road_distance_ptr).mapped())));
             if (!road_distances_tmp.empty()) {
-                assert(road_distances_tmp.size() <= 2);
+                //! assert(road_distances_tmp.size() <= 2);
                 for (auto&& item : road_distances_tmp) {
                     assert(std::holds_alternative<int>(item.second) || std::holds_alternative<double>(item.second));
                     std::string to_stop = std::move(item.first);
@@ -301,12 +311,20 @@ namespace transport_catalogue::io /* Requests */ {
         bool IsBaseRequest() const override {
             return false;
         }
+
         bool IsStatRequest() const override {
             return true;
         }
 
+        int GetRequestId() const {
+            return request_id_;
+        }
+
     protected:
         void Build() override {}
+
+    private:
+        int request_id_;
     };
 }
 
@@ -341,8 +359,9 @@ namespace transport_catalogue::io {
     class RequestHandler : public IRequestObserver {
     public:
         // MapRenderer понадобится в следующей части итогового проекта
-        RequestHandler(const data::ITransportStatDataReader& reader, const io::renderer::MapRenderer& renderer)
-            : db_reader_{reader}, renderer_{renderer} {}
+        RequestHandler(
+            const data::ITransportStatDataReader& reader, const data::ITransportDataWriter& writer, const io::renderer::MapRenderer& renderer)
+            : db_reader_{reader}, db_writer_{writer}, renderer_{renderer} {}
 
         ~RequestHandler() {
 #if (TRACE && REQUEST_TRACE && TRACE_CTR)
@@ -397,9 +416,39 @@ namespace transport_catalogue::io {
             OnStatRequest(std::move(requests_tmp));
         }
 
+        void ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const {
+            if (raw_req.IsStopCommand()) {
+                assert(raw_req.GetCoordinates().has_value());
+                db_writer_.AddStop(data::Stop{std::move(raw_req.GetName()), std::move(raw_req.GetCoordinates().value())});
+                std::move(raw_req.GetroadDistances().begin(), raw_req.GetroadDistances().end(), std::back_inserter(out_distances));
+
+            } else if (raw_req.IsBusCommand()) {
+                db_writer_.AddBus(std::move(raw_req.GetName()), std::move(raw_req.GetStops()));
+            }
+        }
+
+        void ExecuteRequest(std::vector<BaseRequest>&& base_req) const {
+            std::vector<data::MeasuredRoadDistance> out_distances;
+            out_distances.reserve(base_req.size());
+
+            std::for_each(
+                std::make_move_iterator(base_req.begin()), std::make_move_iterator(base_req.end()), [this, &out_distances](BaseRequest&& req) {
+                    ExecuteRequest(std::move(req), out_distances);
+                });
+
+            std::for_each(
+                std::make_move_iterator(out_distances.begin()), std::make_move_iterator(out_distances.end()),
+                [this](data::MeasuredRoadDistance&& dist) {
+                    db_writer_.SetMeasuredDistance(std::move(dist));
+                });
+
+            //!out_distances.shrink_to_fit();
+        }
+
     private:
         // RequestHandler использует агрегацию объектов "Транспортный Справочник" и "Визуализатор Карты"
         const data::ITransportStatDataReader& db_reader_;
+        const data::ITransportDataWriter& db_writer_;
         const renderer::MapRenderer& renderer_;
     };
 }
