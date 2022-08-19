@@ -154,6 +154,10 @@ namespace transport_catalogue::data {
         double route_curvature{};
     };
 
+    struct StopStat {
+        std::vector<std::string> buses;
+    };
+
     class Hasher {
     public:
         size_t operator()(const std::pair<const Stop*, const Stop*>& stops) const {
@@ -178,8 +182,10 @@ namespace transport_catalogue::data {
     public:
         virtual BusRecord GetBus(std::string_view name) const = 0;
         virtual StopRecord GetStop(std::string_view name) const = 0;
+
         virtual const BusRecordSet& GetBuses(StopRecord stop) const = 0;
         virtual const BusRecordSet& GetBuses(const std::string_view bus_name) const = 0;
+
         virtual DistanceBetweenStopsRecord GetDistanceBetweenStops(StopRecord from, StopRecord to) const = 0;
 
         virtual ~ITransportDataReader() = default;
@@ -202,8 +208,12 @@ namespace transport_catalogue::data {
 
     class ITransportStatDataReader {
     public:
-        virtual const BusStat GetBusInfo(const data::Bus* bus) const = 0;
-        virtual const std::optional<BusStat> GetBusInfo(const std::string_view bus_name) const = 0;
+        virtual BusStat GetBusInfo(const data::BusRecord bus) const = 0;
+        virtual std::optional<BusStat> GetBusInfo(const std::string_view bus_name) const = 0;
+
+        virtual StopStat GetStopInfo(const data::StopRecord stop) const = 0;
+        virtual std::optional<StopStat> GetStopInfo(const std::string_view stop_name) const = 0;
+
         virtual const data::ITransportDataReader& GetDataReader() const = 0;
 
         virtual ~ITransportStatDataReader() = default;
@@ -352,7 +362,10 @@ namespace transport_catalogue::data {
             return std::lock_guard<std::mutex>{mutex_};
         }
 
-        template <typename Container, detail::EnableIf<detail::IsSameV<Container, std::vector<std::string_view>> || detail::IsSameV<Container, std::vector<std::string>>> = true>
+        template <
+            typename Container,
+            detail::EnableIf<detail::IsSameV<Container, std::vector<std::string_view>> || detail::IsSameV<Container, std::vector<std::string>>> =
+                true>
         Route ToRoute(Container&& stops) const {
             Route route{stops.size()};
             std::transform(stops.begin(), stops.end(), route.begin(), [this](const std::string_view stop) {
