@@ -398,6 +398,8 @@ namespace transport_catalogue::io {
                 assert(lhs.GetCommand() != RequestCommand::UNDEFINED && rhs.GetCommand() != RequestCommand::UNDEFINED);
                 return static_cast<uint8_t>(lhs.GetCommand()) < static_cast<uint8_t>(rhs.GetCommand());
             });
+
+            ExecuteRequest(std::move(reqs));
         }
 
         void OnBaseRequest(const std::vector<RawRequest>& requests) override {
