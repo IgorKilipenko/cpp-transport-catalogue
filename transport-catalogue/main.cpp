@@ -41,7 +41,7 @@ int main() {
     main_request_handler_ptr = std::make_shared<io::RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), renderer);
     json_reader.AddObserver(main_request_handler_ptr);
     json_reader.ReadDocument();
-    {
+    /*{
         istream << json_file;
         //std::cerr << istream.str() << std::endl;
         const auto request_handler_ptr = std::make_shared<io::RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), renderer);
@@ -49,7 +49,7 @@ int main() {
         json_reader.ReadDocument();
     }
     istream << json_file;
-    json_reader.ReadDocument();
+    json_reader.ReadDocument();*/
 
     return 0;
 }
