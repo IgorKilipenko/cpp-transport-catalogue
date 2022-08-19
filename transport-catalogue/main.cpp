@@ -1,5 +1,7 @@
+#include <iostream>
 #include <memory>
 #include <sstream>
+#include <vector>
 
 #include "./tests/json_test.h"
 #include "./tests/svg_test.h"
@@ -18,14 +20,6 @@
  * Вывести в stdout ответы в виде JSON
  */
 
-namespace transport_catalogue::io::mock {
-    class StatResponseSender : public IStatResponseSender {
-        bool Send(StatResponse&& response) const override {
-            std::cerr << "mock send" << std::endl;
-            return true;
-        }
-    };
-}
 
 int main() {
     using namespace transport_catalogue::tests;
@@ -41,12 +35,12 @@ int main() {
     TransportCatalogueTester tester;
     tester.TestTransportCatalogue();
     std::shared_ptr<io::RequestHandler> main_request_handler_ptr;
-    std::string json_file = io::FileReader::Read("/home/igor/Documents/test1.json");
+    std::string json_file = transport_catalogue::detail::io::FileReader::Read("/home/igor/Documents/test1.json");
     std::stringstream istream;
     io::JsonReader json_reader{istream};
     istream << json_file << std::endl;
     TransportCatalogue catalog;
-    io::mock::StatResponseSender stat_sender;
+    io::JsonResponseSender stat_sender(std::cerr);
     io::renderer::MapRenderer renderer;
     main_request_handler_ptr = std::make_shared<io::RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer);
     json_reader.AddObserver(main_request_handler_ptr);

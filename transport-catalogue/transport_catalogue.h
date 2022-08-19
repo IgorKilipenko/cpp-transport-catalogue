@@ -1,9 +1,11 @@
 #pragma once
 
+#include <algorithm>
 #include <deque>
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "domain.h"
 
@@ -66,12 +68,20 @@ namespace transport_catalogue {
 
         const std::shared_ptr<const Database> GetDatabaseReadOnly() const;
 
-        const data::BusStat GetBusInfo(data::BusRecord bus) const override {
+        data::BusStat GetBusInfo(data::BusRecord bus) const override {
             return db_stat_reader_.GetBusInfo(bus);
         }
 
-        const std::optional<data::BusStat> GetBusInfo(const std::string_view bus_name) const override {
+        std::optional<data::BusStat> GetBusInfo(const std::string_view bus_name) const override {
             return db_stat_reader_.GetBusInfo(bus_name);
+        }
+
+        data::StopStat GetStopInfo(const data::StopRecord stop) const override {
+            return db_stat_reader_.GetStopInfo(stop);
+        }
+
+        std::optional<data::StopStat> GetStopInfo(const std::string_view stop_name) const override {
+            return db_stat_reader_.GetStopInfo(stop_name);
         }
 
         const data::ITransportDataWriter& GetDataWriter() const {
@@ -90,7 +100,8 @@ namespace transport_catalogue {
         class StatReader : public data::ITransportStatDataReader {
         public:
             StatReader(const data::ITransportDataReader& db_reader) : db_reader_{db_reader} {}
-            const data::BusStat GetBusInfo(const data::Bus* bus) const override {
+
+            data::BusStat GetBusInfo(const data::BusRecord bus) const override {
                 data::BusStat info;
                 double route_length = 0;
                 double pseudo_length = 0;
@@ -114,9 +125,26 @@ namespace transport_catalogue {
                 return info;
             }
 
-            const std::optional<data::BusStat> GetBusInfo(const std::string_view bus_name) const override {
+            std::optional<data::BusStat> GetBusInfo(const std::string_view bus_name) const override {
                 data::BusRecord bus = db_reader_.GetBus(bus_name);
                 return bus != nullptr ? std::optional{GetBusInfo(bus)} : std::nullopt;
+            }
+
+            data::StopStat GetStopInfo(const data::StopRecord stop) const override {
+                const data::BusRecordSet& buses = db_reader_.GetBuses(stop);
+                std::vector<std::string> buses_names(buses.size());
+                std::transform(buses.begin(), buses.end(), buses_names.begin(), [](const auto& bus) {
+                    return bus->name;
+                });
+                return data::StopStat{std::move(buses_names)};
+            }
+
+            std::optional<data::StopStat> GetStopInfo(const std::string_view stop_name) const override {
+                const data::StopRecord stop = db_reader_.GetStop(stop_name);
+                if (stop == nullptr) {
+                    return std::nullopt;
+                }
+                return std::optional<data::StopStat>{GetStopInfo(stop)};
             }
 
             const data::ITransportDataReader& GetDataReader() const override {

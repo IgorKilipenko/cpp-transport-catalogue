@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <iostream>
@@ -88,6 +89,13 @@ namespace transport_catalogue::io /* Requests */ {
         virtual bool IsBaseRequest() const;
         virtual bool IsStatRequest() const;
 
+        virtual bool IsStopCommand() const {
+            return command_ == RequestCommand::STOP;
+        }
+        virtual bool IsBusCommand() const {
+            return command_ == RequestCommand::BUS;
+        }
+
         RequestCommand& GetCommand();
 
         const RequestCommand& GetCommand() const;
@@ -144,9 +152,9 @@ namespace transport_catalogue::io /* Requests */ {
 
         bool IsStatRequest() const override;
 
-        bool IsStopCommand() const;
+        /*bool IsStopCommand() const override;
 
-        bool IsBusCommand() const;
+        bool IsBusCommand() const override;*/
 
     protected:
         void Build() override;
@@ -175,12 +183,20 @@ namespace transport_catalogue::io /* Requests */ {
         using Request::Request;
 
     public:
-        bool IsBaseRequest() const override {
+        /*bool IsBaseRequest() const override {
             return command_ == RequestCommand::BUS;
         }
 
-        bool IsStatRequest() const override {
+        bool IsStopRequest() const override {
             return command_ == RequestCommand::STOP;
+        }*/
+
+        bool IsBaseRequest() const override {
+            return false;
+        }
+
+        bool IsStatRequest() const override {
+            return true;
         }
 
         int GetRequestId() const {
@@ -202,36 +218,88 @@ namespace transport_catalogue::io /* Response */ {
     };
 
     class Response {
-        using ResponseArgsMap = RawResponse;
-
     public:
-        Response(std::optional<int>&& request_id, ResponseArgsMap&& args) : request_id_{std::move(request_id)}, args_{std::move(args)} {}
+        using ResponseArgsMap = RawResponse;
+        Response(int&& request_id, RequestCommand&& command, std::string&& name)
+            : request_id_{std::move(request_id)}, command_{std::move(command)}, name_{std::move(name)} {}
 
-        std::optional<int>& GetRequestId() {
+        int& GetRequestId() {
             return request_id_;
         }
 
-        const std::optional<int>& GetRequestId() const {
+        int GetRequestId() const {
             return request_id_;
         }
 
-        ResponseArgsMap& GetArgs() {
-            return args_;
+        virtual bool IsBusResponse() const {
+            return command_ == RequestCommand::BUS;
         }
 
-        const ResponseArgsMap& GetArgs() const {
-            return args_;
+        virtual bool IsStopResponse() const {
+            return command_ == RequestCommand::STOP;
         }
 
-        void Print() const {}
+        virtual bool IsStatResponse() const {
+            return false;
+        }
+
+        virtual bool IsBaseResponse() const {
+            return false;
+        }
 
     protected:
-        std::optional<int> request_id_;
-        ResponseArgsMap args_;
+        int request_id_;
+        RequestCommand command_;
+        std::string name_;
     };
 
-    class StatResponse : public Response {
-        using Response::Response;
+    class StatResponse final : public Response {
+        // using Response::Response;
+
+    public:
+        /*
+            StatResponse(int&& request_id, RequestCommand&& command, std::string&& name, std::optional<data::BusStat>&& stat)
+                : Response(std::move(request_id), std::move(command), std::move(name)), bus_stat_{std::move(stat)} {}
+
+            StatResponse(int&& request_id, RequestCommand&& command, std::string&& name, std::optional<data::StopStat>&& stat)
+                : Response(std::move(request_id), std::move(command), std::move(name)), stop_stat_{std::move(stat)} {}*/
+
+        StatResponse(
+            int&& request_id, RequestCommand&& command, std::string&& name, std::optional<data::BusStat>&& bus_stat = std::nullopt,
+            std::optional<data::StopStat>&& stop_stat = std::nullopt)
+            : Response(std::move(request_id), std::move(command), std::move(name)),
+              bus_stat_{std::move(bus_stat)},
+              stop_stat_{std::move(stop_stat)} {}
+
+        StatResponse(
+            StatRequest&& request, std::optional<data::BusStat>&& bus_stat = std::nullopt, std::optional<data::StopStat>&& stop_stat = std::nullopt)
+            : StatResponse(
+                  std::move(request.GetRequestId()), std::move(request.GetCommand()), std::move(request.GetName()), std::move(bus_stat),
+                  std::move(stop_stat)) {}
+
+        std::optional<data::BusStat>& GetBusInfo() {
+            return bus_stat_;
+        }
+
+        std::optional<data::StopStat>& GetStopInfo() {
+            return stop_stat_;
+        }
+        /*
+                bool IsBusSatResponse() override {
+                    return Response::IsBusSatResponse() && bus_stat_.has_value();
+                }
+
+                bool IsStopSatResponse() override {
+                    return Response::IsStopSatResponse() && buses_.has_value();
+                }
+        */
+        bool IsStatResponse() const override {
+            return true;
+        }
+
+    private:
+        std::optional<data::BusStat> bus_stat_;
+        std::optional<data::StopStat> stop_stat_;
     };
 }
 
@@ -263,6 +331,7 @@ namespace transport_catalogue::io /* Interfaces */ {
     class IStatResponseSender {
     public:
         virtual bool Send(StatResponse&& response) const = 0;
+        virtual size_t Send(std::vector<StatResponse>&& responses) const = 0;
         virtual ~IStatResponseSender() = default;
     };
 }
@@ -306,9 +375,17 @@ namespace transport_catalogue::io {
         /// Execute Basic (Insert) requests
         void ExecuteRequest(std::vector<BaseRequest>&& base_req) const;
 
+        /// Execute Stat (Get) request
         void ExecuteRequest(StatRequest&& stat_req) const;
 
+        /// Execute Stat (Get) requests
+        void ExecuteRequest(std::vector<StatRequest>&& stat_req) const;
+
+        /// Send Stat Response
         void SendStatResponse(StatResponse&& response) const;
+
+        /// Send Stat Response
+        void SendStatResponse(std::vector<StatResponse>&& responses) const;
 
     private:
         // RequestHandler использует агрегацию объектов "Транспортный Справочник" и "Визуализатор Карты"

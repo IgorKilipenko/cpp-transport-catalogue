@@ -8,6 +8,12 @@
 
 #include "request_handler.h"
 
+#include <algorithm>
+#include <optional>
+#include <vector>
+
+#include "domain.h"
+
 namespace transport_catalogue::io /* BaseRequest implementation */ {
     const std::vector<std::string>& BaseRequest::GetStops() const {
         return stops_;
@@ -48,7 +54,7 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
     bool BaseRequest::IsStatRequest() const {
         return false;
     }
-
+    /*
     bool BaseRequest::IsStopCommand() const {
         return command_ == RequestCommand::STOP;
     }
@@ -56,7 +62,7 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
     bool BaseRequest::IsBusCommand() const {
         return command_ == RequestCommand::BUS;
     }
-
+    */
     void BaseRequest::Build() {
         assert(!args_.empty());
         assert(command_ == RequestCommand::BUS || command_ == RequestCommand::STOP);
@@ -212,6 +218,15 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
 #if (TRACE && REQUEST_TRACE)
         std::cerr << "onStatRequest" << std::endl;  //! FOR DEBUG ONLY
 #endif
+        std::vector<StatRequest> reqs;
+        reqs.reserve(requests.size());
+
+        std::for_each(std::make_move_iterator(requests.begin()), std::make_move_iterator(requests.end()), [&reqs](RawRequest&& raw_req) {
+            StatRequest stat_req(std::move(raw_req));
+            reqs.emplace_back(std::move(stat_req));
+        });
+
+        ExecuteRequest(std::move(reqs));
     }
 
     void RequestHandler::OnStatRequest([[maybe_unused]] const std::vector<RawRequest>& requests) {
@@ -247,12 +262,37 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         //! out_distances.shrink_to_fit();
     }
 
-    void RequestHandler::ExecuteRequest(StatRequest&& stat_req) const {
-        // StatResponse resp{stat_req.GetRequestId()};
-        // stat_req.
+    void RequestHandler::ExecuteRequest(StatRequest&& request) const {
+        ExecuteRequest(std::vector<StatRequest>{std::move(request)});
+    }
+
+    void RequestHandler::ExecuteRequest(std::vector<StatRequest>&& requests) const {
+
+        std::vector<StatResponse> responses;
+        responses.reserve(requests.size());
+
+        std::for_each(std::make_move_iterator(requests.begin()), std::make_move_iterator(requests.end()), [this, &responses](StatRequest&& request) {
+            assert(request.IsStatRequest());
+            assert(request.IsBusCommand() || request.IsStopCommand());
+
+            bool is_bus = request.IsBusCommand();   
+            bool is_stop = request.IsStopCommand(); 
+            std::string name = request.GetName();   //!!
+
+            StatResponse resp(
+                std::move(request), is_bus ? db_reader_.GetBusInfo(name) : std::nullopt, is_stop ? db_reader_.GetStopInfo(name) : std::nullopt);
+            
+            responses.emplace_back(std::move(resp));
+        });
+
+        response_sender_.Send(std::move(responses));
     }
 
     void RequestHandler::SendStatResponse(StatResponse&& response) const {
         response_sender_.Send(std::move(response));
+    }
+
+    void RequestHandler::SendStatResponse(std::vector<StatResponse>&& responses) const {
+        response_sender_.Send(std::move(responses));
     }
 }
