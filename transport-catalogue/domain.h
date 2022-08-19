@@ -352,6 +352,16 @@ namespace transport_catalogue::data {
             return std::lock_guard<std::mutex>{mutex_};
         }
 
+        template <typename Container, detail::EnableIf<detail::IsSameV<Container, std::vector<std::string_view>> || detail::IsSameV<Container, std::vector<std::string>>> = true>
+        Route ToRoute(Container&& stops) const {
+            Route route{stops.size()};
+            std::transform(stops.begin(), stops.end(), route.begin(), [this](const std::string_view stop) {
+                assert(name_to_stop_.count(stop));
+                return name_to_stop_.at(stop);
+            });
+            return route;
+        }
+
     public:
         class DataWriter : public ITransportDataWriter {
         public:
@@ -438,6 +448,8 @@ namespace transport_catalogue::data {
     template <class Owner>
     template <typename Stop, detail::EnableIfSame<Stop, data::Stop>>
     const Stop& Database<Owner>::AddStop(Stop&& stop) {
+        assert(name_to_stop_.count(stop.name) == 0);
+
         const Stop& new_stop = stops_.emplace_back(std::forward<Stop>(stop));
         name_to_stop_[new_stop.name] = &new_stop;
         return new_stop;
@@ -465,6 +477,8 @@ namespace transport_catalogue::data {
     template <class Owner>
     template <typename Bus, detail::EnableIfSame<Bus, data::Bus>>
     const Bus& Database<Owner>::AddBus(Bus&& bus) {
+        assert(name_to_bus_.count(bus.name) == 0);
+
         const Bus& new_bus = bus_routes_.emplace_back(std::forward<Bus>(bus));
         name_to_bus_[new_bus.name] = &new_bus;
         std::for_each(new_bus.route.begin(), new_bus.route.end(), [this, &new_bus](const Stop* stop) {
@@ -486,12 +500,7 @@ namespace transport_catalogue::data {
             detail::IsConvertibleV<String, std::string> &&
             (detail::IsSameV<StopsNameContainer, std::vector<std::string>> || detail::IsSameV<StopsNameContainer, std::vector<std::string_view>>)>>
     const Bus& Database<Owner>::AddBus(String&& name, StopsNameContainer&& stops) {
-        Route route{stops.size()};
-        std::transform(stops.begin(), stops.end(), route.begin(), [&](const std::string_view stop) {
-            assert(name_to_stop_.count(stop));
-            return name_to_stop_[stop];
-        });
-
+        Route route = ToRoute(std::forward<StopsNameContainer>(stops));
         return AddBus(std::forward<String>(name), std::move(route));
     }
 
