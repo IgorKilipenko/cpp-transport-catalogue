@@ -43,15 +43,6 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
         return true;
     }
 
-    /*
-    bool BaseRequest::IsStopCommand() const {
-        return command_ == RequestCommand::STOP;
-    }
-
-    bool BaseRequest::IsBusCommand() const {
-        return command_ == RequestCommand::BUS;
-    }
-    */
     void BaseRequest::Build() {
         assert(!args_.empty());
         assert(command_ == RequestCommand::BUS || command_ == RequestCommand::STOP);
@@ -118,7 +109,6 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
                 : std::get<Dict>(
                       (assert(std::holds_alternative<Dict>(road_distance_ptr->second)), std::move(args_.extract(road_distance_ptr).mapped())));
         if (!road_distances_tmp.empty()) {
-            //! assert(road_distances_tmp.size() <= 2);
             for (auto&& item : road_distances_tmp) {
                 assert(std::holds_alternative<int>(item.second) || std::holds_alternative<double>(item.second));
                 std::string to_stop = std::move(item.first);
@@ -183,9 +173,6 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
     }
 
     void RequestHandler::OnBaseRequest(std::vector<RawRequest>&& requests) {
-#if (TRACE && REQUEST_TRACE)
-        std::cerr << "onBaseRequest" << std::endl;  //! FOR DEBUG ONLY
-#endif
         std::vector<BaseRequest> reqs;
         reqs.reserve(requests.size());
 
@@ -208,9 +195,6 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
     }
 
     void RequestHandler::OnStatRequest(std::vector<RawRequest>&& requests) {
-#if (TRACE && REQUEST_TRACE)
-        std::cerr << "onStatRequest" << std::endl;  //! FOR DEBUG ONLY
-#endif
         std::vector<StatRequest> reqs;
         reqs.reserve(requests.size());
 
@@ -240,7 +224,6 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         }
     }
 
-    /// Execute Basic (Insert) requests
     void RequestHandler::ExecuteRequest(std::vector<BaseRequest>&& base_req) const {
         std::vector<data::MeasuredRoadDistance> out_distances;
         out_distances.reserve(base_req.size());
@@ -254,7 +237,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
                 db_writer_.SetMeasuredDistance(std::move(dist));
             });
 
-        //! out_distances.shrink_to_fit();
+        out_distances.shrink_to_fit();
     }
 
     void RequestHandler::ExecuteRequest(StatRequest&& request) const {
@@ -271,7 +254,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
 
             bool is_bus = request.IsBusCommand();
             bool is_stop = request.IsStopCommand();
-            std::string name = request.GetName();  //!!
+            std::string name = request.GetName(); 
 
             StatResponse resp(
                 std::move(request), is_bus ? db_reader_.GetBusInfo(name) : std::nullopt, is_stop ? db_reader_.GetStopInfo(name) : std::nullopt);

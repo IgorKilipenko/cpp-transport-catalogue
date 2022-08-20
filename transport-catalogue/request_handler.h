@@ -117,8 +117,6 @@ namespace transport_catalogue::io /* Requests */ {
     };
 
     class BaseRequest : public Request {
-        // using Request::Request;
-
     public:
         BaseRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args) : Request(std::move(type), std::move(name), std::move(args)) {
             Build();
@@ -135,10 +133,6 @@ namespace transport_catalogue::io /* Requests */ {
         const std::vector<std::string>& GetStops() const;
 
         std::vector<std::string>& GetStops();
-
-        /*const std::optional<bool>& Roundtrip() const;
-
-        std::optional<bool>& Roundtrip();*/
 
         bool IsRoundtrip() const {
             return is_roundtrip_.value_or(false);
@@ -178,10 +172,6 @@ namespace transport_catalogue::io /* Requests */ {
             std::copy(stops.begin(), stops.begin() + old_size - 1, stops.rbegin());
         }
 
-        /*bool IsStopCommand() const override;
-
-        bool IsBusCommand() const override;*/
-
     protected:
         void Build() override;
 
@@ -206,8 +196,6 @@ namespace transport_catalogue::io /* Requests */ {
     };
 
     class StatRequest : public Request {
-        // using Request::Request;
-
     public:
         StatRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args) : Request(std::move(type), std::move(name), std::move(args)) {
             Build();
@@ -215,13 +203,6 @@ namespace transport_catalogue::io /* Requests */ {
         explicit StatRequest(RawRequest&& raw_request) : Request(std::move(raw_request)) {
             Build();
         }
-        /*bool IsBaseRequest() const override {
-            return command_ == RequestCommand::BUS;
-        }
-
-        bool IsStopRequest() const override {
-            return command_ == RequestCommand::STOP;
-        }*/
 
         bool IsBaseRequest() const override {
             return false;
@@ -303,13 +284,6 @@ namespace transport_catalogue::io /* Response */ {
         // using Response::Response;
 
     public:
-        /*
-            StatResponse(int&& request_id, RequestCommand&& command, std::string&& name, std::optional<data::BusStat>&& stat)
-                : Response(std::move(request_id), std::move(command), std::move(name)), bus_stat_{std::move(stat)} {}
-
-            StatResponse(int&& request_id, RequestCommand&& command, std::string&& name, std::optional<data::StopStat>&& stat)
-                : Response(std::move(request_id), std::move(command), std::move(name)), stop_stat_{std::move(stat)} {}*/
-
         StatResponse(
             int&& request_id, RequestCommand&& command, std::string&& name, std::optional<data::BusStat>&& bus_stat = std::nullopt,
             std::optional<data::StopStat>&& stop_stat = std::nullopt)
@@ -330,15 +304,7 @@ namespace transport_catalogue::io /* Response */ {
         std::optional<data::StopStat>& GetStopInfo() {
             return stop_stat_;
         }
-        /*
-                bool IsBusSatResponse() override {
-                    return Response::IsBusSatResponse() && bus_stat_.has_value();
-                }
 
-                bool IsStopSatResponse() override {
-                    return Response::IsStopSatResponse() && buses_.has_value();
-                }
-        */
         bool IsStatResponse() const override {
             return true;
         }
@@ -439,25 +405,5 @@ namespace transport_catalogue::io {
         const data::ITransportDataWriter& db_writer_;
         const IStatResponseSender& response_sender_;
         const renderer::MapRenderer& renderer_;
-    };
-}
-
-namespace transport_catalogue::io {
-    class RequestParser {
-    public:
-        inline static const std::string TYPE_FIELD = "type";
-        inline static const std::string NAME_FIELD = "name";
-
-        void ParseRawRequest(std::vector<RawRequest>&& requests) const {
-            assert(!requests.empty());
-        }
-        void ParseBaseRequest(RawRequest&& request) const {
-            assert(!request.empty());
-            assert(request.count(TYPE_FIELD));
-            assert(request.count(NAME_FIELD));
-        }
-        bool CheckScheme(const RawRequest& request) const {
-            return request.count(TYPE_FIELD) && request.count(NAME_FIELD);
-        }
     };
 }
