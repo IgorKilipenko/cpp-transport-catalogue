@@ -198,10 +198,18 @@ namespace json {
             return {out, indent_step, indent + indent_step};
         }
 
+        PrintContext PrevIndented() const {
+            return {out, indent_step, std::max(indent - indent_step, 0)};
+        }
+
         void RenderIndent() const {
             for (int i = 0; i < indent; ++i) {
                 out.put(' ');
             }
+        }
+
+        void RenderNewLine() const {
+            out.put('\n');
         }
 
         std::ostream& out;
@@ -216,6 +224,8 @@ namespace json {
     public:
         NodePrinter(std::ostream& out_stream, bool pretty_print = true)
             : context_{out_stream, pretty_print ? def_indent_step : 0, pretty_print ? def_indent : 0} {}
+
+        NodePrinter(PrintContext&& context) : context_{context} {}
 
         template <typename Node, detail::EnableIfSame<Node, json::Node> = true>
         void PrintValue(Node&& value) const;
@@ -240,6 +250,10 @@ namespace json {
         template <typename Array = json::Array, detail::EnableIfSame<Array, json::Array> = true>
         void operator()(Array&& array) const;
 
+        NodePrinter NextIndent() const {
+            return context_.indent == 0 && context_.indent_step == 0 ? *this : NodePrinter(context_.Indented());
+        }
+
     private:
         PrintContext context_;
     };
@@ -255,7 +269,7 @@ namespace json {
 
         bool operator==(const Document& rhs) const;
 
-        bool operator!=(const Document& rhs) const ;
+        bool operator!=(const Document& rhs) const;
 
         void Print(std::ostream& output) const;
 
@@ -410,25 +424,39 @@ namespace json /* NodePrinter class template impl */ {
     template <typename Dict, detail::EnableIfSame<Dict, json::Dict>>
     void NodePrinter::operator()(Dict&& dict) const {
         int size = dict.size();
+
         context_.out << Parser::Token::START_OBJ;
+
         static const std::string sep{Parser::Token::VALUE_SEPARATOR};
+
         std::for_each(dict.begin(), dict.end(), [this, &size](const auto& item) {
+            context_.RenderNewLine();
+            context_.RenderIndent();
             context_.out << Parser::Token::START_STRING << item.first << Parser::Token::END_STRING << Parser::Token::KEYVAL_SEPARATOR << ' ';
             PrintValue(item.second);
             context_.out << (--size > 0 ? sep : "");
         });
+        context_.RenderNewLine();
+        context_.PrevIndented().RenderIndent();
         context_.out << Parser::Token::END_OBJ;
     }
 
     template <typename Array, detail::EnableIfSame<Array, json::Array>>
     void NodePrinter::operator()(Array&& array) const {
         int size = array.size();
+
         context_.out << Parser::Token::START_ARRAY;
+
         static const std::string sep{Parser::Token::VALUE_SEPARATOR};
         std::for_each(array.begin(), array.end(), [this, &size](const Node& node) {
+            context_.RenderNewLine();
+            context_.RenderIndent();
             PrintValue(node);
             context_.out << (--size > 0 ? sep : "");
         });
+
+        context_.RenderNewLine();
+        context_.PrevIndented().RenderIndent();
         context_.out << Parser::Token::END_ARRAY;
     }
 
@@ -459,11 +487,11 @@ namespace json /* NodePrinter class template impl */ {
 
     template <typename Node, detail::EnableIfSame<Node, json::Node>>
     void NodePrinter::PrintValue(Node&& value) const {
-        std::visit(*this, value.GetValue());
+        std::visit(this->NextIndent(), value.GetValue());
     }
 
     template <typename Value, detail::EnableIfConvertible<Value, json::Node::ValueType>>
     void NodePrinter::PrintValue(Value&& value) const {
-        std::visit(*this, std::forward<Value>(value));
+        std::visit(this->NextIndent(), std::forward<Value>(value));
     }
 }
