@@ -23,6 +23,10 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
         return stops_;
     }
 
+    bool BaseRequest::IsRoundtrip() const {
+        return is_roundtrip_.value_or(false);
+    }
+
     const std::optional<data::Coordinates>& BaseRequest::GetCoordinates() const {
         return coordinates_;
     }
@@ -41,6 +45,30 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
 
     bool BaseRequest::IsBaseRequest() const {
         return true;
+    }
+
+    bool BaseRequest::IsValidRequest() const {
+        return Request::IsValidRequest() && ((IsBusCommand() && is_roundtrip_.has_value()) || (IsStopCommand() && coordinates_.has_value()));
+    }
+
+    void BaseRequest::ConvertToRoundtrip() {
+        if (!is_roundtrip_.has_value() || is_roundtrip_.value()) {
+            return;
+        }
+
+        ConvertToRoundtrip(stops_);
+
+        is_roundtrip_ = true;
+    }
+
+    void BaseRequest::ConvertToRoundtrip(std::vector<std::string>& stops) {
+        if (stops.size() <= 1) {
+            return;
+        }
+
+        size_t old_size = stops.size();
+        stops.resize(old_size * 2 - 1);
+        std::copy(stops.begin(), stops.begin() + old_size - 1, stops.rbegin());
     }
 
     void BaseRequest::Build() {
@@ -254,7 +282,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
 
             bool is_bus = request.IsBusCommand();
             bool is_stop = request.IsStopCommand();
-            std::string name = request.GetName(); 
+            std::string name = request.GetName();
 
             StatResponse resp(
                 std::move(request), is_bus ? db_reader_.GetBusInfo(name) : std::nullopt, is_stop ? db_reader_.GetStopInfo(name) : std::nullopt);
@@ -271,5 +299,86 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
 
     void RequestHandler::SendStatResponse(std::vector<StatResponse>&& responses) const {
         response_sender_.Send(std::move(responses));
+    }
+}
+
+namespace transport_catalogue::io /* StatRequest implementation */ {
+    bool StatRequest::IsBaseRequest() const {
+        return false;
+    }
+
+    bool StatRequest::IsStatRequest() const {
+        return true;
+    }
+
+    bool StatRequest::IsValidRequest() const {
+        return Request::IsValidRequest() && request_id_.has_value();
+    }
+
+    const std::optional<int>& StatRequest::GetRequestId() const {
+        return request_id_;
+    }
+
+    std::optional<int>& StatRequest::GetRequestId() {
+        return request_id_;
+    }
+
+    void StatRequest::Build() {
+        auto request_id__ptr = args_.find("id");
+        request_id_ = request_id__ptr != args_.end() ? std::optional<int>(
+                                                           (assert(std::holds_alternative<int>(request_id__ptr->second)),
+                                                            std::get<int>(std::move(args_.extract(request_id__ptr).mapped()))))
+                                                     : std::nullopt;
+    }
+}
+
+namespace transport_catalogue::io /* Response implementation */ {
+    int& Response::GetRequestId() {
+        return request_id_;
+    }
+
+    int Response::GetRequestId() const {
+        return request_id_;
+    }
+
+    bool Response::IsBusResponse() const {
+        return command_ == RequestCommand::BUS;
+    }
+
+    bool Response::IsStopResponse() const {
+        return command_ == RequestCommand::STOP;
+    }
+
+    bool Response::IsStatResponse() const {
+        return false;
+    }
+
+    bool Response::IsBaseResponse() const {
+        return false;
+    }
+}
+
+namespace transport_catalogue::io /* StatResponse implementation */ {
+    StatResponse::StatResponse(
+        int&& request_id, RequestCommand&& command, std::string&& name, std::optional<data::BusStat>&& bus_stat,
+        std::optional<data::StopStat>&& stop_stat)
+        : Response(std::move(request_id), std::move(command), std::move(name)), bus_stat_{std::move(bus_stat)}, stop_stat_{std::move(stop_stat)} {}
+
+    StatResponse::StatResponse(
+        StatRequest && request, std::optional<data::BusStat>&& bus_stat, std::optional<data::StopStat>&& stop_stat)
+        : StatResponse(
+              std::move((assert(request.IsValidRequest()), request.GetRequestId().value())), std::move(request.GetCommand()),
+              std::move(request.GetName()), std::move(bus_stat), std::move(stop_stat)) {}
+
+    std::optional<data::BusStat>& StatResponse::GetBusInfo() {
+        return bus_stat_;
+    }
+
+    std::optional<data::StopStat>& StatResponse::GetStopInfo() {
+        return stop_stat_;
+    }
+
+    bool StatResponse::IsStatResponse() const {
+        return true;
     }
 }
