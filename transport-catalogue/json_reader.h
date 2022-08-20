@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <iterator>
@@ -63,10 +64,10 @@ namespace transport_catalogue::detail::convertors {
 namespace transport_catalogue::detail::io /* FileReader */ {
     class FileReader {
     public:
-        template <typename String = std::string>
-        static std::string Read(String&& filename) {
+        template <typename Path = std::filesystem::path>
+        static std::string Read(Path&& path) {
             std::ifstream istrm;
-            istrm.open(filename, std::ios::in);
+            istrm.open(path, std::ios::in);
             if (!istrm.is_open()) {
                 throw exceptions::ReadingException("failed to open " /*+ filename*/);
             }

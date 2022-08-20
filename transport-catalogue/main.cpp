@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -20,7 +21,6 @@
  * Вывести в stdout ответы в виде JSON
  */
 
-
 int main() {
     using namespace transport_catalogue::tests;
     using namespace svg::tests;
@@ -35,7 +35,7 @@ int main() {
     TransportCatalogueTester tester;
     tester.TestTransportCatalogue();
     std::shared_ptr<io::RequestHandler> main_request_handler_ptr;
-    std::string json_file = transport_catalogue::detail::io::FileReader::Read("/home/igor/Documents/test1.json");
+    std::string json_file = transport_catalogue::detail::io::FileReader::Read(std::filesystem::current_path() /= "transport-catalogue/tests/data/json_requests/test1.json");
     std::stringstream istream;
     io::JsonReader json_reader{istream};
     istream << json_file << std::endl;
