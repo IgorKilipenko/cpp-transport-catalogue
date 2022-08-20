@@ -118,7 +118,7 @@ namespace transport_catalogue {
                 }
 
                 info.total_stops = route.size();
-                info.unique_stops = std::unordered_set<data::StopRecord>(route.begin(), route.end()).size();
+                info.unique_stops = CulculateUniqueStops(route.begin(), route.end()); //std::unordered_set<data::StopRecord>(route.begin(), route.end()).size();
                 info.route_length = route_length;
                 info.route_curvature = route_length / std::max(pseudo_length, 1.);
 
@@ -153,6 +153,11 @@ namespace transport_catalogue {
 
         private:
             const data::ITransportDataReader& db_reader_;
+
+            template <typename Iterator>
+            static size_t CulculateUniqueStops(Iterator begin, Iterator end) {
+                return  std::unordered_set<typename Iterator::value_type>(begin, end).size();
+            }
         };
 
     private:
