@@ -12,6 +12,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -190,20 +191,19 @@ namespace json {
     };
 
     struct PrintContext {
+    public:
         PrintContext(std::ostream& out) : out(out) {}
 
-        PrintContext(std::ostream& out, int indent_step, int indent = 0) : out(out), indent_step(indent_step), indent(indent) {}
+        PrintContext(std::ostream& out, uint8_t indent_step, size_t indent = 0) : out(out), indent_step(indent_step), indent(indent) {}
 
-        PrintContext Indented() const {
-            return {out, indent_step, indent + indent_step};
+        PrintContext Indented(bool backward = false) const {
+            return !backward ? PrintContext{out, indent_step, indent + indent_step}
+                             : PrintContext{out, indent_step, std::max(indent - indent_step, 0ul)};
         }
 
-        PrintContext PrevIndented() const {
-            return {out, indent_step, std::max(indent - indent_step, 0)};
-        }
-
-        void RenderIndent() const {
-            for (int i = 0; i < indent; ++i) {
+        void RenderIndent(bool backward = false) const {
+            int size = !backward ? indent : std::max(indent - indent_step, 0ul);
+            for (int i = 0; i < size; ++i) {
                 out.put(' ');
             }
         }
@@ -212,18 +212,42 @@ namespace json {
             out.put('\n');
         }
 
+        template <typename Value>
+        std::ostream& Print(Value&& value) const {
+            out << std::forward<Value>(value);
+            return out;
+        }
+
+        std::ostream& Stream() const {
+            return out;
+        }
+
+        uint8_t GetStep() const {
+            return indent_step;
+        }
+
+        size_t GetCurrentIndent() const {
+            return indent;
+        }
+
+        bool IsPretty() const {
+            return indent_step != 0;
+        }
+
+    public:
         std::ostream& out;
-        int indent_step = 4;
-        int indent = 0;
+
+    private:
+        uint8_t indent_step = 4;
+        size_t indent = 0;
     };
 
     class NodePrinter {
-        const int def_indent_step = 4;
-        const int def_indent = 4;
+        const uint8_t def_indent_step = 4;
 
     public:
         NodePrinter(std::ostream& out_stream, bool pretty_print = true)
-            : context_{out_stream, pretty_print ? def_indent_step : 0, pretty_print ? def_indent : 0} {}
+            : context_{out_stream, pretty_print ? def_indent_step : uint8_t{0}, pretty_print ? def_indent_step : uint8_t{0}} {}
 
         NodePrinter(PrintContext&& context) : context_{context} {}
 
@@ -251,7 +275,7 @@ namespace json {
         void operator()(Array&& array) const;
 
         NodePrinter NextIndent() const {
-            return context_.indent == 0 && context_.indent_step == 0 ? *this : NodePrinter(context_.Indented());
+            return !context_.IsPretty() ? *this : NodePrinter(context_.Indented());
         }
 
     private:
@@ -424,7 +448,6 @@ namespace json /* NodePrinter class template impl */ {
     template <typename Dict, detail::EnableIfSame<Dict, json::Dict>>
     void NodePrinter::operator()(Dict&& dict) const {
         int size = dict.size();
-
         context_.out << Parser::Token::START_OBJ;
 
         static const std::string sep{Parser::Token::VALUE_SEPARATOR};
@@ -437,7 +460,7 @@ namespace json /* NodePrinter class template impl */ {
             context_.out << (--size > 0 ? sep : "");
         });
         context_.RenderNewLine();
-        context_.PrevIndented().RenderIndent();
+        context_.RenderIndent(true);
         context_.out << Parser::Token::END_OBJ;
     }
 
@@ -456,7 +479,7 @@ namespace json /* NodePrinter class template impl */ {
         });
 
         context_.RenderNewLine();
-        context_.PrevIndented().RenderIndent();
+        context_.RenderIndent(true);
         context_.out << Parser::Token::END_ARRAY;
     }
 
