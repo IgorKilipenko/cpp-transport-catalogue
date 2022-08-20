@@ -88,6 +88,7 @@ namespace transport_catalogue::io /* JsonResponseSender */ {
     public:
         struct StatFields {
             inline static const std::string ERROR_MESSAGE{"error_message"};
+            inline static const std::string REQUEST_ID{"request_id"};
             inline static const std::string CURVATURE{"curvature"};
             inline static const std::string ROUTE_LENGTH{"route_length"};
             inline static const std::string STOP_COUNT{"stop_count"};

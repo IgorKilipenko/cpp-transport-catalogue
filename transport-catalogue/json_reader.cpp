@@ -139,7 +139,7 @@ namespace transport_catalogue::io /* JsonResponseSender implementation */ {
     json::Dict JsonResponseSender::BuildStatMessage(StatResponse&& response) const {
         static const json::Dict::ItemType ERROR_MESSAGE_ITEM{StatFields::ERROR_MESSAGE, "not found"};
         json::Dict map;
-        map["request_id"] = response.GetRequestId();
+        map[StatFields::REQUEST_ID] = response.GetRequestId();
         if (response.IsBusResponse()) {
             auto stat = std::move(response.GetBusInfo());
             if (!stat.has_value()) {
