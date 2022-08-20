@@ -35,7 +35,8 @@ int main() {
     TransportCatalogueTester tester;
     tester.TestTransportCatalogue();
     std::shared_ptr<io::RequestHandler> main_request_handler_ptr;
-    std::string json_file = transport_catalogue::detail::io::FileReader::Read(std::filesystem::current_path() /= "transport-catalogue/tests/data/json_requests/test1.json");
+    std::string json_file = transport_catalogue::detail::io::FileReader::Read(
+        std::filesystem::current_path() /= "transport-catalogue/tests/data/json_requests/test2.json");
     std::stringstream istream;
     io::JsonReader json_reader{istream};
     istream << json_file << std::endl;
