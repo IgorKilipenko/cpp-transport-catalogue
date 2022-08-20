@@ -22,7 +22,7 @@ namespace json {
     }
 }
 
-namespace json /* Document */ {
+namespace json /* Document implementation */ {
     const Node& Document::GetRoot() const {
         return root_;
     }
@@ -39,15 +39,20 @@ namespace json /* Document */ {
         return !(*this == rhs);
     }
 
-    void Document::Print(std::ostream& output) const {
-        std::visit(NodePrinter{output}, GetRoot().GetValue());
+    void Document::Print(std::ostream& output, bool pretty_print) const {
+        //std::visit(NodePrinter{output, pretty_print}, GetRoot().GetValue());
+        root_.Print(output, pretty_print);
     }
 
     Document Document::Load(std::istream& stream) {
+#if (TRACE && JSONLIB_TRACE)
         const std::function<void(const Node&, const void*)> on_node = [](const Node& node, const void*) -> void {
             std::visit(NodePrinter{std::cerr}, node.GetValue());
         };
         return Document{Node::LoadNode(stream, &on_node)};
+#else
+        return Document{Node::LoadNode(stream)};
+#endif
     }
 
     void Document::Print(const Document& doc, std::ostream& output) {
@@ -374,7 +379,7 @@ namespace json /* NodePrinter */ {
     }
 }
 
-namespace json /* Node */ {
+namespace json /* Node implementation */ {
     bool Node::IsNull() const {
         return /*IsType<std::monostate>() ||*/ IsType<std::nullptr_t>();
     }
@@ -465,12 +470,18 @@ namespace json /* Node */ {
 
     Node Node::LoadNode(std::istream& stream, const std::function<void(const Node&, const void*)>* on_node_loaded) {
         Parser parser(stream);
-#if (JSONLIB_TRACE)
-        auto listener = std::shared_ptr<int>(new int(1));
+
+        // For DEBUG ONLY
         if (on_node_loaded != nullptr) {
+            auto listener = std::shared_ptr<int>(new int(1));
             parser.AddListener(listener.get(), *on_node_loaded);
         }
-#endif
+
         return parser.Parse();
+    }
+
+    void Node::Print(std::ostream& output, bool pretty_print) const {
+        //std::visit(NodePrinter{output, pretty_print}, GetValue());
+        Print(NodePrinter{output, pretty_print});
     }
 }

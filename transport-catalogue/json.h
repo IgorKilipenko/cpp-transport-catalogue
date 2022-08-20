@@ -68,7 +68,7 @@ namespace json /* Interfaces */ {
     };
 }
 
-namespace json {
+namespace json /* Node */ {
     class Node;
     using ArrayBase = std::vector<Node>;
     using DictBase = std::map<std::string, Node, std::less<>>;
@@ -188,8 +188,41 @@ namespace json {
         bool operator!=(const Node& rhs) const;
 
         static Node LoadNode(std::istream& stream, const std::function<void(const Node&, const void*)>* = nullptr);
+
+        void Print(std::ostream& output, bool pretty_print = true) const;
+
+        template <typename Printer>
+        void Print(Printer&& printer) const;
     };
 
+    class Document {
+    public:
+        template <typename Node, detail::EnableIfConvertible<Node, json::Node> = true>
+        explicit Document(Node&& root) : root_(std::forward<Node>(root)) {}
+
+        const Node& GetRoot() const;
+
+        Node& GetRoot();
+
+        bool operator==(const Document& rhs) const;
+
+        bool operator!=(const Document& rhs) const;
+
+        void Print(std::ostream& output, bool pretty_print = true) const;
+
+        template <typename Printer>
+        void Print(Printer&& printer) const;
+
+        static void Print(const Document& doc, std::ostream& output);
+
+        static Document Load(std::istream& stream);
+
+    private:
+        Node root_;
+    };
+}
+
+namespace json /* Node Printer */ {
     struct PrintContext {
     public:
         PrintContext(std::ostream& out) : out(out) {}
@@ -286,30 +319,9 @@ namespace json {
     private:
         PrintContext context_;
     };
+}
 
-    class Document {
-    public:
-        template <typename Node, detail::EnableIfConvertible<Node, json::Node> = true>
-        explicit Document(Node&& root) : root_(std::forward<Node>(root)) {}
-
-        const Node& GetRoot() const;
-
-        Node& GetRoot();
-
-        bool operator==(const Document& rhs) const;
-
-        bool operator!=(const Document& rhs) const;
-
-        void Print(std::ostream& output) const;
-
-        static void Print(const Document& doc, std::ostream& output);
-
-        static Document Load(std::istream& stream);
-
-    private:
-        Node root_;
-    };
-
+namespace json /* Parser */ {
     class Parser : public INotifier<Node> {
     public:
         class ParsingError : public std::runtime_error {  //!!!!!!!!!!
@@ -447,6 +459,11 @@ namespace json /* Node class template impl */ {
             return static_cast<Node::ValueType&&>(std::move(*this));
         }
     }
+
+    template <typename Printer>
+    void Node::Print(Printer&& printer) const {
+        std::visit(std::forward<Printer>(printer), GetValue());
+    }
 }
 
 namespace json /* NodePrinter class template impl */ {
@@ -477,7 +494,7 @@ namespace json /* NodePrinter class template impl */ {
         context_.out << Parser::Token::START_ARRAY;
 
         static const std::string sep{Parser::Token::VALUE_SEPARATOR};
-        
+
         std::for_each(array.begin(), array.end(), [this, &size](const Node& node) {
             context_.RenderNewLine();
             context_.RenderIndent();
@@ -523,5 +540,12 @@ namespace json /* NodePrinter class template impl */ {
     template <typename Value, detail::EnableIfConvertible<Value, json::Node::ValueType>>
     void NodePrinter::PrintValue(Value&& value) const {
         std::visit(this->NextIndent(), std::forward<Value>(value));
+    }
+}
+
+namespace json /* Document class template implementation */ {
+    template <typename Printer>
+    void Document::Print(Printer&& printer) const{
+        root_.Print(printer);
     }
 }
