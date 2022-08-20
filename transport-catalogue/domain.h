@@ -27,6 +27,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include <execution>
 
 #include "geo.h"
 
@@ -60,6 +61,12 @@ namespace transport_catalogue::detail {
 
     template <typename BaseType, typename DerivedType>
     using EnableIfBaseOf = std::enable_if_t<std::is_base_of_v<BaseType, std::decay_t<DerivedType>>, bool>;
+
+    template <class ExecutionPolicy>
+    using IsExecutionPolicy = std::is_execution_policy<std::decay_t<ExecutionPolicy>>;
+
+    template <class ExecutionPolicy>
+    using EnableForExecutionPolicy = typename std::enable_if_t<IsExecutionPolicy<ExecutionPolicy>::value, bool>;
 }
 
 namespace transport_catalogue::exceptions {
