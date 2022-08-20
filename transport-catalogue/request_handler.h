@@ -136,9 +136,13 @@ namespace transport_catalogue::io /* Requests */ {
 
         std::vector<std::string>& GetStops();
 
-        const std::optional<bool>& IsRoundtrip() const;
+        /*const std::optional<bool>& Roundtrip() const;
 
-        std::optional<bool>& IsRoundtrip();
+        std::optional<bool>& Roundtrip();*/
+
+        bool IsRoundtrip() const {
+            return is_roundtrip_.value_or(false);
+        }
 
         const std::optional<data::Coordinates>& GetCoordinates() const;
 
@@ -152,6 +156,26 @@ namespace transport_catalogue::io /* Requests */ {
 
         bool IsValidRequest() const override {
             return Request::IsValidRequest() && ((IsBusCommand() && is_roundtrip_.has_value()) || (IsStopCommand() && coordinates_.has_value()));
+        }
+
+        void ConvertToRoundtrip() {
+            if (!is_roundtrip_.has_value() || is_roundtrip_.value()) {
+                return;
+            }
+
+            ConvertToRoundtrip(stops_);
+
+            is_roundtrip_ = true;
+        }
+
+        static void ConvertToRoundtrip(std::vector<std::string>& stops) {
+            if (stops.size() <= 1) {
+                return;
+            }
+
+            size_t old_size = stops.size();
+            stops.resize(old_size * 2 - 1);
+            std::copy(stops.begin(), stops.begin() + old_size - 1, stops.rbegin());
         }
 
         /*bool IsStopCommand() const override;

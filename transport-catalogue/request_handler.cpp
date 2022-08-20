@@ -23,14 +23,6 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
         return stops_;
     }
 
-    const std::optional<bool>& BaseRequest::IsRoundtrip() const {
-        return is_roundtrip_;
-    }
-
-    std::optional<bool>& BaseRequest::IsRoundtrip() {
-        return is_roundtrip_;
-    }
-
     const std::optional<data::Coordinates>& BaseRequest::GetCoordinates() const {
         return coordinates_;
     }
@@ -236,12 +228,14 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
     }
 
     void RequestHandler::ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const {
+        assert(raw_req.IsValidRequest());
+
         if (raw_req.IsStopCommand()) {
-            assert(raw_req.GetCoordinates().has_value());
             db_writer_.AddStop(data::Stop{std::move(raw_req.GetName()), std::move(raw_req.GetCoordinates().value())});
             std::move(raw_req.GetroadDistances().begin(), raw_req.GetroadDistances().end(), std::back_inserter(out_distances));
 
-        } else if (raw_req.IsBusCommand()) {
+        } else {
+            raw_req.ConvertToRoundtrip();
             db_writer_.AddBus(std::move(raw_req.GetName()), std::move(raw_req.GetStops()));
         }
     }
