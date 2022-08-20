@@ -74,13 +74,6 @@ namespace transport_catalogue::io /* Requests */ {
             inline static const std::string_view BUS = "Bus";
         };
 
-        Request(RequestCommand type, std::string&& name, RequestArgsMap&& args)
-            : command_{std::move(type)}, name_{std::move(name)}, args_{std::move(args)} {}
-
-        Request(std::string&& type, std::string&& name, RequestArgsMap&& args);
-
-        explicit Request(RawRequest&& raw_request);
-
         Request(const Request& other) = default;
         Request& operator=(const Request& other) = default;
         Request(Request&& other) = default;
@@ -88,6 +81,7 @@ namespace transport_catalogue::io /* Requests */ {
 
         virtual bool IsBaseRequest() const;
         virtual bool IsStatRequest() const;
+        virtual bool IsValidRequest() const;
 
         virtual bool IsStopCommand() const {
             return command_ == RequestCommand::STOP;
@@ -113,11 +107,17 @@ namespace transport_catalogue::io /* Requests */ {
 
     protected:
         Request() = default;
+        Request(RequestCommand type, std::string&& name, RequestArgsMap&& args)
+            : command_{std::move(type)}, name_{std::move(name)}, args_{std::move(args)} {}
+
+        Request(std::string&& type, std::string&& name, RequestArgsMap&& args);
+
+        explicit Request(RawRequest&& raw_request);
         virtual void Build() {}
     };
 
     class BaseRequest : public Request {
-        using Request::Request;
+        // using Request::Request;
 
     public:
         BaseRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args) : Request(std::move(type), std::move(name), std::move(args)) {
@@ -150,7 +150,9 @@ namespace transport_catalogue::io /* Requests */ {
 
         bool IsBaseRequest() const override;
 
-        bool IsStatRequest() const override;
+        bool IsValidRequest() const override {
+            return Request::IsValidRequest() && ((IsBusCommand() && is_roundtrip_.has_value()) || (IsStopCommand() && coordinates_.has_value()));
+        }
 
         /*bool IsStopCommand() const override;
 
@@ -180,9 +182,15 @@ namespace transport_catalogue::io /* Requests */ {
     };
 
     class StatRequest : public Request {
-        using Request::Request;
+        // using Request::Request;
 
     public:
+        StatRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args) : Request(std::move(type), std::move(name), std::move(args)) {
+            Build();
+        }
+        explicit StatRequest(RawRequest&& raw_request) : Request(std::move(raw_request)) {
+            Build();
+        }
         /*bool IsBaseRequest() const override {
             return command_ == RequestCommand::BUS;
         }
@@ -199,15 +207,29 @@ namespace transport_catalogue::io /* Requests */ {
             return true;
         }
 
-        int GetRequestId() const {
+        bool IsValidRequest() const override {
+            return Request::IsValidRequest() && request_id_.has_value();
+        }
+
+        const std::optional<int>& GetRequestId() const {
+            return request_id_;
+        }
+
+        std::optional<int>& GetRequestId() {
             return request_id_;
         }
 
     protected:
-        void Build() override {}
+        void Build() override {
+            auto request_id__ptr = args_.find("id");
+            request_id_ = request_id__ptr != args_.end() ? std::optional<int>(
+                                                               (assert(std::holds_alternative<int>(request_id__ptr->second)),
+                                                                std::get<int>(std::move(args_.extract(request_id__ptr).mapped()))))
+                                                         : std::nullopt;
+        }
 
     private:
-        int request_id_;
+        std::optional<int> request_id_;
     };
 }
 
@@ -274,8 +296,8 @@ namespace transport_catalogue::io /* Response */ {
         StatResponse(
             StatRequest&& request, std::optional<data::BusStat>&& bus_stat = std::nullopt, std::optional<data::StopStat>&& stop_stat = std::nullopt)
             : StatResponse(
-                  std::move(request.GetRequestId()), std::move(request.GetCommand()), std::move(request.GetName()), std::move(bus_stat),
-                  std::move(stop_stat)) {}
+                  std::move((assert(request.IsValidRequest()), request.GetRequestId().value())), std::move(request.GetCommand()),
+                  std::move(request.GetName()), std::move(bus_stat), std::move(stop_stat)) {}
 
         std::optional<data::BusStat>& GetBusInfo() {
             return bus_stat_;

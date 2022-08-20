@@ -51,9 +51,6 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
         return true;
     }
 
-    bool BaseRequest::IsStatRequest() const {
-        return false;
-    }
     /*
     bool BaseRequest::IsStopCommand() const {
         return command_ == RequestCommand::STOP;
@@ -163,6 +160,10 @@ namespace transport_catalogue::io /* Request implementation */ {
         return false;
     }
 
+    bool Request::IsValidRequest() const {
+        return (IsBusCommand() || IsStopCommand()) && !name_.empty();
+    }
+
     RequestCommand& Request::GetCommand() {
         return command_;
     }
@@ -267,21 +268,20 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
     }
 
     void RequestHandler::ExecuteRequest(std::vector<StatRequest>&& requests) const {
-
         std::vector<StatResponse> responses;
         responses.reserve(requests.size());
 
         std::for_each(std::make_move_iterator(requests.begin()), std::make_move_iterator(requests.end()), [this, &responses](StatRequest&& request) {
             assert(request.IsStatRequest());
-            assert(request.IsBusCommand() || request.IsStopCommand());
+            assert(request.IsValidRequest());
 
-            bool is_bus = request.IsBusCommand();   
-            bool is_stop = request.IsStopCommand(); 
-            std::string name = request.GetName();   //!!
+            bool is_bus = request.IsBusCommand();
+            bool is_stop = request.IsStopCommand();
+            std::string name = request.GetName();  //!!
 
             StatResponse resp(
                 std::move(request), is_bus ? db_reader_.GetBusInfo(name) : std::nullopt, is_stop ? db_reader_.GetStopInfo(name) : std::nullopt);
-            
+
             responses.emplace_back(std::move(resp));
         });
 
