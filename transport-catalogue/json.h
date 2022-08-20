@@ -23,7 +23,7 @@
 #include <variant>
 #include <vector>
 
-namespace json::detail {
+namespace json::detail /* template helpers */{
     template <bool Condition>
     using EnableIf = typename std::enable_if_t<Condition, bool>;
 
@@ -54,6 +54,7 @@ namespace json::detail {
     template <typename BaseType, typename DerivedType>
     using EnableIfBaseOf = std::enable_if_t<std::is_base_of_v<BaseType, std::decay_t<DerivedType>>, bool>;
 }
+
 namespace json /* Interfaces */ {
 
     template <typename Data>
@@ -229,47 +230,24 @@ namespace json /* Node Printer */ {
 
         PrintContext(std::ostream& out, uint8_t indent_step, size_t indent = 0) : out(out), indent_step(indent_step), indent(indent) {}
 
-        PrintContext Indented(bool backward = false) const {
-            return !backward ? PrintContext{out, indent_step, indent + indent_step}
-                             : PrintContext{out, indent_step, std::max(indent - indent_step, 0ul)};
-        }
+        PrintContext Indented(bool backward = false) const ;
 
-        void RenderIndent(bool backward = false) const {
-            int size = !backward ? indent : std::max(indent - indent_step, 0ul);
-            for (int i = 0; i < size; ++i) {
-                out.put(' ');
-            }
-        }
+        void RenderIndent(bool backward = false) const;
 
-        void RenderNewLine() const {
-            out << new_line_;
-        }
+        void RenderNewLine() const;
 
-        std::string NewLineSymbols() const {
-            return new_line_;
-        }
+        std::string NewLineSymbols() const;
 
         template <typename Value>
-        std::ostream& Print(Value&& value) const {
-            out << std::forward<Value>(value);
-            return out;
-        }
+        std::ostream& Print(Value&& value) const;
 
-        std::ostream& Stream() const {
-            return out;
-        }
+        std::ostream& Stream() const;
 
-        uint8_t GetStep() const {
-            return indent_step;
-        }
+        uint8_t GetStep() const;
 
-        size_t GetCurrentIndent() const {
-            return indent;
-        }
+        size_t GetCurrentIndent() const;
 
-        bool IsPretty() const {
-            return indent_step != 0;
-        }
+        bool IsPretty() const;
 
     public:
         std::ostream& out;
@@ -420,7 +398,7 @@ namespace json /* Parser */ {
     void Print(const Document& doc, std::ostream& output);
 }
 
-namespace json /* Node class template impl */ {
+namespace json /* Node class template implementation */ {
     template <typename T, detail::EnableIfConvertible<T, NodeValueType>>
     bool Node::IsType() const {
         return std::holds_alternative<T>(*this);
@@ -466,7 +444,7 @@ namespace json /* Node class template impl */ {
     }
 }
 
-namespace json /* NodePrinter class template impl */ {
+namespace json /* NodePrinter class template implementation */ {
     template <typename Dict, detail::EnableIfSame<Dict, json::Dict>>
     void NodePrinter::operator()(Dict&& dict) const {
         int size = dict.size();
@@ -541,11 +519,17 @@ namespace json /* NodePrinter class template impl */ {
     void NodePrinter::PrintValue(Value&& value) const {
         std::visit(this->NextIndent(), std::forward<Value>(value));
     }
+
+    template <typename Value>
+    std::ostream& PrintContext::Print(Value&& value) const {
+        out << std::forward<Value>(value);
+        return out;
+    }
 }
 
 namespace json /* Document class template implementation */ {
     template <typename Printer>
-    void Document::Print(Printer&& printer) const{
+    void Document::Print(Printer&& printer) const {
         root_.Print(printer);
     }
 }

@@ -7,7 +7,7 @@
 
 using namespace std;
 
-namespace json {
+namespace json /* For TESTS */{
 
     Node LoadNode(std::istream& input) {
         return Parser(input).Parse();
@@ -40,7 +40,7 @@ namespace json /* Document implementation */ {
     }
 
     void Document::Print(std::ostream& output, bool pretty_print) const {
-        //std::visit(NodePrinter{output, pretty_print}, GetRoot().GetValue());
+        // std::visit(NodePrinter{output, pretty_print}, GetRoot().GetValue());
         root_.Print(output, pretty_print);
     }
 
@@ -60,7 +60,7 @@ namespace json /* Document implementation */ {
     }
 }
 
-namespace json /* Parser */ {
+namespace json /* Parser implementation */ {
 
     Node Parser::Parse() const {
         char ch;
@@ -217,7 +217,7 @@ namespace json /* Parser */ {
     }
 }
 
-namespace json /* Parser::NumericParser */ {
+namespace json /* Parser::NumericParser implementation */ {
 
     Numeric Parser::NumericParser::Parse() const {
         using namespace std::literals;
@@ -299,7 +299,7 @@ namespace json /* Parser::NumericParser */ {
     }
 }
 
-namespace json /* Parser::StringParser */ {
+namespace json /* Parser::StringParser implementation */ {
 
     std::string Parser::StringParser::Parse() const {
         using namespace std::literals;
@@ -360,7 +360,7 @@ namespace json /* Parser::StringParser */ {
     }
 }
 
-namespace json /* NodePrinter */ {
+namespace json /* NodePrinter implementation */ {
 
     void NodePrinter::operator()(std::nullptr_t) const {
         context_.out << Parser::Token::NULL_LITERAL;
@@ -376,6 +376,43 @@ namespace json /* NodePrinter */ {
 
     void NodePrinter::operator()(double value) const {
         context_.out << value;
+    }
+}
+
+namespace json /* PrintContext implementation */ {
+    PrintContext PrintContext::Indented(bool backward) const {
+        return !backward ? PrintContext{out, indent_step, indent + indent_step} : PrintContext{out, indent_step, std::max(indent - indent_step, 0ul)};
+    }
+
+    void PrintContext::RenderIndent(bool backward) const {
+        int size = !backward ? indent : std::max(indent - indent_step, 0ul);
+        for (int i = 0; i < size; ++i) {
+            out.put(' ');
+        }
+    }
+
+    void PrintContext::RenderNewLine() const {
+        out << new_line_;
+    }
+
+    std::string PrintContext::NewLineSymbols() const {
+        return new_line_;
+    }
+
+    std::ostream& PrintContext::Stream() const {
+        return out;
+    }
+
+    uint8_t PrintContext::GetStep() const {
+        return indent_step;
+    }
+
+    size_t PrintContext::GetCurrentIndent() const {
+        return indent;
+    }
+
+    bool PrintContext::IsPretty() const {
+        return indent_step != 0;
     }
 }
 
@@ -481,7 +518,7 @@ namespace json /* Node implementation */ {
     }
 
     void Node::Print(std::ostream& output, bool pretty_print) const {
-        //std::visit(NodePrinter{output, pretty_print}, GetValue());
+        // std::visit(NodePrinter{output, pretty_print}, GetValue());
         Print(NodePrinter{output, pretty_print});
     }
 }
