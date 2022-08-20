@@ -106,7 +106,7 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
                                                                               std::get<double>(std::move(args_.extract(longitude_ptr).mapped()))))
                                                                        : std::nullopt;
         assert((latitude.has_value() && longitude.has_value()) || !(latitude.has_value() && longitude.has_value()));
-        coordinates_ = !latitude.has_value() ? std::nullopt : std::optional<Coordinates>({longitude.value(), latitude.value()});
+        coordinates_ = !latitude.has_value() ? std::nullopt : std::optional<Coordinates>({latitude.value(), longitude.value()});
         assert(coordinates_.has_value());
     }
 

@@ -24,7 +24,7 @@ namespace transport_catalogue::geo {
 
         Coordinates() : Coordinates(0., 0.) {}
 
-        Coordinates(double lat, double lng) : lat{lat}, lng{lng} {}
+        Coordinates(double latitude, double longitude) : lat{latitude}, lng{longitude} {}
 
         Coordinates(Coordinates&& other) : lat{std::move(other.lat)}, lng{std::move(other.lng)} {}
 

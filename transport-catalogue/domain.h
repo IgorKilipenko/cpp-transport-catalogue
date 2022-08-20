@@ -491,7 +491,7 @@ namespace transport_catalogue::data {
 
         double pseudo_length = geo::ComputeDistance(from_stop->coordinates, to_stop->coordinates);
 
-        measured_distances_btw_stops_[{from_stop, to_stop}] = {distance, pseudo_length};
+        measured_distances_btw_stops_[{from_stop, to_stop}] = {pseudo_length, distance};
     }
 
     template <class Owner>

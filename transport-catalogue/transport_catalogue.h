@@ -112,9 +112,9 @@ namespace transport_catalogue {
                     data::StopRecord to_stop = db_reader_.GetStop(route[i + 1]->name);
                     assert(from_stop && from_stop);
 
-                    const auto& [measured_dist, dist] = db_reader_.GetDistanceBetweenStops(from_stop, to_stop);
-                    route_length += measured_dist;
-                    pseudo_length += dist;
+                    const auto& dist_btw = db_reader_.GetDistanceBetweenStops(from_stop, to_stop);
+                    route_length += dist_btw.measured_distance;
+                    pseudo_length += dist_btw.distance;
                 }
 
                 info.total_stops = route.size();
