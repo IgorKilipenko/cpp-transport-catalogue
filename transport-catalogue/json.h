@@ -209,7 +209,11 @@ namespace json {
         }
 
         void RenderNewLine() const {
-            out.put('\n');
+            out << new_line_;
+        }
+
+        std::string NewLineSymbols() const {
+            return new_line_;
         }
 
         template <typename Value>
@@ -240,6 +244,7 @@ namespace json {
     private:
         uint8_t indent_step = 4;
         size_t indent = 0;
+        const std::string new_line_ = "\n";
     };
 
     class NodePrinter {
@@ -448,6 +453,7 @@ namespace json /* NodePrinter class template impl */ {
     template <typename Dict, detail::EnableIfSame<Dict, json::Dict>>
     void NodePrinter::operator()(Dict&& dict) const {
         int size = dict.size();
+
         context_.out << Parser::Token::START_OBJ;
 
         static const std::string sep{Parser::Token::VALUE_SEPARATOR};
@@ -471,6 +477,7 @@ namespace json /* NodePrinter class template impl */ {
         context_.out << Parser::Token::START_ARRAY;
 
         static const std::string sep{Parser::Token::VALUE_SEPARATOR};
+        
         std::for_each(array.begin(), array.end(), [this, &size](const Node& node) {
             context_.RenderNewLine();
             context_.RenderIndent();
