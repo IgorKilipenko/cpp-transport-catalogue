@@ -187,6 +187,9 @@ namespace svg {
         int indent_step = 0;
         int indent = 0;
     };
+}
+
+namespace svg /* PathProps */ {
 
     template <typename Owner>
     class PathProps {
@@ -256,6 +259,9 @@ namespace svg {
             return static_cast<Owner&>(*this);
         }
     };
+}
+
+namespace svg /* Svg Objects */ {
 
     /*
      * Абстрактный базовый класс Object служит для унифицированного хранения
@@ -420,21 +426,18 @@ namespace svg /* Text class template implementation */ {
         return *this;
     }
 
-    /// Задаёт название шрифта (атрибут font-family)
     template <typename String, detail::EnableIfConvertible<String, std::string>>
     Text& Text::SetFontFamily(String&& font_family) {
         style_.font_family = std::forward<String>(font_family);
         return *this;
     }
 
-    /// Задаёт толщину шрифта (атрибут font-weight)
     template <typename String, detail::EnableIfConvertible<String, std::string>>
     Text& Text::SetFontWeight(String&& font_weight) {
         style_.font_weight = std::forward<String>(font_weight);
         return *this;
     }
 
-    /// Задаёт текстовое содержимое объекта (отображается внутри тега text)
     template <typename String, detail::EnableIfConvertible<String, std::string>>
     Text& Text::SetData(String&& data) {
         text_ = std::forward<String>(data);
