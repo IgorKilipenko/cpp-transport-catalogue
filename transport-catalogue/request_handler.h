@@ -271,7 +271,7 @@ namespace transport_catalogue::io /* Interfaces */ {
     };
 }
 
-namespace transport_catalogue::io {
+namespace transport_catalogue::io /* RequestHandler */ {
 
     class RequestHandler : public IRequestObserver {
     public:
