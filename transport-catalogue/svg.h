@@ -399,7 +399,7 @@ namespace svg {
 
 }
 
-namespace svg /* Polyline class template impl */ {
+namespace svg /* Polyline class template implementation */ {
     template <typename Point, detail::EnableIfConvertible<Point, svg::Point>>
     Polyline& Polyline::AddPoint(Point&& point) {
         points_.push_back(std::forward<Point>(point));
@@ -407,7 +407,7 @@ namespace svg /* Polyline class template impl */ {
     }
 }
 
-namespace svg /* Text class template impl */ {
+namespace svg /* Text class template implementation */ {
     template <typename Point, detail::EnableIfConvertible<Point, svg::Point>>
     Text& Text::SetPosition(Point&& pos) {
         base_point_ = std::forward<Point>(pos);
@@ -442,14 +442,14 @@ namespace svg /* Text class template impl */ {
     }
 }
 
-namespace svg /* ObjectContainer class template impl */ {
+namespace svg /* ObjectContainer class template implementation */ {
     template <typename Object, detail::EnableIfBaseOf<svg::Object, Object>>
     void ObjectContainer::Add(Object&& obj) {
         AddPtr(std::make_unique<std::decay_t<Object>>(std::forward<Object>(obj)));
     }
 }
 
-namespace svg /* Colors class template impl */ {
+namespace svg /* Colors class template implementation */ {
     template <
         typename RgbFrom, typename RgbTo,
         std::enable_if_t<detail::IsConvertible<RgbFrom, Rgb>::value && detail::IsConvertible<RgbTo, Rgb>::value, bool>>
@@ -458,7 +458,7 @@ namespace svg /* Colors class template impl */ {
     }
 }
 
-namespace svg /* Colors::ColorPrinter class template impl */ {
+namespace svg /* Colors::ColorPrinter class template implementation */ {
 
     template <typename String, detail::EnableIfConvertible<String, std::string_view>>
     void Colors::ColorPrinter::operator()(String&& color) const {

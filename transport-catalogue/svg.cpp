@@ -1,6 +1,6 @@
 #include "svg.h"
 
-namespace svg /* Render class impl */ {
+namespace svg /* Render class implementation */ {
 
     using namespace std::literals;
 
@@ -14,7 +14,7 @@ namespace svg /* Render class impl */ {
     }
 }
 
-namespace svg /* Circle class impl */ {
+namespace svg /* Circle class implementation */ {
 
     Circle& Circle::SetCenter(Point center) {
         center_ = center;
@@ -40,7 +40,7 @@ namespace svg /* Circle class impl */ {
     }
 }
 
-namespace svg /* Polyline class impl */ {
+namespace svg /* Polyline class implementation */ {
     std::ostream& Polyline::PrintPoints(std::ostream& out) const {
         if (points_.empty()) {
             return out;
@@ -70,7 +70,7 @@ namespace svg /* Polyline class impl */ {
     }
 }
 
-namespace svg /* Text class impl */ {
+namespace svg /* Text class implementation */ {
     Text& Text::SetFontSize(uint32_t size) {
         style_.size = size;
         return *this;
@@ -128,7 +128,7 @@ namespace svg /* Text class impl */ {
     }
 }
 
-namespace svg /* Document class impl */
+namespace svg /* Document class implementation */
 {
     void Document::AddPtr(ObjectPtr&& obj) {
         objects_.emplace_back(std::move(obj));
@@ -148,7 +148,7 @@ namespace svg /* Document class impl */
     }
 }
 
-namespace svg {
+namespace svg /* Stroke class implementation */{
     template <>
     std::string_view Stroke::ToString(StrokeLineCap line_cap) {
         using namespace std::string_view_literals;
@@ -190,13 +190,13 @@ namespace svg {
     }
 }
 
-namespace svg /* Colors */ {
+namespace svg /* Colors class implementation */ {
     uint8_t Colors::Lerp(uint8_t from, uint8_t to, double t) {
         return static_cast<uint8_t>(std::round((to - from) * t + from));
     }
 }
 
-namespace svg /* Colors::ColorPrinter */ {
+namespace svg /* Colors::ColorPrinter class implementation */ {
 
     void Colors::ColorPrinter::operator()(std::monostate) const {
         out_ << Colors::NONE;
