@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cassert>
 #include <deque>
+#include <execution>
 #include <iterator>
 #include <memory>
 #include <mutex>
@@ -27,11 +28,10 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include <execution>
 
 #include "geo.h"
 
-namespace transport_catalogue::detail {
+namespace transport_catalogue::detail /* template helpers */ {
     template <bool Condition>
     using EnableIf = typename std::enable_if_t<Condition, bool>;
 
@@ -88,7 +88,7 @@ namespace transport_catalogue::exceptions {
     };
 }
 
-namespace transport_catalogue::data {
+namespace transport_catalogue::data /* Db objects */ {
     using Coordinates = geo::Coordinates;
 
     struct Stop {
@@ -116,7 +116,6 @@ namespace transport_catalogue::data {
     class Route : public std::vector<StopRecord> {
         using vector::vector;
     };
-
     struct Bus {
         std::string name;
         Route route;
@@ -184,7 +183,9 @@ namespace transport_catalogue::data {
         std::hash<const void*> pointer_hasher_;
         static const size_t INDEX = 42;
     };
+}
 
+namespace transport_catalogue::data /* Interfaces */ {
     class ITransportDataReader {
     public:
         virtual BusRecord GetBus(std::string_view name) const = 0;
@@ -225,9 +226,12 @@ namespace transport_catalogue::data {
 
         virtual ~ITransportStatDataReader() = default;
     };
+}
+
+namespace transport_catalogue::data /* Database */ {
 
     template <class Owner>
-    class Database /*: public ITransportDataReader, public ITransportDataWriter*/ {
+    class Database {
         friend Owner;
 
     private: /* aliases */
@@ -383,79 +387,8 @@ namespace transport_catalogue::data {
         }
 
     public:
-        class DataWriter : public ITransportDataWriter {
-        public:
-            DataWriter(Database& db) : db_{db} {}
-
-            void AddBus(Bus&& bus) const override {
-                db_.AddBus(std::move(bus));
-            }
-
-            void AddBus(std::string&& name, const std::vector<std::string_view>& stops) const override {
-                db_.AddBus(std::move(name), stops);
-            }
-
-            void AddBus(std::string&& name, std::vector<std::string>&& stops) const override {
-                db_.AddBus(std::move(name), std::move(stops));
-            }
-
-            void AddStop(Stop&& stop) const override {
-                db_.AddStop(std::move(stop));
-            }
-
-            void AddStop(std::string&& name, Coordinates&& coordinates) const override {
-                db_.AddStop(std::move(name), std::move(coordinates));
-            }
-
-            void SetMeasuredDistance(const std::string_view from_stop_name, const std::string_view to_stop_name, double distance) const override {
-                db_.AddMeasuredDistance(from_stop_name, to_stop_name, distance);
-            }
-
-            void SetMeasuredDistance(data::MeasuredRoadDistance&& distance) const override {
-                db_.AddMeasuredDistance(std::move(distance.from_stop), std::move(distance.to_stop), std::move(distance.distance));
-            }
-
-        private:
-            Database& db_;
-        };
-
-        class DataReader : public ITransportDataReader {
-        public:
-            DataReader(Database& db) : db_{db} {}
-
-            BusRecord GetBus(std::string_view name) const override {
-                return db_.GetBus(name);
-            }
-
-            StopRecord GetStop(std::string_view name) const override {
-                return db_.GetStop(name);
-            }
-
-            const BusRecordSet& GetBuses(StopRecord stop) const override {
-                static const BusRecordSet empty_result;
-                auto ptr = db_.stop_to_buses_.find(stop);
-                return ptr == db_.stop_to_buses_.end() ? empty_result : ptr->second;
-            }
-
-            const BusRecordSet& GetBuses(const std::string_view bus_name) const override {
-                static const BusRecordSet empty_result;
-                auto stop_ptr = GetStop(bus_name);
-                return stop_ptr == nullptr ? empty_result : GetBuses(stop_ptr);
-            }
-
-            DistanceBetweenStopsRecord GetDistanceBetweenStops(StopRecord from, StopRecord to) const override {
-                auto ptr = db_.measured_distances_btw_stops_.find({from, to});
-                if (ptr != db_.measured_distances_btw_stops_.end()) {
-                    return ptr->second;
-                } else if (ptr = db_.measured_distances_btw_stops_.find({to, from}); ptr != db_.measured_distances_btw_stops_.end()) {
-                    return ptr->second;
-                }
-                return {0., 0.};
-            }
-
-        private:
-            Database& db_;
-        };
+        class DataWriter;
+        class DataReader;
 
     private:
         DataWriter db_writer_;
@@ -463,7 +396,85 @@ namespace transport_catalogue::data {
     };
 }
 
-namespace transport_catalogue::data {
+namespace transport_catalogue::data /* Database inner classes (Read/Write interface) */ {
+    template <class Owner>
+    class Database<Owner>::DataWriter : public ITransportDataWriter {
+    public:
+        DataWriter(Database& db) : db_{db} {}
+
+        void AddBus(Bus&& bus) const override {
+            db_.AddBus(std::move(bus));
+        }
+
+        void AddBus(std::string&& name, const std::vector<std::string_view>& stops) const override {
+            db_.AddBus(std::move(name), stops);
+        }
+
+        void AddBus(std::string&& name, std::vector<std::string>&& stops) const override {
+            db_.AddBus(std::move(name), std::move(stops));
+        }
+
+        void AddStop(Stop&& stop) const override {
+            db_.AddStop(std::move(stop));
+        }
+
+        void AddStop(std::string&& name, Coordinates&& coordinates) const override {
+            db_.AddStop(std::move(name), std::move(coordinates));
+        }
+
+        void SetMeasuredDistance(const std::string_view from_stop_name, const std::string_view to_stop_name, double distance) const override {
+            db_.AddMeasuredDistance(from_stop_name, to_stop_name, distance);
+        }
+
+        void SetMeasuredDistance(data::MeasuredRoadDistance&& distance) const override {
+            db_.AddMeasuredDistance(std::move(distance.from_stop), std::move(distance.to_stop), std::move(distance.distance));
+        }
+
+    private:
+        Database& db_;
+    };
+
+    template <class Owner>
+    class Database<Owner>::DataReader : public ITransportDataReader {
+    public:
+        DataReader(Database& db) : db_{db} {}
+
+        BusRecord GetBus(std::string_view name) const override {
+            return db_.GetBus(name);
+        }
+
+        StopRecord GetStop(std::string_view name) const override {
+            return db_.GetStop(name);
+        }
+
+        const BusRecordSet& GetBuses(StopRecord stop) const override {
+            static const BusRecordSet empty_result;
+            auto ptr = db_.stop_to_buses_.find(stop);
+            return ptr == db_.stop_to_buses_.end() ? empty_result : ptr->second;
+        }
+
+        const BusRecordSet& GetBuses(const std::string_view bus_name) const override {
+            static const BusRecordSet empty_result;
+            auto stop_ptr = GetStop(bus_name);
+            return stop_ptr == nullptr ? empty_result : GetBuses(stop_ptr);
+        }
+
+        DistanceBetweenStopsRecord GetDistanceBetweenStops(StopRecord from, StopRecord to) const override {
+            auto ptr = db_.measured_distances_btw_stops_.find({from, to});
+            if (ptr != db_.measured_distances_btw_stops_.end()) {
+                return ptr->second;
+            } else if (ptr = db_.measured_distances_btw_stops_.find({to, from}); ptr != db_.measured_distances_btw_stops_.end()) {
+                return ptr->second;
+            }
+            return {0., 0.};
+        }
+
+    private:
+        Database& db_;
+    };
+}
+
+namespace transport_catalogue::data /* Database implementation */ {
 
     template <class Owner>
     template <typename Stop, detail::EnableIfSame<Stop, data::Stop>>
