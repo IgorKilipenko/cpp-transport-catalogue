@@ -99,7 +99,6 @@ namespace transport_catalogue::data /* Db objects */ {
             typename String = std::string, typename Coordinates = data::Coordinates,
             detail::EnableIf<detail::IsConvertibleV<String, std::string_view> && detail::IsSameV<Coordinates, data::Coordinates>> = true>
         Stop(String&& name, Coordinates&& coordinates) : name{std::forward<String>(name)}, coordinates{std::forward<Coordinates>(coordinates)} {}
-        // Stop(Stop&& other) : name{std::move(other.name)}, coordinates{std::move(other.coordinates)} {}
 
         bool operator==(const Stop& rhs) const noexcept {
             return this == &rhs || (name == rhs.name && coordinates == rhs.coordinates);
@@ -116,6 +115,7 @@ namespace transport_catalogue::data /* Db objects */ {
     class Route : public std::vector<StopRecord> {
         using vector::vector;
     };
+
     struct Bus {
         std::string name;
         Route route;
@@ -124,7 +124,6 @@ namespace transport_catalogue::data /* Db objects */ {
             typename String = std::string, typename Route = data::Route,
             detail::EnableIf<detail::IsConvertibleV<String, std::string> && detail::IsSameV<Route, data::Route>> = true>
         Bus(String&& name, Route&& route) : name{std::forward<String>(name)}, route{std::forward<Route>(route)} {}
-        // Bus(Bus&& other) : name{std::move(other.name)}, route{std::move(other.route)} {}
 
         bool operator==(const Bus& rhs) const noexcept {
             return this == &rhs || (name == rhs.name && route == rhs.route);
