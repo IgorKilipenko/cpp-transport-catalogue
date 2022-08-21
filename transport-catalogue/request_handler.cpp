@@ -200,7 +200,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         return db_reader_.GetDataReader().GetBuses(stop_name);
     }
 
-    void RequestHandler::OnBaseRequest(std::vector<RawRequest>&& requests) {
+    void RequestHandler::OnBaseRequest(std::vector<RawRequest>&& requests) const {
         std::vector<BaseRequest> reqs;
         reqs.reserve(requests.size());
 
@@ -217,12 +217,12 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         ExecuteRequest(std::move(reqs));
     }
 
-    void RequestHandler::OnBaseRequest(const std::vector<RawRequest>& requests) {
+    void RequestHandler::OnBaseRequest(const std::vector<RawRequest>& requests) const {
         std::vector<RawRequest> requests_tmp(requests);
         OnBaseRequest(std::move(requests_tmp));
     }
 
-    void RequestHandler::OnStatRequest(std::vector<RawRequest>&& requests) {
+    void RequestHandler::OnStatRequest(std::vector<RawRequest>&& requests) const {
         std::vector<StatRequest> reqs;
         reqs.reserve(requests.size());
 
@@ -234,7 +234,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         ExecuteRequest(std::move(reqs));
     }
 
-    void RequestHandler::OnStatRequest([[maybe_unused]] const std::vector<RawRequest>& requests) {
+    void RequestHandler::OnStatRequest([[maybe_unused]] const std::vector<RawRequest>& requests) const {
         std::vector<RawRequest> requests_tmp(requests);
         OnStatRequest(std::move(requests_tmp));
     }
@@ -364,8 +364,7 @@ namespace transport_catalogue::io /* StatResponse implementation */ {
         std::optional<data::StopStat>&& stop_stat)
         : Response(std::move(request_id), std::move(command), std::move(name)), bus_stat_{std::move(bus_stat)}, stop_stat_{std::move(stop_stat)} {}
 
-    StatResponse::StatResponse(
-        StatRequest && request, std::optional<data::BusStat>&& bus_stat, std::optional<data::StopStat>&& stop_stat)
+    StatResponse::StatResponse(StatRequest&& request, std::optional<data::BusStat>&& bus_stat, std::optional<data::StopStat>&& stop_stat)
         : StatResponse(
               std::move((assert(request.IsValidRequest()), request.GetRequestId().value())), std::move(request.GetCommand()),
               std::move(request.GetName()), std::move(bus_stat), std::move(stop_stat)) {}

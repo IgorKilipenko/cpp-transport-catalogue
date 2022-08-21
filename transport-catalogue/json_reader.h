@@ -170,7 +170,7 @@ namespace transport_catalogue::io /* JsonReader */ {
 
     private:
         std::istream& input_stream_;
-        std::unordered_map<const IRequestObserver*, std::weak_ptr<IRequestObserver>, Hasher> observers_;
+        std::unordered_map<const IRequestObserver*, std::weak_ptr<const IRequestObserver>, Hasher> observers_;
         bool is_broadcast_ = true;
         constexpr static const std::string_view BASE_REQUESTS_LITERAL = "base_requests"sv;
         constexpr static const std::string_view STAT_REQUESTS_LITERAL = "stat_requests"sv;

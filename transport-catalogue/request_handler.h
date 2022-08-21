@@ -242,10 +242,10 @@ namespace transport_catalogue::io /* Interfaces */ {
     class IRequestNotifier;
     class IRequestObserver {
     public:
-        virtual void OnBaseRequest(std::vector<RawRequest>&& requests) = 0;
-        virtual void OnBaseRequest(const std::vector<RawRequest>& requests) = 0;
-        virtual void OnStatRequest(std::vector<RawRequest>&& requests) = 0;
-        virtual void OnStatRequest(const std::vector<RawRequest>& requests) = 0;
+        virtual void OnBaseRequest(std::vector<RawRequest>&& requests) const = 0;
+        virtual void OnBaseRequest(const std::vector<RawRequest>& requests) const = 0;
+        virtual void OnStatRequest(std::vector<RawRequest>&& requests) const = 0;
+        virtual void OnStatRequest(const std::vector<RawRequest>& requests) const = 0;
 
     protected:
         virtual ~IRequestObserver() = default;
@@ -296,13 +296,13 @@ namespace transport_catalogue::io /* RequestHandler */ {
         // Этот метод будет нужен в следующей части итогового проекта
         svg::Document RenderMap() const;
 
-        void OnBaseRequest(std::vector<RawRequest>&& requests) override;
+        void OnBaseRequest(std::vector<RawRequest>&& requests) const override;
 
-        void OnBaseRequest(const std::vector<RawRequest>& requests) override;
+        void OnBaseRequest(const std::vector<RawRequest>& requests) const override;
 
-        void OnStatRequest(std::vector<RawRequest>&& requests) override;
+        void OnStatRequest(std::vector<RawRequest>&& requests) const override;
 
-        void OnStatRequest(const std::vector<RawRequest>& requests) override;
+        void OnStatRequest(const std::vector<RawRequest>& requests) const override;
 
         /// Execute Basic (Insert) request
         void ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const;
