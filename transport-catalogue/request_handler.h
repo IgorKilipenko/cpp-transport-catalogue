@@ -300,9 +300,9 @@ namespace transport_catalogue::io /* RequestHandler */ {
 
         void OnBaseRequest(const std::vector<RawRequest>& requests) override;
 
-        void OnStatRequest([[maybe_unused]] std::vector<RawRequest>&& requests) override;
+        void OnStatRequest(std::vector<RawRequest>&& requests) override;
 
-        void OnStatRequest([[maybe_unused]] const std::vector<RawRequest>& requests) override;
+        void OnStatRequest(const std::vector<RawRequest>& requests) override;
 
         /// Execute Basic (Insert) request
         void ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const;
