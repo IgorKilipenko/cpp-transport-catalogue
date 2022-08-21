@@ -100,13 +100,9 @@ namespace transport_catalogue::data /* Db objects (ORM) */ {
             detail::EnableIf<detail::IsConvertibleV<String, std::string_view> && detail::IsSameV<Coordinates, data::Coordinates>> = true>
         Stop(String&& name, Coordinates&& coordinates) : name{std::forward<String>(name)}, coordinates{std::forward<Coordinates>(coordinates)} {}
 
-        bool operator==(const Stop& rhs) const noexcept {
-            return this == &rhs || (name == rhs.name && coordinates == rhs.coordinates);
-        }
+        bool operator==(const Stop& rhs) const noexcept;
 
-        bool operator!=(const Stop& rhs) const noexcept {
-            return !(*this == rhs);
-        }
+        bool operator!=(const Stop& rhs) const noexcept;
     };
 
     using StopRecord = const Stop*;
@@ -125,13 +121,9 @@ namespace transport_catalogue::data /* Db objects (ORM) */ {
             detail::EnableIf<detail::IsConvertibleV<String, std::string> && detail::IsSameV<Route, data::Route>> = true>
         Bus(String&& name, Route&& route) : name{std::forward<String>(name)}, route{std::forward<Route>(route)} {}
 
-        bool operator==(const Bus& rhs) const noexcept {
-            return this == &rhs || (name == rhs.name && route == rhs.route);
-        }
+        bool operator==(const Bus& rhs) const noexcept;
 
-        bool operator!=(const Bus& rhs) const noexcept {
-            return !(*this == rhs);
-        }
+        bool operator!=(const Bus& rhs) const noexcept;
     };
 
     using BusRecord = const Bus*;
@@ -165,9 +157,7 @@ namespace transport_catalogue::data /* Db objects (ORM) */ {
 
     class Hasher {
     public:
-        size_t operator()(const std::pair<const Stop*, const Stop*>& stops) const {
-            return this->operator()({stops.first, stops.second});
-        }
+        size_t operator()(const std::pair<const Stop*, const Stop*>& stops) const ;
 
         template <typename T>
         size_t operator()(std::initializer_list<const T*> items) const {
