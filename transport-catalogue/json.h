@@ -23,7 +23,7 @@
 #include <variant>
 #include <vector>
 
-namespace json::detail /* template helpers */{
+namespace json::detail /* template helpers */ {
     template <bool Condition>
     using EnableIf = typename std::enable_if_t<Condition, bool>;
 
@@ -190,12 +190,17 @@ namespace json /* Node */ {
 
         static Node LoadNode(std::istream& stream, const std::function<void(const Node&, const void*)>* = nullptr);
 
+        template <typename InputStream, detail::EnableIf<detail::IsBaseOfV<std::istream, InputStream> && !std::is_reference_v<InputStream>> = true>
+        static Node LoadNode(InputStream&& stream, const std::function<void(const Node&, const void*)>* = nullptr);
+
         void Print(std::ostream& output, bool pretty_print = true) const;
 
         template <typename Printer>
         void Print(Printer&& printer) const;
     };
+}
 
+namespace json /* Document */ {
     class Document {
     public:
         template <typename Node, detail::EnableIfConvertible<Node, json::Node> = true>
@@ -218,6 +223,9 @@ namespace json /* Node */ {
 
         static Document Load(std::istream& stream);
 
+        template <typename InputStream, detail::EnableIf<detail::IsBaseOfV<std::istream, InputStream> && !std::is_reference_v<InputStream>> = true>
+        static Document Load(InputStream&& stream);
+
     private:
         Node root_;
     };
@@ -230,7 +238,7 @@ namespace json /* Node Printer */ {
 
         PrintContext(std::ostream& out, uint8_t indent_step, size_t indent = 0) : out(out), indent_step(indent_step), indent(indent) {}
 
-        PrintContext Indented(bool backward = false) const ;
+        PrintContext Indented(bool backward = false) const;
 
         void RenderIndent(bool backward = false) const;
 
@@ -442,6 +450,11 @@ namespace json /* Node class template implementation */ {
     void Node::Print(Printer&& printer) const {
         std::visit(std::forward<Printer>(printer), GetValue());
     }
+
+    template <typename InputStream, detail::EnableIf<detail::IsBaseOfV<std::istream, InputStream> && !std::is_reference_v<InputStream>>>
+    Node Node::LoadNode(InputStream&& stream, const std::function<void(const Node&, const void*)>* on_load) {
+        LoadNode(stream, on_load);
+    }
 }
 
 namespace json /* NodePrinter class template implementation */ {
@@ -531,5 +544,10 @@ namespace json /* Document class template implementation */ {
     template <typename Printer>
     void Document::Print(Printer&& printer) const {
         root_.Print(printer);
+    }
+
+    template <typename InputStream, detail::EnableIf<detail::IsBaseOfV<std::istream, InputStream> && !std::is_reference_v<InputStream>>>
+    Document Document::Load(InputStream&& stream) {
+        return Load(stream);
     }
 }
