@@ -98,15 +98,6 @@ namespace transport_catalogue::tests {
             stat_reader.PorcessRequests();
 
             std::string result = output.str();
-            /*if (result != expected_result) {
-                std::cerr << "Test result:" << std::endl;
-                std::cerr << result << std::endl;
-
-                std::cerr << std::endl << "Test expected result:" << std::endl;
-                std::cerr << expected_result << std::endl;
-
-                assert(false);
-            }*/
             CheckResults(expected_result, result);
         }
 
