@@ -34,6 +34,7 @@ int main() {
 
     TransportCatalogueTester tester;
     tester.TestTransportCatalogue();
+
     std::shared_ptr<io::RequestHandler> main_request_handler_ptr;
     std::string json_file = transport_catalogue::detail::io::FileReader::Read(
         std::filesystem::current_path() /= "transport-catalogue/tests/data/json_requests/test2.json");
@@ -46,46 +47,20 @@ int main() {
     main_request_handler_ptr = std::make_shared<io::RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer);
     json_reader.AddObserver(main_request_handler_ptr);
     json_reader.ReadDocument();
-    /*{
+    {
+        TransportCatalogue catalog;
+        json_file = transport_catalogue::detail::io::FileReader::Read(
+            std::filesystem::current_path() /= "transport-catalogue/tests/data/json_requests/test1.json");
         istream << json_file;
-        //std::cerr << istream.str() << std::endl;
-        const auto request_handler_ptr = std::make_shared<io::RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), renderer);
+        // std::cerr << istream.str() << std::endl;
+        const auto request_handler_ptr = std::make_shared<io::RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer);
         json_reader.AddObserver(request_handler_ptr);
         json_reader.ReadDocument();
     }
+    json_file = transport_catalogue::detail::io::FileReader::Read(
+        std::filesystem::current_path() /= "transport-catalogue/tests/data/json_requests/test3.json");
     istream << json_file;
-    json_reader.ReadDocument();*/
+    json_reader.ReadDocument();
 
     return 0;
 }
-
-/*
-{
-  "base_requests": [
-    {
-      "type": "Bus",
-      "name": "114",
-      "stops": ["Морской вокзал", "Ривьерский мост"],
-      "is_roundtrip": false
-    },
-    {
-      "type": "Stop",
-      "name": "Ривьерский мост",
-      "latitude": 43.587795,
-      "longitude": 39.716901,
-      "road_distances": {"Морской вокзал": 850}
-    },
-    {
-      "type": "Stop",
-      "name": "Морской вокзал",
-      "latitude": 43.581969,
-      "longitude": 39.719848,
-      "road_distances": {"Ривьерский мост": 850}
-    }
-  ],
-  "stat_requests": [
-    { "id": 1, "type": "Stop", "name": "Ривьерский мост" },
-    { "id": 2, "type": "Bus", "name": "114" }
-  ]
-}
-*/
