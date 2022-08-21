@@ -88,7 +88,7 @@ namespace transport_catalogue::exceptions {
     };
 }
 
-namespace transport_catalogue::data /* Db objects */ {
+namespace transport_catalogue::data /* Db objects (ORM) */ {
     using Coordinates = geo::Coordinates;
 
     struct Stop {
@@ -278,21 +278,13 @@ namespace transport_catalogue::data /* Database */ {
 
         const NameToStopView& GetNameToStopView() const;
 
-        const ITransportDataWriter& GetDataWriter() const {
-            return db_writer_;
-        }
+        const ITransportDataWriter& GetDataWriter() const;
 
-        const ITransportDataReader& GetDataReader() const {
-            return db_reader_;
-        }
+        const ITransportDataReader& GetDataReader() const;
 
-        explicit operator ITransportDataWriter() const {
-            return db_writer_;
-        }
+        explicit operator ITransportDataWriter() const;
 
-        explicit operator ITransportDataReader() const {
-            return db_reader_;
-        }
+        explicit operator ITransportDataReader() const;
 
     protected: /* ORM */
         template <typename Stop = data::Stop, detail::EnableIfSame<Stop, data::Stop> = true>
@@ -324,18 +316,7 @@ namespace transport_catalogue::data /* Database */ {
             typename String = std::string, typename StopsNameContainer = std::vector<std::string_view>,
             detail::EnableIf<detail::IsConvertibleV<String, std::string> && detail::IsSameV<StopsNameContainer, std::vector<std::string_view>>> =
                 true>
-        const Bus* AddBusForce(String&& name, StopsNameContainer&& stops) {
-            Route route;
-            route.reserve(stops.size());
-            std::for_each(stops.begin(), stops.end(), [&](const std::string_view stop) {
-                auto ptr = name_to_stop_.find(stop);
-                if (ptr != name_to_stop_.end()) {
-                    route.push_back(ptr->second);
-                }
-            });
-
-            return AddBus(std::forward<String>(name), std::move(route));
-        }
+        const Bus* AddBusForce(String&& name, StopsNameContainer&& stops);
 
         const Bus* GetBus(const std::string_view name) const;
 
@@ -357,33 +338,17 @@ namespace transport_catalogue::data /* Database */ {
             detail::EnableIf<detail::IsConvertibleV<StringView, std::string_view> && detail::IsBaseOfV<Database::TableView, TableView>> = true>
         const auto* GetItem(StringView&& name, const TableView& table) const;
 
-        void LockDatabase() {
-            throw transport_catalogue::exceptions::NotImplementedException();
-            mutex_.lock();
-        }
+        void LockDatabase();
 
-        void UnlockDatabase() {
-            throw transport_catalogue::exceptions::NotImplementedException();
-            mutex_.unlock();
-        }
+        void UnlockDatabase();
 
-        std::lock_guard<std::mutex> LockGuard() {
-            throw transport_catalogue::exceptions::NotImplementedException();
-            return std::lock_guard<std::mutex>{mutex_};
-        }
+        std::lock_guard<std::mutex> LockGuard();
 
         template <
             typename Container,
             detail::EnableIf<detail::IsSameV<Container, std::vector<std::string_view>> || detail::IsSameV<Container, std::vector<std::string>>> =
                 true>
-        Route ToRoute(Container&& stops) const {
-            Route route{stops.size()};
-            std::transform(stops.begin(), stops.end(), route.begin(), [this](const std::string_view stop) {
-                assert(name_to_stop_.count(stop));
-                return name_to_stop_.at(stop);
-            });
-            return route;
-        }
+        Route ToRoute(Container&& stops) const;
 
     public:
         class DataWriter;
@@ -401,33 +366,19 @@ namespace transport_catalogue::data /* Database inner classes (Read/Write interf
     public:
         DataWriter(Database& db) : db_{db} {}
 
-        void AddBus(Bus&& bus) const override {
-            db_.AddBus(std::move(bus));
-        }
+        void AddBus(Bus&& bus) const override;
 
-        void AddBus(std::string&& name, const std::vector<std::string_view>& stops) const override {
-            db_.AddBus(std::move(name), stops);
-        }
+        void AddBus(std::string&& name, const std::vector<std::string_view>& stops) const override;
 
-        void AddBus(std::string&& name, std::vector<std::string>&& stops) const override {
-            db_.AddBus(std::move(name), std::move(stops));
-        }
+        void AddBus(std::string&& name, std::vector<std::string>&& stops) const override;
 
-        void AddStop(Stop&& stop) const override {
-            db_.AddStop(std::move(stop));
-        }
+        void AddStop(Stop&& stop) const override;
 
-        void AddStop(std::string&& name, Coordinates&& coordinates) const override {
-            db_.AddStop(std::move(name), std::move(coordinates));
-        }
+        void AddStop(std::string&& name, Coordinates&& coordinates) const override;
 
-        void SetMeasuredDistance(const std::string_view from_stop_name, const std::string_view to_stop_name, double distance) const override {
-            db_.AddMeasuredDistance(from_stop_name, to_stop_name, distance);
-        }
+        void SetMeasuredDistance(const std::string_view from_stop_name, const std::string_view to_stop_name, double distance) const override;
 
-        void SetMeasuredDistance(data::MeasuredRoadDistance&& distance) const override {
-            db_.AddMeasuredDistance(std::move(distance.from_stop), std::move(distance.to_stop), std::move(distance.distance));
-        }
+        void SetMeasuredDistance(data::MeasuredRoadDistance&& distance) const override;
 
     private:
         Database& db_;
@@ -438,35 +389,15 @@ namespace transport_catalogue::data /* Database inner classes (Read/Write interf
     public:
         DataReader(Database& db) : db_{db} {}
 
-        BusRecord GetBus(std::string_view name) const override {
-            return db_.GetBus(name);
-        }
+        BusRecord GetBus(std::string_view name) const override;
 
-        StopRecord GetStop(std::string_view name) const override {
-            return db_.GetStop(name);
-        }
+        StopRecord GetStop(std::string_view name) const override;
 
-        const BusRecordSet& GetBuses(StopRecord stop) const override {
-            static const BusRecordSet empty_result;
-            auto ptr = db_.stop_to_buses_.find(stop);
-            return ptr == db_.stop_to_buses_.end() ? empty_result : ptr->second;
-        }
+        const BusRecordSet& GetBuses(StopRecord stop) const override;
 
-        const BusRecordSet& GetBuses(const std::string_view bus_name) const override {
-            static const BusRecordSet empty_result;
-            auto stop_ptr = GetStop(bus_name);
-            return stop_ptr == nullptr ? empty_result : GetBuses(stop_ptr);
-        }
+        const BusRecordSet& GetBuses(const std::string_view bus_name) const override;
 
-        DistanceBetweenStopsRecord GetDistanceBetweenStops(StopRecord from, StopRecord to) const override {
-            auto ptr = db_.measured_distances_btw_stops_.find({from, to});
-            if (ptr != db_.measured_distances_btw_stops_.end()) {
-                return ptr->second;
-            } else if (ptr = db_.measured_distances_btw_stops_.find({to, from}); ptr != db_.measured_distances_btw_stops_.end()) {
-                return ptr->second;
-            }
-            return {0., 0.};
-        }
+        DistanceBetweenStopsRecord GetDistanceBetweenStops(StopRecord from, StopRecord to) const override;
 
     private:
         Database& db_;
@@ -536,6 +467,36 @@ namespace transport_catalogue::data /* Database implementation */ {
 
     template <class Owner>
     template <
+        typename String, typename StopsNameContainer,
+        detail::EnableIf<detail::IsConvertibleV<String, std::string> && detail::IsSameV<StopsNameContainer, std::vector<std::string_view>>>>
+    const Bus* Database<Owner>::AddBusForce(String&& name, StopsNameContainer&& stops) {
+        Route route;
+        route.reserve(stops.size());
+        std::for_each(stops.begin(), stops.end(), [&](const std::string_view stop) {
+            auto ptr = name_to_stop_.find(stop);
+            if (ptr != name_to_stop_.end()) {
+                route.push_back(ptr->second);
+            }
+        });
+
+        return AddBus(std::forward<String>(name), std::move(route));
+    }
+
+    template <class Owner>
+    template <
+        typename Container,
+        detail::EnableIf<detail::IsSameV<Container, std::vector<std::string_view>> || detail::IsSameV<Container, std::vector<std::string>>>>
+    Route Database<Owner>::ToRoute(Container&& stops) const {
+        Route route{stops.size()};
+        std::transform(stops.begin(), stops.end(), route.begin(), [this](const std::string_view stop) {
+            assert(name_to_stop_.count(stop));
+            return name_to_stop_.at(stop);
+        });
+        return route;
+    }
+
+    template <class Owner>
+    template <
         typename StringView, typename TableView,
         detail::EnableIf<detail::IsConvertibleV<StringView, std::string_view> && detail::IsBaseOfV<typename Database<Owner>::TableView, TableView>>>
     const auto* Database<Owner>::GetItem(StringView&& name, const TableView& table) const {
@@ -567,5 +528,120 @@ namespace transport_catalogue::data /* Database implementation */ {
     template <class Owner>
     const typename Database<Owner>::NameToStopView& Database<Owner>::GetNameToStopView() const {
         return name_to_stop_;
+    }
+
+    template <class Owner>
+    const ITransportDataWriter& Database<Owner>::GetDataWriter() const {
+        return db_writer_;
+    }
+
+    template <class Owner>
+    const ITransportDataReader& Database<Owner>::GetDataReader() const {
+        return db_reader_;
+    }
+
+    template <class Owner>
+    Database<Owner>::operator ITransportDataWriter() const {
+        return db_writer_;
+    }
+
+    template <class Owner>
+    Database<Owner>::operator ITransportDataReader() const {
+        return db_reader_;
+    }
+
+    template <class Owner>
+    void Database<Owner>::LockDatabase() {
+        throw transport_catalogue::exceptions::NotImplementedException();
+        mutex_.lock();
+    }
+
+    template <class Owner>
+    void Database<Owner>::UnlockDatabase() {
+        throw transport_catalogue::exceptions::NotImplementedException();
+        mutex_.unlock();
+    }
+
+    template <class Owner>
+    std::lock_guard<std::mutex> Database<Owner>::LockGuard() {
+        throw transport_catalogue::exceptions::NotImplementedException();
+        return std::lock_guard<std::mutex>{mutex_};
+    }
+}
+
+namespace transport_catalogue::data /* Database::DataWriter implementation */ {
+
+    template <class Owner>
+    void Database<Owner>::DataWriter::AddBus(Bus&& bus) const {
+        db_.AddBus(std::move(bus));
+    }
+
+    template <class Owner>
+    void Database<Owner>::DataWriter::AddBus(std::string&& name, const std::vector<std::string_view>& stops) const {
+        db_.AddBus(std::move(name), stops);
+    }
+
+    template <class Owner>
+    void Database<Owner>::DataWriter::AddBus(std::string&& name, std::vector<std::string>&& stops) const {
+        db_.AddBus(std::move(name), std::move(stops));
+    }
+
+    template <class Owner>
+    void Database<Owner>::DataWriter::AddStop(Stop&& stop) const {
+        db_.AddStop(std::move(stop));
+    }
+
+    template <class Owner>
+    void Database<Owner>::DataWriter::AddStop(std::string&& name, Coordinates&& coordinates) const {
+        db_.AddStop(std::move(name), std::move(coordinates));
+    }
+
+    template <class Owner>
+    void Database<Owner>::DataWriter::SetMeasuredDistance(
+        const std::string_view from_stop_name, const std::string_view to_stop_name, double distance) const {
+        db_.AddMeasuredDistance(from_stop_name, to_stop_name, distance);
+    }
+
+    template <class Owner>
+    void Database<Owner>::DataWriter::SetMeasuredDistance(data::MeasuredRoadDistance&& distance) const {
+        db_.AddMeasuredDistance(std::move(distance.from_stop), std::move(distance.to_stop), std::move(distance.distance));
+    }
+}
+
+namespace transport_catalogue::data /* Database::DataReader implementation */ {
+
+    template <class Owner>
+    BusRecord Database<Owner>::DataReader::GetBus(std::string_view name) const {
+        return db_.GetBus(name);
+    }
+
+    template <class Owner>
+    StopRecord Database<Owner>::DataReader::GetStop(std::string_view name) const {
+        return db_.GetStop(name);
+    }
+
+    template <class Owner>
+    const BusRecordSet& Database<Owner>::DataReader::GetBuses(StopRecord stop) const {
+        static const BusRecordSet empty_result;
+        auto ptr = db_.stop_to_buses_.find(stop);
+        return ptr == db_.stop_to_buses_.end() ? empty_result : ptr->second;
+    }
+
+    template <class Owner>
+    const BusRecordSet& Database<Owner>::DataReader::GetBuses(const std::string_view bus_name) const {
+        static const BusRecordSet empty_result;
+        auto stop_ptr = GetStop(bus_name);
+        return stop_ptr == nullptr ? empty_result : GetBuses(stop_ptr);
+    }
+
+    template <class Owner>
+    DistanceBetweenStopsRecord Database<Owner>::DataReader::GetDistanceBetweenStops(StopRecord from, StopRecord to) const {
+        auto ptr = db_.measured_distances_btw_stops_.find({from, to});
+        if (ptr != db_.measured_distances_btw_stops_.end()) {
+            return ptr->second;
+        } else if (ptr = db_.measured_distances_btw_stops_.find({to, from}); ptr != db_.measured_distances_btw_stops_.end()) {
+            return ptr->second;
+        }
+        return {0., 0.};
     }
 }
