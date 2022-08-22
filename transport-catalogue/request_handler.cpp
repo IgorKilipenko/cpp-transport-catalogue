@@ -217,11 +217,6 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         ExecuteRequest(std::move(reqs));
     }
 
-    void RequestHandler::OnBaseRequest(const std::vector<RawRequest>& requests) const {
-        std::vector<RawRequest> requests_tmp(requests);
-        OnBaseRequest(std::move(requests_tmp));
-    }
-
     void RequestHandler::OnStatRequest(std::vector<RawRequest>&& requests) const {
         std::vector<StatRequest> reqs;
         reqs.reserve(requests.size());
@@ -232,11 +227,6 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         });
 
         ExecuteRequest(std::move(reqs));
-    }
-
-    void RequestHandler::OnStatRequest([[maybe_unused]] const std::vector<RawRequest>& requests) const {
-        std::vector<RawRequest> requests_tmp(requests);
-        OnStatRequest(std::move(requests_tmp));
     }
 
     void RequestHandler::ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const {
