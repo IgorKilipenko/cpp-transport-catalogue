@@ -69,7 +69,7 @@ namespace transport_catalogue::tests {
         };
 
     public:
-        void Test() const {
+        void TestObserver() const {
             const auto print_address = [](const void* ptr) {
                 std::ostringstream oss;
                 oss << ptr;
@@ -99,7 +99,7 @@ namespace transport_catalogue::tests {
         }
 
         void RunTests() const {
-            Test();
+            TestObserver();
         }
     };
 }
