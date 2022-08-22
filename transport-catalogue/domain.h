@@ -72,6 +72,7 @@ namespace transport_catalogue::data /* Db objects (ORM) */ {
     using StopRecordSet = std::deque<StopRecord>;
 
     class Route : public std::vector<StopRecord> {
+    public:
         using vector::vector;
     };
 
@@ -203,26 +204,32 @@ namespace transport_catalogue::data /* Database */ {
         class TableView {};
 
         class StopsTable : public DataTable, public StopsTableBase {
+        public:
             using StopsTableBase::deque;
         };
 
         class BusRoutesTable : public DataTable, public BusRoutesTableBase {
+        public:
             using BusRoutesTableBase::deque;
         };
 
         class DistanceBetweenStopsTable : public DataTable, public DistanceBetweenStopsTableBase {
+        public:
             using DistanceBetweenStopsTableBase::unordered_map;
         };
 
         class NameToStopView : public TableView, public NameToStopViewBase {
+        public:
             using NameToStopViewBase::unordered_map;
         };
 
         class NameToBusRoutesView : public TableView, public NameToBusRoutesViewBase {
+        public:
             using NameToBusRoutesViewBase::unordered_map;
         };
 
         class StopToBusesView : public TableView, public StopToBusesViewBase {
+        public:
             using StopToBusesViewBase::unordered_map;
         };
 
