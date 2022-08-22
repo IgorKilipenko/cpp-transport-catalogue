@@ -195,7 +195,7 @@ namespace json /* Node */ {
 
         void Print(std::ostream& output, bool pretty_print = true) const;
 
-        template <typename Printer>
+        template <typename Printer, detail::EnableIf<!std::is_reference_v<Printer>> = true>
         void Print(Printer&& printer) const;
     };
 }
@@ -216,7 +216,7 @@ namespace json /* Document */ {
 
         void Print(std::ostream& output, bool pretty_print = true) const;
 
-        template <typename Printer>
+        template <typename Printer, detail::EnableIf<!std::is_reference_v<Printer>> = true>
         void Print(Printer&& printer) const;
 
         static void Print(const Document& doc, std::ostream& output);
@@ -446,7 +446,7 @@ namespace json /* Node class template implementation */ {
         }
     }
 
-    template <typename Printer>
+    template <typename Printer, detail::EnableIf<!std::is_reference_v<Printer>>>
     void Node::Print(Printer&& printer) const {
         std::visit(std::forward<Printer>(printer), GetValue());
     }
@@ -541,7 +541,7 @@ namespace json /* NodePrinter class template implementation */ {
 }
 
 namespace json /* Document class template implementation */ {
-    template <typename Printer>
+    template <typename Printer, detail::EnableIf<!std::is_reference_v<Printer>>>
     void Document::Print(Printer&& printer) const {
         root_.Print(printer);
     }
