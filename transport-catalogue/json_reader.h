@@ -48,7 +48,11 @@ namespace transport_catalogue::detail::convertors {
                     if constexpr (detail::IsConvertibleV<T, std::variant<ToArgs...>>) {
                         return std::move(arg);
                     } else {
-                        return std::monostate();
+                        if constexpr (detail::IsConvertibleV<std::monostate, std::variant<ToArgs...>>) {
+                            return std::monostate();
+                        } else {
+                            return nullptr;
+                        }
                     }
                 },
                 v);
