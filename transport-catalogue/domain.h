@@ -89,6 +89,10 @@ namespace transport_catalogue::data /* Db objects (ORM) */ {
         bool operator!=(const Bus& rhs) const noexcept;
     };
 
+    template <typename T>
+    using DbRecord = const T*;
+    template <typename T>
+    constexpr const T* DbNull = nullptr;
     using BusRecord = const Bus*;
     using BusRecordSet = std::set<BusRecord>;
 
