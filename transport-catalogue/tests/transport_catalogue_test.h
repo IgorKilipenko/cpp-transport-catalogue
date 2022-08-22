@@ -13,7 +13,6 @@
 
 namespace transport_catalogue::tests {
     using namespace std::literals;
-    using namespace transport_catalogue;
 
     class TransportCatalogueTester {
     private:
