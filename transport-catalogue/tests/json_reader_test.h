@@ -34,7 +34,7 @@ namespace transport_catalogue::tests {
                     json::Dict dict;
                     std::for_each(std::make_move_iterator(req.begin()), std::make_move_iterator(req.end()), [&dict](auto&& req_val) {
                         std::string key = std::move(req_val.first);
-                        json::Node::ValueType val = detail::convertors::VariantCast(std::move(req_val.second));
+                        json::Node::ValueType val = detail::converters::VariantCast(std::move(req_val.second));
 
                         std::visit(
                             [&key, &dict](auto&& val) {
@@ -52,8 +52,13 @@ namespace transport_catalogue::tests {
             /*void OnBaseRequest(const std::vector<io::RawRequest>& requests) const override{
                 std::cerr << "OnBaseRequest" << std::endl;
             };*/
-            void OnStatRequest(std::vector<io::RawRequest>&& requests) const override {}
-            //!void OnStatRequest(const std::vector<io::RawRequest>& requests) const override {}
+            void OnStatRequest(std::vector<io::RawRequest>&& /*requests*/) const override {
+                std::cerr << "OnStatRequest" << std::endl;
+            }
+            void OnRenderSettingsRequest(std::vector<io::RawRequest>&& /*requests*/) const override {
+                std::cerr << "OnRenderSettingsRequest" << std::endl;
+            }
+            
 
             std::string& GetName() {
                 return name_;
