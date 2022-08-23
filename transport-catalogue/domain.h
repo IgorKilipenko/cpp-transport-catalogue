@@ -142,11 +142,83 @@ namespace transport_catalogue::data /* Db objects (ORM) */ {
     };
 }
 
+namespace transport_catalogue::data /* Db scheme abstraction */ {
+    class DataTable {
+    /*public:
+        const std::string_view GetName() const {
+            return name_;
+        }
+
+    protected:
+        DataTable(std::string name) : name_(std::move(name)) {}
+
+    private:
+        std::string name_;*/
+    };
+
+    class TableView {
+    /*public:
+        const std::string_view GetName() const {
+            return name_;
+        }
+
+    protected:
+        TableView(const std::string name) : name_(std::move(name)) {}
+
+    private:
+        std::string name_;*/
+    };
+}
+
+namespace transport_catalogue::data /* Db scheme */ {
+    class DatabaseScheme {
+    public: /* Aliases */
+        using StopsTableBase = std::deque<Stop>;
+        using BusRoutesTableBase = std::deque<Bus>;
+        using DistanceBetweenStopsTableBase = std::unordered_map<std::pair<const Stop*, const Stop*>, DistanceBetweenStopsRecord, Hasher>;
+        using NameToStopViewBase = std::unordered_map<std::string_view, const data::Stop*>;
+        using NameToBusRoutesViewBase = std::unordered_map<std::string_view, const data::Bus*>;
+        using StopToBusesViewBase = std::unordered_map<StopRecord, BusRecordSet>;
+
+    public:
+        class StopsTable : public DataTable, public StopsTableBase {
+        public:
+            using StopsTableBase::deque;
+        };
+
+        class BusRoutesTable : public DataTable, public BusRoutesTableBase {
+        public:
+            using BusRoutesTableBase::deque;
+        };
+
+        class DistanceBetweenStopsTable : public DataTable, public DistanceBetweenStopsTableBase {
+        public:
+            using DistanceBetweenStopsTableBase::unordered_map;
+        };
+
+        class NameToStopView : public TableView, public NameToStopViewBase {
+        public:
+            using NameToStopViewBase::unordered_map;
+        };
+
+        class NameToBusRoutesView : public TableView, public NameToBusRoutesViewBase {
+        public:
+            using NameToBusRoutesViewBase::unordered_map;
+        };
+
+        class StopToBusesView : public TableView, public StopToBusesViewBase {
+        public:
+            using StopToBusesViewBase::unordered_map;
+        };
+    };
+}
+
 namespace transport_catalogue::data /* Interfaces */ {
     class ITransportDataReader {
     public:
         virtual BusRecord GetBus(std::string_view name) const = 0;
         virtual StopRecord GetStop(std::string_view name) const = 0;
+        virtual const DatabaseScheme::StopsTable& GetStopsTable() const = 0;
 
         virtual const BusRecordSet& GetBuses(StopRecord stop) const = 0;
         virtual const BusRecordSet& GetBuses(const std::string_view bus_name) const = 0;
@@ -179,6 +251,9 @@ namespace transport_catalogue::data /* Interfaces */ {
         virtual StopStat GetStopInfo(const data::StopRecord stop) const = 0;
         virtual std::optional<StopStat> GetStopInfo(const std::string_view stop_name) const = 0;
 
+        // Возвращает маршруты, проходящие через остановку
+        virtual const data::BusRecordSet& GetBusesByStop(const std::string_view& stop_name) const = 0;
+
         virtual const data::ITransportDataReader& GetDataReader() const = 0;
 
         virtual ~ITransportStatDataReader() = default;
@@ -191,56 +266,14 @@ namespace transport_catalogue::data /* Database */ {
     class Database {
         friend Owner;
 
-    private: /* aliases */
-        using StopsTableBase = std::deque<Stop>;
-        using BusRoutesTableBase = std::deque<Bus>;
-        using DistanceBetweenStopsTableBase = std::unordered_map<std::pair<const Stop*, const Stop*>, DistanceBetweenStopsRecord, Hasher>;
-        using NameToStopViewBase = std::unordered_map<std::string_view, const data::Stop*>;
-        using NameToBusRoutesViewBase = std::unordered_map<std::string_view, const data::Bus*>;
-        using StopToBusesViewBase = std::unordered_map<StopRecord, BusRecordSet>;
-
-    public: /* DB scheme */
-        class DataTable {};
-        class TableView {};
-
-        class StopsTable : public DataTable, public StopsTableBase {
-        public:
-            using StopsTableBase::deque;
-        };
-
-        class BusRoutesTable : public DataTable, public BusRoutesTableBase {
-        public:
-            using BusRoutesTableBase::deque;
-        };
-
-        class DistanceBetweenStopsTable : public DataTable, public DistanceBetweenStopsTableBase {
-        public:
-            using DistanceBetweenStopsTableBase::unordered_map;
-        };
-
-        class NameToStopView : public TableView, public NameToStopViewBase {
-        public:
-            using NameToStopViewBase::unordered_map;
-        };
-
-        class NameToBusRoutesView : public TableView, public NameToBusRoutesViewBase {
-        public:
-            using NameToBusRoutesViewBase::unordered_map;
-        };
-
-        class StopToBusesView : public TableView, public StopToBusesViewBase {
-        public:
-            using StopToBusesViewBase::unordered_map;
-        };
-
     public:
         Database() : db_writer_{*this}, db_reader_{*this} {}
 
-        const StopsTable& GetStopsTable() const;
+        const DatabaseScheme::StopsTable& GetStopsTable() const;
 
-        const BusRoutesTable& GetBusRoutesTable() const;
+        const DatabaseScheme::BusRoutesTable& GetBusRoutesTable() const;
 
-        const NameToStopView& GetNameToStopView() const;
+        const DatabaseScheme::NameToStopView& GetNameToStopView() const;
 
         const ITransportDataWriter& GetDataWriter() const;
 
@@ -287,19 +320,19 @@ namespace transport_catalogue::data /* Database */ {
         const Stop* GetStop(const std::string_view name) const;
 
     private:
-        StopsTable stops_;
-        BusRoutesTable bus_routes_;
-        DistanceBetweenStopsTable measured_distances_btw_stops_;
+        DatabaseScheme::StopsTable stops_;
+        DatabaseScheme::BusRoutesTable bus_routes_;
+        DatabaseScheme::DistanceBetweenStopsTable measured_distances_btw_stops_;
 
-        NameToStopView name_to_stop_;
-        NameToBusRoutesView name_to_bus_;
-        StopToBusesView stop_to_buses_;
+        DatabaseScheme::NameToStopView name_to_stop_;
+        DatabaseScheme::NameToBusRoutesView name_to_bus_;
+        DatabaseScheme::StopToBusesView stop_to_buses_;
 
         std::mutex mutex_;
 
         template <
             typename StringView, typename TableView,
-            detail::EnableIf<detail::IsConvertibleV<StringView, std::string_view> && detail::IsBaseOfV<Database::TableView, TableView>> = true>
+            detail::EnableIf<detail::IsConvertibleV<StringView, std::string_view> && detail::IsBaseOfV<TableView, TableView>> = true>
         const auto* GetItem(StringView&& name, const TableView& table) const;
 
         void LockDatabase();
@@ -356,6 +389,10 @@ namespace transport_catalogue::data /* Database inner classes (Read/Write interf
         BusRecord GetBus(std::string_view name) const override;
 
         StopRecord GetStop(std::string_view name) const override;
+
+        const DatabaseScheme::StopsTable& GetStopsTable() const override {
+            return db_.GetStopsTable();
+        }
 
         const BusRecordSet& GetBuses(StopRecord stop) const override;
 
@@ -462,7 +499,7 @@ namespace transport_catalogue::data /* Database implementation */ {
     template <class Owner>
     template <
         typename StringView, typename TableView,
-        detail::EnableIf<detail::IsConvertibleV<StringView, std::string_view> && detail::IsBaseOfV<typename Database<Owner>::TableView, TableView>>>
+        detail::EnableIf<detail::IsConvertibleV<StringView, std::string_view> && detail::IsBaseOfV<TableView, TableView>>>
     const auto* Database<Owner>::GetItem(StringView&& name, const TableView& table) const {
         auto ptr = table.find(std::move(name));
         return ptr == table.end() ? nullptr : ptr->second;
@@ -480,17 +517,17 @@ namespace transport_catalogue::data /* Database implementation */ {
     }
 
     template <class Owner>
-    const typename Database<Owner>::StopsTable& Database<Owner>::GetStopsTable() const {
+    const DatabaseScheme::StopsTable& Database<Owner>::GetStopsTable() const {
         return stops_;
     }
 
     template <class Owner>
-    const typename Database<Owner>::BusRoutesTable& Database<Owner>::GetBusRoutesTable() const {
+    const DatabaseScheme::BusRoutesTable& Database<Owner>::GetBusRoutesTable() const {
         return bus_routes_;
     }
 
     template <class Owner>
-    const typename Database<Owner>::NameToStopView& Database<Owner>::GetNameToStopView() const {
+    const DatabaseScheme::NameToStopView& Database<Owner>::GetNameToStopView() const {
         return name_to_stop_;
     }
 
