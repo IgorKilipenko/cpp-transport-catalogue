@@ -302,9 +302,12 @@ namespace svg /* Svg Objects */ {
      * https://developer.mozilla.org/en-US/docs/Web/SVG/Element/polyline
      */
     class Polyline final : public Object, public PathProps<Polyline> {
-        using Points = std::vector<Point>;
-
     public:
+        using Points = std::vector<Point>;
+        
+        Polyline() = default;
+        Polyline(Points points) : points_(points) {}
+
         /// Добавляет очередную вершину к ломаной линии
         template <typename Point = svg::Point, detail::EnableIfConvertible<Point, svg::Point> = true>
         Polyline& AddPoint(Point&& point);
@@ -389,6 +392,7 @@ namespace svg /* Svg Objects */ {
     public:
         using ObjectPtr = std::unique_ptr<Object>;
         using ObjectCollection = std::vector<ObjectPtr>;
+        constexpr static const std::string_view NEW_LINE{"\n"};
 
         /// Добавляет в svg-документ объект-наследник svg::Object
         void AddPtr(ObjectPtr&& obj) override;
