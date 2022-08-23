@@ -35,7 +35,7 @@ namespace transport_catalogue::exceptions {
     };
 }
 
-namespace transport_catalogue::detail::convertors {
+namespace transport_catalogue::detail::converters {
     template <class... Args>
     struct VariantCastProxy {
         std::variant<Args...> v;
@@ -156,6 +156,10 @@ namespace transport_catalogue::io /* JsonReader */ {
 
         void NotifyStatRequest(std::vector<RawRequest>&& requests) override;
 
+        void NotifyRenderSettingsRequest(std::vector<RawRequest>&& requests) override {
+            NotifyObservers(RequestType::RENDER_SETTINGS, std::move(requests));
+        }
+
         bool HasObserver() const override;
 
         void NotifyObservers(RequestType type, std::vector<RawRequest>&& requests);
@@ -178,6 +182,7 @@ namespace transport_catalogue::io /* JsonReader */ {
         bool is_broadcast_ = true;
         constexpr static const std::string_view BASE_REQUESTS_LITERAL = "base_requests"sv;
         constexpr static const std::string_view STAT_REQUESTS_LITERAL = "stat_requests"sv;
+        constexpr static const std::string_view RENDER_SETTINGS_REQUESTS_LITERAL = "render_settings"sv;
 
     public: /* Helpers */
         static RawRequest JsonToRequest(json::Dict&& map, RequestType type);

@@ -42,8 +42,10 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
             }
             if (type == RequestType::BASE) {
                 ptr->second.lock()->OnBaseRequest(is_broadcast_ && observers_.size() > 1 ? requests : std::move(requests));
-            } else {
+            } else if (type == RequestType::STAT) {
                 ptr->second.lock()->OnStatRequest(is_broadcast_ && observers_.size() > 1 ? requests : std::move(requests));
+            } else if (type == RequestType::RENDER_SETTINGS) {
+                ptr->second.lock()->OnRenderSettingsRequest(is_broadcast_ && observers_.size() > 1 ? requests : std::move(requests));
             }
 
             ptr = is_broadcast_ ? ++ptr : observers_.end();
@@ -60,12 +62,17 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
 
         json::Document doc = json::Document::Load(input_stream_);
         json::Node& root = doc.GetRoot();
+
         assert(root.IsMap());
+
         json::Dict raw_requests = root.ExtractMap();
         auto base_req_ptr = std::move_iterator(raw_requests.find(BASE_REQUESTS_LITERAL));
         auto stat_req_ptr = std::move_iterator(raw_requests.find(STAT_REQUESTS_LITERAL));
+        auto render_settings_req_ptr = std::move_iterator(raw_requests.find(RENDER_SETTINGS_REQUESTS_LITERAL));
+
         auto end = std::move_iterator(raw_requests.end());
-        assert(base_req_ptr != end || stat_req_ptr != end);
+
+        assert(base_req_ptr != end || stat_req_ptr != end || render_settings_req_ptr != end);
 
         if (base_req_ptr != end && base_req_ptr->second.IsArray()) {
             json::Array array = base_req_ptr->second.ExtractArray();
@@ -75,6 +82,10 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
         if (stat_req_ptr != end && stat_req_ptr->second.IsArray()) {
             json::Array array = stat_req_ptr->second.ExtractArray();
             NotifyStatRequest(JsonToRequest(std::move(array), RequestType::STAT));
+        }
+        if (render_settings_req_ptr != end && render_settings_req_ptr->second.IsArray()) {
+            json::Array array = render_settings_req_ptr->second.ExtractArray();
+            NotifyRenderSettingsRequest(JsonToRequest(std::move(array), RequestType::RENDER_SETTINGS));
         }
     }
 
@@ -89,7 +100,7 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
                 std::vector<RequestArrayValueType> sub_array;
                 sub_array.reserve(array.size());
                 std::for_each(std::make_move_iterator(array.begin()), std::make_move_iterator(array.end()), [&sub_array](auto&& node) {
-                    RequestArrayValueType value = detail::convertors::VariantCast(node.ExtractValue());
+                    RequestArrayValueType value = detail::converters::VariantCast(node.ExtractValue());
                     sub_array.emplace_back(std::move(value));
                 });
                 result.emplace(std::move(key), std::move(sub_array));
@@ -98,12 +109,12 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
                 std::unordered_map<std::string, RequestDictValueType> sub_map;
                 std::for_each(std::make_move_iterator(map.begin()), std::make_move_iterator(map.end()), [&sub_map](auto&& node) {
                     std::string key = std::move(node.first);
-                    RequestArrayValueType value = detail::convertors::VariantCast(node.second.ExtractValue());
+                    RequestArrayValueType value = detail::converters::VariantCast(node.second.ExtractValue());
                     sub_map.emplace(std::move(key), std::move(value));
                 });
                 result.emplace(std::move(key), std::move(sub_map));
             } else {
-                RequestValueType value = detail::convertors::VariantCast(node_val.ExtractValue());
+                RequestValueType value = detail::converters::VariantCast(node_val.ExtractValue());
                 result.emplace(std::move(key), std::move(value));
             }
         });
