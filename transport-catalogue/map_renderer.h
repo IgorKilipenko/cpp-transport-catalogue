@@ -7,6 +7,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <iterator>
 #include <map>
@@ -22,8 +23,10 @@
 #include "transport_catalogue.h"
 
 namespace transport_catalogue::io::renderer /* MapRenderer */ {
+
     class IRenderer {
     public:
+        virtual void UpdateMapProjection(geo::Projection projection) = 0;
         // virtual void DrawTransportTracksLayer(std::vector<data::BusRecord>&& records) = 0;
         virtual void DrawTransportTracksLayer(data::BusRecord bus) = 0;
         virtual void DrawTransportStopsLayer(std::vector<data::BusRecord>&& records) = 0;
@@ -36,12 +39,41 @@ namespace transport_catalogue::maps /* Aliases */ {
     using Offset = geo::Offset;
     using Size = geo::Size;
     using GlobalCoordinates = geo::Coordinates;
+
+    class Style {
+    public:
+        Color color;
+        double stroke_width = 0.;
+    };
+
+    class TextStyle : public Style {
+    public:
+        Offset offset;
+        uint32_t font_size;
+        std::optional<Color> underlayer_color;
+    };
+
+    class Drawable {
+    public:
+        virtual void Darw(svg::ObjectContainer& layer) const = 0;
+        virtual ~Drawable() = default;
+
+    protected:
+        Drawable(Style style) : style_(style) {}
+        Drawable(TextStyle style) : text_style_(style) {}
+        Drawable(Style style, TextStyle text_style) : style_(style), text_style_(text_style) {}
+
+    protected:
+        std::optional<Style> style_;
+        std::optional<TextStyle> text_style_;
+    };
 }
 
 namespace transport_catalogue::maps /* Locations */ {
 
     struct MapPoint : public geo::Point {
         using geo::Point::Point;
+        MapPoint(geo::Point point) : geo::Point(std::move(point)) {}
         operator svg::Point() const {
             return svg::Point(north, east);
         }
@@ -93,40 +125,16 @@ namespace transport_catalogue::maps /* Locations */ {
             return result;
         }
 
-        std::vector<MapPoint> ExtractPoints() {
-            std::vector<MapPoint> result(size());
+        template <typename Point>
+        std::vector<Point> ExtractPoints() {
+            std::vector<Point> result(size());
             std::transform(std::make_move_iterator(begin()), std::make_move_iterator(end()), result.begin(), [](Location&& location) {
-                return static_cast<MapPoint>(std::move(location.GetMapPoint()));
+                return static_cast<Point>(std::move(location.GetMapPoint()));
             });
             return result;
         }
     };
-}
 
-namespace transport_catalogue::maps {
-    class MapLayer {
-    public:
-        svg::Document& GetSvgDocument() {
-            return svg_document_;
-        }
-
-    private:
-        svg::Document svg_document_;
-    };
-
-    class Map {
-    public:
-        virtual geo::Bounds<geo::Point> GetProjectedBounds() {
-            [[maybe_unused]] geo::Point min = projection_.FromLatLngToMapPoint(bounds_.min);
-            [[maybe_unused]] geo::Point max = projection_.FromLatLngToMapPoint(bounds_.max);
-            return geo::Bounds<geo::Point>{min, max};
-        }
-
-    private:
-        Size size_;
-        geo::Projection projection_;
-        geo::Bounds<geo::Coordinates> bounds_;
-    };
 }
 
 namespace transport_catalogue::maps {
@@ -143,7 +151,7 @@ namespace transport_catalogue::maps {
         "underlayer_color": [82, 175, 153, 0.11467454568298674],
         "underlayer_width": 98705.69087384189,
         */
-        Size size;
+        Size map_size;
 
         double padding = 0.0;
 
@@ -163,36 +171,40 @@ namespace transport_catalogue::maps {
     };
 }
 
+namespace transport_catalogue::maps {
+    class MapLayer {
+    public:
+        svg::Document& GetSvgDocument() {
+            return svg_document_;
+        }
+
+        void Draw() {
+            std::for_each(objects_.begin(), objects_.end(), [this](Drawable& obj) {
+                obj.Darw(svg_document_);
+            });
+        }
+
+    private:
+        std::vector<Drawable> objects_;
+        svg::Document svg_document_;
+    };
+
+    class Map {
+    public:
+        virtual geo::Bounds<geo::Point> GetProjectedBounds() {
+            return geo::Bounds<geo::Point>{projection_.FromLatLngToMapPoint(bounds_.min), projection_.FromLatLngToMapPoint(bounds_.max)};
+        }
+
+    private:
+        Size size_;
+        geo::Projection projection_;
+        geo::Bounds<geo::Coordinates> bounds_;
+    };
+}
+
 namespace transport_catalogue::maps /* MapRenderer */ {
     class MapRenderer : public io::renderer::IRenderer {
     public:
-        class Style {
-        public:
-            Color color;
-            double stroke_width = 0.;
-        };
-
-        class TextStyle : public Style {
-        public:
-            Offset offset;
-            uint32_t font_size;
-            std::optional<Color> underlayer_color;
-        };
-
-        class Drawable {
-        protected:
-            Drawable(Style style) : style_(style) {}
-            Drawable(TextStyle style) : text_style_(style) {}
-            Drawable(Style style, TextStyle text_style) : style_(style), text_style_(text_style) {}
-            virtual ~Drawable() = default;
-
-            virtual void Darw(MapLayer& layer, bool move = false) const = 0;
-
-        protected:
-            std::optional<Style> style_;
-            std::optional<TextStyle> text_style_;
-        };
-
         template <typename ObjectType>
         class DbObject {
         public:
@@ -203,24 +215,40 @@ namespace transport_catalogue::maps /* MapRenderer */ {
                 throw std::runtime_error("Not implemented");
             }
 
+            virtual void UpdateLocation() = 0;
+
+            const std::string_view GetName() const {
+                return name_;
+            }
+
+            const data::DbRecord<ObjectType>& GetDbRecord() const {
+                return db_id_;
+            }
+
         protected:
-            DbObject(data::DbRecord<ObjectType> object_id) : db_id_{object_id} {}
+            DbObject(data::DbRecord<ObjectType> object_id, const geo::Projection& projection) : db_id_{object_id}, projection_{projection} {}
 
         protected:
             std::string name_;
             data::DbRecord<ObjectType> db_id_;
+            const geo::Projection& projection_;
         };
 
         class BusStop : public DbObject<data::Stop>, public Drawable {
         public:
-            BusStop(Style style) : DbObject{data::DbNull<data::Stop>}, Drawable{style} {}
-            BusStop(data::StopRecord id, Style style) : DbObject{id}, Drawable{style} {}
+            BusStop(Style style, const geo::Projection& projection) : DbObject{data::DbNull<data::Stop>, projection}, Drawable{style} {}
+            BusStop(data::StopRecord id, Style style, const geo::Projection& projection) : DbObject{id, projection}, Drawable{style} {}
 
             void Update() override {
                 DbObject::Update();
             }
 
-            void Darw(MapLayer& layer, bool move) const override {
+            void UpdateLocation() override {
+                std::cerr << "BusRoute -> Update Location" << std::endl;  //! FOR DEBUG ONLY
+                location_.GetMapPoint() = {projection_.FromLatLngToMapPoint(location_.GetGlobalCoordinates())};
+            }
+
+            void Darw(svg::ObjectContainer& layer) const override {
                 // layer.Add(Polyline{})
             }
 
@@ -230,31 +258,62 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
         class BusRoute : public DbObject<data::Bus>, public Drawable {
         public:
-            BusRoute(Style style) : DbObject{data::DbNull<data::Bus>}, Drawable{style} {}
-            BusRoute(data::BusRecord id, Style style) : DbObject{id}, Drawable{style} {}
+            BusRoute(Style style, const geo::Projection& projection) : DbObject{data::DbNull<data::Bus>, projection}, Drawable{style} {}
+            BusRoute(data::BusRecord id, Style style, const geo::Projection& projection) : DbObject{id, projection}, Drawable{style} {}
 
             void Update() override {
                 DbObject::Update();
             }
 
-            void Darw(MapLayer& layer, bool move) const override {
+            void UpdateLocation() override {
+                std::cerr << "BusRoute -> Update Location" << std::endl;  //! FOR DEBUG ONLY
+                std::for_each(locations_.begin(), locations_.end(), [this](Location& location) {
+                    location.GetMapPoint() = {projection_.FromLatLngToMapPoint(location.GetGlobalCoordinates())};
+                });
+            }
+
+            void Darw(svg::ObjectContainer& layer) const override {
                 // layer.Add(svg::Polyline(static_cast<std::vector<svg::Point>>(locations_)));
-                svg::Document& doc = layer.GetSvgDocument();
-                doc.Add(svg::Polyline(move ? std::move(locations_) : locations_));
+                layer.Add(svg::Polyline(locations_));
+            }
+
+            const data::Route& GetRoute() const {
+                return db_id_->route;
             }
 
         private:
             Polyline locations_;
+
+            void Build() {
+                assert(locations_.empty());
+
+                const data::Route& route = db_id_->route;
+                locations_.reserve(route.size());
+                std::for_each(route.begin(), route.end(), [this](const data::StopRecord& stop) {
+                    locations_.emplace_back(projection_.FromLatLngToMapPoint(stop->coordinates), stop->coordinates);
+                });
+            }
         };
 
+        void UpdateLayers() {}
+
+        void UpdateMapProjection(geo::Projection projection) override {
+            if (projection == *projection_) {
+                return;
+            }
+            projection_ = std::move(&projection);
+            UpdateLayers();
+        }
+
         void DrawTransportTracksLayer(data::BusRecord bus) override {
-            /*BusRoute drawable {
-                bus, {}
-            }*/
+            BusRoute drawable_bus{bus, {}, *projection_};
+            drawable_bus.Darw(transport_layer_.GetSvgDocument());
         }
 
         void DrawTransportStopsLayer(std::vector<data::BusRecord>&& records) override {}
 
     private:
+        MapLayer transport_layer_;
+        geo::Projection* projection_;
     };
 }
