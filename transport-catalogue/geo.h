@@ -5,6 +5,7 @@
 #include <iostream>
 #include <optional>
 #include <stdexcept>
+#include <string>
 #include <utility>
 
 #include "detail/type_traits.h"
@@ -50,6 +51,7 @@ namespace transport_catalogue::geo {
         double east = 0.;
         Point() = default;
         Point(double north, double east) : north(north), east(east) {}
+        virtual ~Point() = default;
     };
 
     struct Offset : Point {};
@@ -67,8 +69,10 @@ namespace transport_catalogue::geo {
         CoordinatesType max;
 
         Bounds() = default;
-        
-        template <typename Coordinates = geo::Coordinates, detail::EnableIf<detail::IsBaseOfV<geo::Coordinates, Coordinates> || detail::IsBaseOfV<geo::Point, Coordinates>> = true>
+
+        template <
+            typename Coordinates = geo::Coordinates,
+            detail::EnableIf<detail::IsBaseOfV<geo::Coordinates, Coordinates> || detail::IsBaseOfV<geo::Point, Coordinates>> = true>
         Bounds(Coordinates&& min, Coordinates&& max) : min(std::forward<Coordinates>(min)), max(std::forward<Coordinates>(max)) {}
     };
 
@@ -89,13 +93,24 @@ namespace transport_catalogue::geo {
             return 0.;
         }
 
+        virtual bool operator==(const Projection& rhs) const {
+            return this == &rhs || code_ == rhs.code_;
+        }
+
+        virtual bool operator!=(const Projection& rhs) const {
+            return !(*this == rhs);
+        }
+
     protected:
-        Projection() = default;
+        Projection(std::string unique_code) : code_(unique_code) {}
+
+    private:
+        std::string code_;
     };
 
     class WGS84 : public Projection {
     public:
-        WGS84() = default;
+        WGS84() : Projection("WGS84") {}
 
         Bounds<> GetBounds() const override {
             Coordinates min{90.0, 180.0};
@@ -126,10 +141,12 @@ namespace transport_catalogue::geo {
         };
 
     public:
-        MockProjection(Bounds<> bounds, double scale, double padding) : bounds_{bounds}, scale_{scale}, padding_(padding) {}
+        MockProjection() : MockProjection(Bounds<>{}, 0, 0) {}
+        MockProjection(Bounds<> bounds, double scale, double padding)
+            : Projection("MockProjection"), bounds_{bounds}, scale_{scale}, padding_(padding) {}
 
         template <template <typename, typename...> class Container, typename Coordinates, typename... Types>
-        static MockProjection FromPoints(Container<Coordinates, Types...> points, Size map_size, double padding) {
+        static MockProjection CalculateFromParams(Container<Coordinates, Types...> points, Size map_size, double padding) {
             Bounds<> bounds = CalculateBounds(points.begin(), points.end());
             double scale = CalculateScale(std::move(map_size), bounds, padding);
             return MockProjection(std::move(bounds), scale, padding);
