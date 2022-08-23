@@ -43,7 +43,7 @@ namespace transport_catalogue /* TransportCatalogue */ {
         const data::BusRecordSet& GetBuses(data::StopRecord stop) const override;
         const data::BusRecordSet& GetBuses(const std::string_view bus_name) const override;
         data::DistanceBetweenStopsRecord GetDistanceBetweenStops(data::StopRecord from, data::StopRecord to) const override;
-        
+
         data::BusStat GetBusInfo(data::BusRecord bus) const override;
         std::optional<data::BusStat> GetBusInfo(const std::string_view bus_name) const override;
         data::StopStat GetStopInfo(const data::StopRecord stop) const override;
