@@ -52,6 +52,10 @@ namespace transport_catalogue {
 
         data::StopRecord GetStop(const std::string_view name) const override;
 
+        const data::DatabaseScheme::StopsTable& GetStopsTable() const override {
+            return db_reader_.GetStopsTable();
+        }
+
         const data::BusRecordSet& GetBuses(data::StopRecord stop) const override {
             return db_reader_.GetBuses(stop);
         }
@@ -82,6 +86,10 @@ namespace transport_catalogue {
 
         std::optional<data::StopStat> GetStopInfo(const std::string_view stop_name) const override {
             return db_stat_reader_.GetStopInfo(stop_name);
+        }
+
+        const data::BusRecordSet& GetBusesByStop(const std::string_view& stop_name) const override {
+            return db_stat_reader_.GetBusesByStop(stop_name);
         }
 
         const data::ITransportDataWriter& GetDataWriter() const {
@@ -118,7 +126,8 @@ namespace transport_catalogue {
                 }
 
                 info.total_stops = route.size();
-                info.unique_stops = CulculateUniqueStops(route.begin(), route.end()); //std::unordered_set<data::StopRecord>(route.begin(), route.end()).size();
+                info.unique_stops =
+                    CulculateUniqueStops(route.begin(), route.end());  // std::unordered_set<data::StopRecord>(route.begin(), route.end()).size();
                 info.route_length = route_length;
                 info.route_curvature = route_length / std::max(pseudo_length, 1.);
 
@@ -147,6 +156,10 @@ namespace transport_catalogue {
                 return std::optional<data::StopStat>{GetStopInfo(stop)};
             }
 
+            const data::BusRecordSet& GetBusesByStop(const std::string_view& stop_name) const override {
+                return db_reader_.GetBuses(stop_name);
+            }
+
             const data::ITransportDataReader& GetDataReader() const override {
                 return db_reader_;
             }
@@ -156,7 +169,7 @@ namespace transport_catalogue {
 
             template <typename Iterator>
             static size_t CulculateUniqueStops(Iterator begin, Iterator end) {
-                return  std::unordered_set<typename Iterator::value_type>(begin, end).size();
+                return std::unordered_set<typename Iterator::value_type>(begin, end).size();
             }
         };
 
