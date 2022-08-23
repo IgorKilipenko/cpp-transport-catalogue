@@ -13,10 +13,10 @@ namespace transport_catalogue {
     }
 
     const data::Bus* TransportCatalogue::GetBus(const std::string_view name) const {
-        return db_->GetBus(std::move(name));
+        return db_reader_.GetBus(std::move(name));
     }
 
     const data::Stop* TransportCatalogue::GetStop(const std::string_view name) const {
-        return db_->GetStop(std::move(name));
+        return db_reader_.GetStop(std::move(name));
     }
 }
