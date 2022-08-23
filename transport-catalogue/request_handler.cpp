@@ -149,10 +149,11 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
 }
 
 namespace transport_catalogue::io /* Request implementation */ {
+
     Request::Request(std::string&& type, std::string&& name, RequestArgsMap&& args)
         : Request(
-              (assert(type == TypeValues::BUS || type == TypeValues::STOP),
-               TypeValues::BUS == std::move(type) ? RequestCommand::BUS : RequestCommand::STOP),
+              (assert(type == converter(RequestCommand::BUS) || type == converter(RequestCommand::STOP) || type == converter(RequestCommand::RENDER)),
+               converter.operator()<RequestCommand>(std::move(type))),
               std::move(name), std::move(args)) {}
 
     Request::Request(RawRequest&& raw_request)
@@ -167,6 +168,10 @@ namespace transport_catalogue::io /* Request implementation */ {
     }
 
     bool Request::IsStatRequest() const {
+        return false;
+    }
+
+    bool Request::IsRenderSettingsRequest() const {
         return false;
     }
 
@@ -191,14 +196,84 @@ namespace transport_catalogue::io /* Request implementation */ {
     }
 }
 
+namespace transport_catalogue::io /* RequestEnumConverter implementation */ {
+    template <>
+    std::string_view RequestEnumConverter::operator()(io::RequestCommand enum_value) const {
+        using namespace std::string_view_literals;
+
+        switch (enum_value) {
+        case io::RequestCommand::BUS:
+            return "Bus"sv;
+        case io::RequestCommand::STOP:
+            return "Stop"sv;
+        case io::RequestCommand::RENDER:
+            return "Render"sv;
+        case io::RequestCommand::UNKNOWN:
+            return "Unknown"sv;
+        default:
+            return InvalidValue;
+        }
+    }
+
+    template <>
+    io::RequestCommand RequestEnumConverter::operator()(std::string_view enum_name) const {
+        using namespace std::string_view_literals;
+
+        if (enum_name == "Bus"sv) {
+            return io::RequestCommand::BUS;
+        } else if (enum_name == "Stop"sv) {
+            return io::RequestCommand::STOP;
+        } else if (enum_name == "Render"sv) {
+            return io::RequestCommand::RENDER;
+        } else if (enum_name == "Unknown"sv) {
+            return io::RequestCommand::UNKNOWN;
+        }
+        throw std::invalid_argument(InvalidValue);
+    }
+
+    template <>
+    std::string_view RequestEnumConverter::operator()(io::RequestType enum_value) const {
+        using namespace std::string_view_literals;
+
+        switch (enum_value) {
+        case io::RequestType::BASE:
+            return "base_requests"sv;
+        case io::RequestType::STAT:
+            return "stat_requests"sv;
+        case io::RequestType::RENDER_SETTINGS:
+            return "render_settings"sv;
+        case io::RequestType::UNKNOWN:
+            return "Unknown"sv;
+        default:
+            return InvalidValue;
+        }
+    }
+
+    template <>
+    io::RequestType RequestEnumConverter::operator()(std::string_view enum_name) const {
+        using namespace std::string_view_literals;
+
+        if (enum_name == "base_requests"sv) {
+            return io::RequestType::BASE;
+        } else if (enum_name == "stat_requests"sv) {
+            return io::RequestType::STAT;
+        } else if (enum_name == "render_settings"sv) {
+            return io::RequestType::RENDER_SETTINGS;
+        } else if (enum_name == "Unknown"sv) {
+            return io::RequestType::UNKNOWN;
+        }
+        throw std::invalid_argument(InvalidValue);
+    }
+}
+
 namespace transport_catalogue::io /* RequestHandler implementation */ {
-    std::optional<data::BusStat> RequestHandler::GetBusStat(const std::string_view bus_name) const {
+    /*std::optional<data::BusStat> RequestHandler::GetBusStat(const std::string_view bus_name) const {
         return db_reader_.GetBusInfo(bus_name);
     }
 
     const data::BusRecordSet& RequestHandler::GetBusesByStop(const std::string_view& stop_name) const {
         return db_reader_.GetDataReader().GetBuses(stop_name);
-    }
+    }*/
 
     void RequestHandler::OnBaseRequest(std::vector<RawRequest>&& requests) const {
         std::vector<BaseRequest> reqs;
@@ -210,7 +285,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         });
 
         std::sort(reqs.begin(), reqs.end(), [](const BaseRequest& lhs, const BaseRequest& rhs) {
-            assert(lhs.GetCommand() != RequestCommand::UNDEFINED && rhs.GetCommand() != RequestCommand::UNDEFINED);
+            assert(lhs.GetCommand() != RequestCommand::UNKNOWN && rhs.GetCommand() != RequestCommand::UNKNOWN);
             return static_cast<uint8_t>(lhs.GetCommand()) < static_cast<uint8_t>(rhs.GetCommand());
         });
 
@@ -227,6 +302,18 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         });
 
         ExecuteRequest(std::move(reqs));
+    }
+
+    void RequestHandler::OnRenderSettingsRequest(std::vector<RawRequest>&& requests) const {
+        /*std::vector<StatRequest> reqs;
+        reqs.reserve(requests.size());
+
+        std::for_each(std::make_move_iterator(requests.begin()), std::make_move_iterator(requests.end()), [&reqs](RawRequest&& raw_req) {
+            Request stat_req(std::move(raw_req));
+            reqs.emplace_back(std::move(stat_req));
+        });
+
+        ExecuteRequest(std::move(reqs));*/
     }
 
     void RequestHandler::ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const {
