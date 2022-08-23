@@ -144,8 +144,8 @@ namespace transport_catalogue::data /* Db objects (ORM) */ {
 
 namespace transport_catalogue::data /* Db scheme abstraction */ {
     class DataTable {
-    /*public:
-        const std::string_view GetName() const {
+    public:
+        virtual const std::string_view GetName() const {
             return name_;
         }
 
@@ -153,12 +153,12 @@ namespace transport_catalogue::data /* Db scheme abstraction */ {
         DataTable(std::string name) : name_(std::move(name)) {}
 
     private:
-        std::string name_;*/
+        std::string name_;
     };
 
     class TableView {
-    /*public:
-        const std::string_view GetName() const {
+    public:
+        virtual const std::string_view GetName() const {
             return name_;
         }
 
@@ -166,7 +166,7 @@ namespace transport_catalogue::data /* Db scheme abstraction */ {
         TableView(const std::string name) : name_(std::move(name)) {}
 
     private:
-        std::string name_;*/
+        std::string name_;
     };
 }
 
@@ -184,31 +184,37 @@ namespace transport_catalogue::data /* Db scheme */ {
         class StopsTable : public DataTable, public StopsTableBase {
         public:
             using StopsTableBase::deque;
+            StopsTable() : DataTable("StopsTable"), StopsTableBase() {}
         };
 
         class BusRoutesTable : public DataTable, public BusRoutesTableBase {
         public:
             using BusRoutesTableBase::deque;
+            BusRoutesTable() : DataTable("BusRoutesTable"), BusRoutesTableBase() {}
         };
 
         class DistanceBetweenStopsTable : public DataTable, public DistanceBetweenStopsTableBase {
         public:
             using DistanceBetweenStopsTableBase::unordered_map;
+            DistanceBetweenStopsTable() : DataTable("DistanceBetweenStopsTable"), DistanceBetweenStopsTableBase() {}
         };
 
         class NameToStopView : public TableView, public NameToStopViewBase {
         public:
             using NameToStopViewBase::unordered_map;
+            NameToStopView() : TableView("NameToStopView"), NameToStopViewBase() {}
         };
 
         class NameToBusRoutesView : public TableView, public NameToBusRoutesViewBase {
         public:
             using NameToBusRoutesViewBase::unordered_map;
+            NameToBusRoutesView() : TableView("NameToBusRoutesView"), NameToBusRoutesViewBase() {}
         };
 
         class StopToBusesView : public TableView, public StopToBusesViewBase {
         public:
             using StopToBusesViewBase::unordered_map;
+            StopToBusesView() : TableView("StopToBusesView"), StopToBusesViewBase() {}
         };
     };
 }
