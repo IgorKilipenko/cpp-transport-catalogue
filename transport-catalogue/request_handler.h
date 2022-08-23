@@ -276,7 +276,7 @@ namespace transport_catalogue::io /* RequestHandler */ {
         // MapRenderer понадобится в следующей части итогового проекта
         RequestHandler(
             const data::ITransportStatDataReader& reader, const data::ITransportDataWriter& writer, const IStatResponseSender& response_sender,
-            const io::renderer::MapRenderer& renderer)
+            const maps::MapRenderer& renderer)
             : db_reader_{reader}, db_writer_{writer}, response_sender_{response_sender}, renderer_{renderer} {}
 
         ~RequestHandler() {
@@ -321,6 +321,6 @@ namespace transport_catalogue::io /* RequestHandler */ {
         const data::ITransportStatDataReader& db_reader_;
         const data::ITransportDataWriter& db_writer_;
         const IStatResponseSender& response_sender_;
-        const renderer::MapRenderer& renderer_;
+        const maps::MapRenderer& renderer_;
     };
 }

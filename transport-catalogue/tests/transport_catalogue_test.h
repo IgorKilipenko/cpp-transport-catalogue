@@ -5,6 +5,7 @@
 #include <string>
 #include <string_view>
 
+#include "../detail/type_traits.h"
 #include "../input_reader.h"
 #include "../json_reader.h"
 #include "../request_handler.h"
@@ -31,7 +32,7 @@ namespace transport_catalogue::tests {
         }
 
         template <typename String, detail::EnableIfConvertible<String, std::string_view> = true>
-        void CheckResults(String&& expected_result, String&& result) const {
+        void CheckResults(String &&expected_result, String &&result) const {
             if (result != expected_result) {
                 std::cerr << "Test result:" << std::endl;
                 std::cerr << result << std::endl;
@@ -142,7 +143,7 @@ namespace transport_catalogue::tests {
             TransportCatalogue catalog;
             io::JsonResponseSender stat_sender(ostream);
 
-            io::renderer::MapRenderer renderer;
+            maps::MapRenderer renderer;
 
             const auto main_request_handler_ptr =
                 std::make_shared<io::RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer);

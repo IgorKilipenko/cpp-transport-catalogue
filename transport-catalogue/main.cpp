@@ -50,7 +50,7 @@ int main() {
         istream << json_file << std::endl;
         TransportCatalogue catalog;
         io::JsonResponseSender stat_sender(std::cerr);
-        io::renderer::MapRenderer renderer;
+        maps::MapRenderer renderer;
         main_request_handler_ptr = std::make_shared<io::RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer);
         json_reader.AddObserver(main_request_handler_ptr);
         json_reader.ReadDocument();
