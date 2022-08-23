@@ -136,7 +136,7 @@ namespace svg /* Document class implementation */
 
     /// Выводит в ostream svg-представление документа
     void Document::Render(std::ostream& out) const {
-        out << HEADER_LINE << "\n"sv << SVG_TAG_OPEN << "\n"sv;
+        out << HEADER_LINE << NEW_LINE << SVG_TAG_OPEN << NEW_LINE;
 
         for (const auto& obj : objects_) {
             RenderContext ctx(out, 2, 2);
