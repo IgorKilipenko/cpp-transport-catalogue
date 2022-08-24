@@ -95,7 +95,7 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
     }
 
     void BaseRequest::FillStops() {
-        auto stops_ptr = args_.find("stops");
+        auto stops_ptr = args_.find(RequestFields::STOPS);
         Array stops_tmp =
             stops_ptr == args_.end()
                 ? Array{}
@@ -108,7 +108,7 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
     }
 
     void BaseRequest::FillRoundtrip() {
-        auto is_roundtrip_ptr = args_.find("is_roundtrip");
+        auto is_roundtrip_ptr = args_.find(RequestFields::IS_ROUNDTRIP);
         is_roundtrip_ = is_roundtrip_ptr != args_.end() ? std::optional<bool>(
                                                               (assert(std::holds_alternative<bool>(is_roundtrip_ptr->second)),
                                                                std::get<bool>(std::move(args_.extract(is_roundtrip_ptr).mapped()))))
@@ -116,12 +116,12 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
     }
 
     void BaseRequest::FillCoordinates() {
-        auto latitude_ptr = args_.find("latitude");
+        auto latitude_ptr = args_.find(RequestFields::LATITUDE);
         std::optional<double> latitude = latitude_ptr != args_.end() ? std::optional<double>(
                                                                            (assert(std::holds_alternative<double>(latitude_ptr->second)),
                                                                             std::get<double>(std::move(args_.extract(latitude_ptr).mapped()))))
                                                                      : std::nullopt;
-        auto longitude_ptr = args_.find("longitude");
+        auto longitude_ptr = args_.find(RequestFields::LONGITUDE);
         std::optional<double> longitude = longitude_ptr != args_.end() ? std::optional<double>(
                                                                              (assert(std::holds_alternative<double>(longitude_ptr->second)),
                                                                               std::get<double>(std::move(args_.extract(longitude_ptr).mapped()))))
@@ -132,7 +132,7 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
     }
 
     void BaseRequest::FillRoadDistances() {
-        auto road_distance_ptr = args_.find("road_distances");
+        auto road_distance_ptr = args_.find(RequestFields::ROAD_DISTANCES);
         Dict road_distances_tmp =
             road_distance_ptr == args_.end()
                 ? Dict{}
@@ -165,10 +165,10 @@ namespace transport_catalogue::io /* Request implementation */ {
               (assert(raw_request.count("name")), std::get<std::string>(std::move(raw_request.extract("name").mapped()))),
               ((assert(raw_request.size() > 0), std::move(raw_request)))) {}*/
         : Request(
-              (assert(raw_request.count("type") && std::holds_alternative<std::string>(raw_request.at("type"))),
-               std::get<std::string>(std::move(raw_request.extract("type").mapped()))),
-              raw_request.count("name") && std::holds_alternative<std::string>(raw_request.at("name"))
-                  ? std::get<std::string>(std::move(raw_request.extract("name").mapped()))
+              (assert(raw_request.count(RequestFields::TYPE) && std::holds_alternative<std::string>(raw_request.at(RequestFields::TYPE))),
+               std::get<std::string>(std::move(raw_request.extract(RequestFields::TYPE).mapped()))),
+              raw_request.count(RequestFields::NAME) && std::holds_alternative<std::string>(raw_request.at(RequestFields::NAME))
+                  ? std::get<std::string>(std::move(raw_request.extract(RequestFields::NAME).mapped()))
                   : "",
               ((assert(raw_request.size() > 0), std::move(raw_request)))) {}
 
@@ -246,11 +246,11 @@ namespace transport_catalogue::io /* RequestEnumConverter implementation */ {
 
         switch (enum_value) {
         case io::RequestType::BASE:
-            return "base_requests"sv;
+            return RequestFields::BASE_REQUESTS;
         case io::RequestType::STAT:
-            return "stat_requests"sv;
+            return RequestFields::STAT_REQUESTS;
         case io::RequestType::RENDER_SETTINGS:
-            return "render_settings"sv;
+            return RequestFields::RENDER_SETTINGS;
         case io::RequestType::UNKNOWN:
             return "Unknown"sv;
         default:
@@ -262,11 +262,11 @@ namespace transport_catalogue::io /* RequestEnumConverter implementation */ {
     io::RequestType RequestEnumConverter::operator()(std::string_view enum_name) const {
         using namespace std::string_view_literals;
 
-        if (enum_name == "base_requests"sv) {
+        if (enum_name == RequestFields::BASE_REQUESTS) {
             return io::RequestType::BASE;
-        } else if (enum_name == "stat_requests"sv) {
+        } else if (enum_name == RequestFields::STAT_REQUESTS) {
             return io::RequestType::STAT;
-        } else if (enum_name == "render_settings"sv) {
+        } else if (enum_name == RequestFields::RENDER_SETTINGS) {
             return io::RequestType::RENDER_SETTINGS;
         } else if (enum_name == "Unknown"sv) {
             return io::RequestType::UNKNOWN;
@@ -413,7 +413,7 @@ namespace transport_catalogue::io /* StatRequest implementation */ {
         if (name_.empty()) {
             name_ = "TransportLayer";
         }
-        auto request_id__ptr = args_.find("id");
+        auto request_id__ptr = args_.find(RequestFields::ID);
         request_id_ = request_id__ptr != args_.end() ? std::optional<int>(
                                                            (assert(std::holds_alternative<int>(request_id__ptr->second)),
                                                             std::get<int>(std::move(args_.extract(request_id__ptr).mapped()))))

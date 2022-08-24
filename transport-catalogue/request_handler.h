@@ -39,6 +39,19 @@ namespace transport_catalogue::io /* Requests aliases */ {
 
     enum class RequestType : int8_t { BASE, STAT, RENDER_SETTINGS, UNKNOWN };
     enum class RequestCommand : uint8_t { STOP, BUS, MAP, UNKNOWN };
+    struct RequestFields {
+        inline static const std::string BASE_REQUESTS{"base_requests"};
+        inline static const std::string STAT_REQUESTS{"stat_requests"};
+        inline static const std::string RENDER_SETTINGS{"render_settings"};
+        inline static const std::string TYPE{"type"};
+        inline static const std::string NAME{"name"};
+        inline static const std::string STOPS{"stops"};
+        inline static const std::string IS_ROUNDTRIP{"is_roundtrip"};
+        inline static const std::string LATITUDE{"latitude"};
+        inline static const std::string LONGITUDE{"longitude"};
+        inline static const std::string ROAD_DISTANCES{"road_distances"};
+        inline static const std::string ID{"id"};
+    };
 }
 
 namespace transport_catalogue::io /* RequestEnumConverter */ {
