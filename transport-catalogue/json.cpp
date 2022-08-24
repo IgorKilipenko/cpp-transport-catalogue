@@ -7,7 +7,7 @@
 
 using namespace std;
 
-namespace json /* For TESTS */{
+namespace json /* For TESTS */ {
 
     Node LoadNode(std::istream& input) {
         return Parser(input).Parse();
@@ -453,6 +453,10 @@ namespace json /* Node implementation */ {
         return GetValuePtr<void>();
     }
 
+    Node::ValueType* Node::GetValuePtr() {
+        return GetValuePtr<void>();
+    }
+
     bool Node::AsBool() const {
         return GetValue<bool>();
     }
@@ -477,11 +481,23 @@ namespace json /* Node implementation */ {
         return GetValue<std::string>();
     }
 
+    std::string& Node::AsString() {
+        return GetValue<std::string>();
+    }
+
     const json::Array& Node::AsArray() const {
         return GetValue<json::Array>();
     }
 
+    json::Array& Node::AsArray() {
+        return GetValue<json::Array>();
+    }
+
     const json::Dict& Node::AsMap() const {
+        return GetValue<json::Dict>();
+    }
+
+    json::Dict& Node::AsMap() {
         return GetValue<json::Dict>();
     }
 

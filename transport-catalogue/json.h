@@ -159,12 +159,20 @@ namespace json /* Node */ {
         const auto& GetValue() const;
 
         template <typename T = void, detail::EnableIf<detail::IsConvertible<T, NodeValueType>::value || detail::IsSame<T, void>::value> = true>
+        auto& GetValue();
+
+        template <typename T = void, detail::EnableIf<detail::IsConvertible<T, NodeValueType>::value || detail::IsSame<T, void>::value> = true>
         auto&& ExtractValue();
 
         template <typename T = void, detail::EnableIf<detail::IsConvertible<T, NodeValueType>::value || detail::IsSame<T, void>::value> = true>
         const auto* GetValuePtr() const noexcept;
 
+        template <typename T = void, detail::EnableIf<detail::IsConvertible<T, NodeValueType>::value || detail::IsSame<T, void>::value> = true>
+        auto* GetValuePtr() noexcept;
+
         const Node::ValueType* GetValuePtr() const;
+
+        Node::ValueType* GetValuePtr();
 
         bool AsBool() const;
 
@@ -174,19 +182,29 @@ namespace json /* Node */ {
 
         const std::string& AsString() const;
 
+        std::string& AsString();
+
         std::string&& ExtractString();
 
         const json::Array& AsArray() const;
 
+        json::Array& AsArray();
+
         json::Array&& ExtractArray();
 
         const json::Dict& AsMap() const;
+
+        json::Dict& AsMap();
 
         json::Dict&& ExtractMap();
 
         bool operator==(const Node& rhs) const;
 
         bool operator!=(const Node& rhs) const;
+
+        bool EqualsWithTolerance(const Node& rhs, double tolerance = 1e-6) const {
+            return *this == rhs || (this->IsDouble() && std::abs(AsDouble() - rhs.AsDouble()) <= tolerance);
+        }
 
         static Node LoadNode(std::istream& stream, const std::function<void(const Node&, const void*)>* = nullptr);
 
@@ -413,6 +431,19 @@ namespace json /* Node class template implementation */ {
     }
 
     template <typename T, detail::EnableIf<detail::IsConvertible<T, NodeValueType>::value || detail::IsSame<T, void>::value>>
+    auto& Node::GetValue() {
+        if constexpr (detail::IsConvertible<T, NodeValueType>::value == true) {
+            auto* ptr = GetValuePtr<T>();
+            if (ptr == 0) {
+                throw std::logic_error("Node don't contained this type alternative");
+            }
+            return *ptr;
+        } else {
+            return static_cast<const Node::ValueType&>(*this);
+        }
+    }
+
+    template <typename T, detail::EnableIf<detail::IsConvertible<T, NodeValueType>::value || detail::IsSame<T, void>::value>>
     const auto& Node::GetValue() const {
         if constexpr (detail::IsConvertible<T, NodeValueType>::value == true) {
             auto* ptr = GetValuePtr<T>();
@@ -431,6 +462,15 @@ namespace json /* Node class template implementation */ {
             return std::get_if<T>(this);
         } else {
             return static_cast<const Node::ValueType*>(this);
+        }
+    }
+
+    template <typename T, detail::EnableIf<detail::IsConvertible<T, NodeValueType>::value || detail::IsSame<T, void>::value>>
+    auto* Node::GetValuePtr() noexcept {
+        if constexpr (detail::IsConvertible<T, NodeValueType>::value == true) {
+            return std::get_if<T>(this);
+        } else {
+            return static_cast<Node::ValueType*>(this);
         }
     }
 
