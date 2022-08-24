@@ -48,7 +48,6 @@ namespace transport_catalogue /* TransportCatalogue */ {
         std::optional<data::BusStat> GetBusInfo(const std::string_view bus_name) const override;
         data::StopStat GetStopInfo(const data::StopRecord stop) const override;
         std::optional<data::StopStat> GetStopInfo(const std::string_view stop_name) const override;
-        const data::BusRecordSet& GetBusesByStop(const std::string_view& stop_name) const override;
 
     private:
         class StatReader;
@@ -73,8 +72,6 @@ namespace transport_catalogue /* TransportCatalogue::StatReader */ {
         data::StopStat GetStopInfo(const data::StopRecord stop) const override;
 
         std::optional<data::StopStat> GetStopInfo(const std::string_view stop_name) const override;
-
-        const data::BusRecordSet& GetBusesByStop(const std::string_view& stop_name) const override;
 
         const data::ITransportDataReader& GetDataReader() const override;
 

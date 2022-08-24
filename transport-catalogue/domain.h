@@ -95,7 +95,7 @@ namespace transport_catalogue::data /* Db objects (ORM) */ {
     template <typename T>
     constexpr const T* DbNull = nullptr;
     using BusRecord = const Bus*;
-    using BusRecordSet = std::set<BusRecord>;
+    using BusRecordSet = std::unordered_set<BusRecord>;
 
     struct DistanceBetweenStopsRecord {
         double distance = 0.;
@@ -256,9 +256,6 @@ namespace transport_catalogue::data /* Interfaces */ {
 
         virtual StopStat GetStopInfo(const data::StopRecord stop) const = 0;
         virtual std::optional<StopStat> GetStopInfo(const std::string_view stop_name) const = 0;
-
-        // Возвращает маршруты, проходящие через остановку
-        virtual const data::BusRecordSet& GetBusesByStop(const std::string_view& stop_name) const = 0;
 
         virtual const data::ITransportDataReader& GetDataReader() const = 0;
 

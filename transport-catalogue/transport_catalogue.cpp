@@ -1,5 +1,7 @@
 #include "transport_catalogue.h"
 
+#include <algorithm>
+#include <string_view>
 #include <utility>
 
 namespace transport_catalogue /* TransportCatalogue implementation */ {
@@ -100,10 +102,6 @@ namespace transport_catalogue /* TransportCatalogue < ITransportStatDataReader i
     std::optional<data::StopStat> TransportCatalogue::GetStopInfo(const std::string_view stop_name) const {
         return db_stat_reader_->GetStopInfo(stop_name);
     }
-
-    const data::BusRecordSet& TransportCatalogue::GetBusesByStop(const std::string_view& stop_name) const {
-        return db_stat_reader_->GetBusesByStop(stop_name);
-    }
 }
 
 namespace transport_catalogue /* TransportCatalogue::StatReader implementation */ {
@@ -143,6 +141,10 @@ namespace transport_catalogue /* TransportCatalogue::StatReader implementation *
         std::transform(buses.begin(), buses.end(), buses_names.begin(), [](const auto& bus) {
             return bus->name;
         });
+        /*std::sort(buses_names.begin(), buses_names.end(), [](const auto& lhs, const auto& rhs) {
+            return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+        });*/
+        std::sort(buses_names.begin(), buses_names.end());
         return data::StopStat{std::move(buses_names)};
     }
 
@@ -152,10 +154,6 @@ namespace transport_catalogue /* TransportCatalogue::StatReader implementation *
             return std::nullopt;
         }
         return std::optional<data::StopStat>{GetStopInfo(stop)};
-    }
-
-    const data::BusRecordSet& TransportCatalogue::StatReader::GetBusesByStop(const std::string_view& stop_name) const {
-        return db_reader_.GetBuses(stop_name);
     }
 
     const data::ITransportDataReader& TransportCatalogue::StatReader::GetDataReader() const {
