@@ -1,7 +1,9 @@
 #pragma once
 
+#include <algorithm>
 #include <cassert>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <string_view>
 
@@ -19,15 +21,31 @@ namespace transport_catalogue::tests {
     private:
         template <typename Result, detail::EnableIf<detail::IsConvertibleV<Result, json::Document> || detail::IsBaseOfV<json::Node, Result>> = true>
         void CheckResults(Result &&expected_result, Result &&result) const {
-            if (result != expected_result) {
-                std::cerr << "Test result:" << std::endl;
-                result.Print(std::cerr);
-                std::cerr << std::endl;
+            // if (result != expected_result) {
+            if constexpr (detail::IsBaseOfV<json::Node, Result>) {
+                if (result.EqualsWithTolerance(expected_result)) {
+                    return;
+                }
+            } else {
+                if (result == expected_result) {
+                    return;
+                }
+            }
 
-                std::cerr << std::endl << "Test expected result:" << std::endl;
-                expected_result.Print(std::cerr);
+            std::cerr << "Test result:" << std::endl;
+            result.Print(std::cerr);
+            std::cerr << std::endl;
 
-                assert(false);
+            std::cerr << std::endl << "Test expected result:" << std::endl;
+            expected_result.Print(std::cerr);
+
+            assert(false);
+        }
+
+        void CheckResultsExtend(json::Array &&expected_result, json::Array &&result) const {
+            assert(expected_result.size() == result.size());
+            for (int i = 0; i < expected_result.size(); ++i) {
+                CheckResults(expected_result[i], result[i]);
             }
         }
 
@@ -212,13 +230,53 @@ namespace transport_catalogue::tests {
 
                 CheckResults(expected_result, result);
             }
+
+            // Test on test2.json
+            {
+                std::string json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / "test3.json");
+                std::stringstream istream;
+                istream << json_file;
+
+                json::Document result = TestWithJsonReader(istream);
+
+                json::Document expected_result{json::Array{{json::Dict{
+                    {"curvature", 0.590668}, {"request_id", 1458419993}, {"route_length", 2000}, {"stop_count", 3}, {"unique_stop_count", 2}}}}};
+
+                CheckResults(expected_result, result);
+            }
+        }
+
+        void TestWithJsonReaderFull() const {
+            std::filesystem::path test_dir = std::filesystem::current_path() / "transport-catalogue/tests/data/json_requests";
+
+            std::string json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / "test4.json");
+            std::string json_result_file = transport_catalogue::detail::io::FileReader::Read(test_dir / "test4__result.json");
+
+            std::stringstream istream;
+            istream << json_file;
+
+            json::Document result = TestWithJsonReader(istream);
+
+            istream << json_result_file;
+            json::Document expected_result = json::Document::Load(istream);
+
+            assert(expected_result.GetRoot().IsArray());
+            assert(!expected_result.GetRoot().AsArray().empty());
+            json::Node map_node = expected_result.GetRoot().AsArray().back();
+            expected_result.GetRoot().AsArray().pop_back();
+
+            assert(expected_result.GetRoot().IsArray() && result.GetRoot().IsArray());
+            CheckResultsExtend(std::move(expected_result.GetRoot().AsArray()), std::move(result.GetRoot().AsArray()));
         }
 
         void TestTransportCatalogue() const {
             const std::string prefix = "[TransportCatalogue] ";
 
-            Test1();
-            std::cerr << prefix << "Test1 : Done." << std::endl;
+            [[maybe_unused]] double max_d = std::numeric_limits<double>::max();
+            [[maybe_unused]] int max_i = std::numeric_limits<int>::max();
+
+            //! Test1();
+            //! std::cerr << prefix << "Test1 : Done." << std::endl;
 
             TestAddBus();
             std::cerr << prefix << "TestAddBus : Done." << std::endl;
@@ -228,6 +286,9 @@ namespace transport_catalogue::tests {
 
             TestWithJsonReader();
             std::cerr << prefix << "TestWithJsonReader : Done." << std::endl;
+
+            TestWithJsonReaderFull();
+            std::cerr << prefix << "TestWithJsonReaderFull : Done." << std::endl;
 
             std::cerr << std::endl << "All TransportCatalogue Tests : Done." << std::endl << std::endl;
         }
