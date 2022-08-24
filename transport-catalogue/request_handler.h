@@ -38,7 +38,7 @@ namespace transport_catalogue::io /* Requests aliases */ {
     using RequestBase = std::unordered_map<std::string, RequestValueType>;
 
     enum class RequestType : int8_t { BASE, STAT, RENDER_SETTINGS, UNKNOWN };
-    enum class RequestCommand : uint8_t { STOP, BUS, RENDER, UNKNOWN };
+    enum class RequestCommand : uint8_t { STOP, BUS, MAP, UNKNOWN };
 }
 
 namespace transport_catalogue::io /* RequestEnumConverter */ {
@@ -101,8 +101,13 @@ namespace transport_catalogue::io /* Requests */ {
         virtual bool IsStopCommand() const {
             return command_ == RequestCommand::STOP;
         }
+
         virtual bool IsBusCommand() const {
             return command_ == RequestCommand::BUS;
+        }
+
+        virtual bool IsMapCommand() const {
+            return command_ == RequestCommand::MAP;
         }
 
         RequestCommand& GetCommand();
@@ -129,7 +134,9 @@ namespace transport_catalogue::io /* Requests */ {
         Request(std::string&& type, std::string&& name, RequestArgsMap&& args);
 
         explicit Request(RawRequest&& raw_request);
-        virtual void Build() {}
+        virtual void Build() {
+            assert(command_ != RequestCommand::MAP || !name_.empty());
+        }
     };
 
     class BaseRequest : public Request {
@@ -264,6 +271,8 @@ namespace transport_catalogue::io /* Response */ {
         virtual bool IsBusResponse() const;
 
         virtual bool IsStopResponse() const;
+
+        virtual bool IsMapResponse() const;
 
         virtual bool IsStatResponse() const;
 

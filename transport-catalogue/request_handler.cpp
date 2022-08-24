@@ -9,6 +9,7 @@
 #include "request_handler.h"
 
 #include <algorithm>
+#include <cassert>
 #include <optional>
 #include <vector>
 
@@ -72,6 +73,7 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
     }
 
     void BaseRequest::Build() {
+        assert(!name_.empty());
         assert(!args_.empty());
         assert(command_ == RequestCommand::BUS || command_ == RequestCommand::STOP);
 
@@ -152,15 +154,22 @@ namespace transport_catalogue::io /* Request implementation */ {
 
     Request::Request(std::string&& type, std::string&& name, RequestArgsMap&& args)
         : Request(
-              (assert(type == converter(RequestCommand::BUS) || type == converter(RequestCommand::STOP) || type == converter(RequestCommand::RENDER)),
+              (assert(type == converter(RequestCommand::BUS) || type == converter(RequestCommand::STOP) || type == converter(RequestCommand::MAP)),
                converter.operator()<RequestCommand>(std::move(type))),
               std::move(name), std::move(args)) {}
 
     Request::Request(RawRequest&& raw_request)
-        : Request(
+        /*: Request(
               (assert(raw_request.count("type") && std::holds_alternative<std::string>(raw_request.at("type"))),
                std::get<std::string>(std::move(raw_request.extract("type").mapped()))),
               (assert(raw_request.count("name")), std::get<std::string>(std::move(raw_request.extract("name").mapped()))),
+              ((assert(raw_request.size() > 0), std::move(raw_request)))) {}*/
+        : Request(
+              (assert(raw_request.count("type") && std::holds_alternative<std::string>(raw_request.at("type"))),
+               std::get<std::string>(std::move(raw_request.extract("type").mapped()))),
+              raw_request.count("name") && std::holds_alternative<std::string>(raw_request.at("name"))
+                  ? std::get<std::string>(std::move(raw_request.extract("name").mapped()))
+                  : "",
               ((assert(raw_request.size() > 0), std::move(raw_request)))) {}
 
     bool Request::IsBaseRequest() const {
@@ -176,7 +185,7 @@ namespace transport_catalogue::io /* Request implementation */ {
     }
 
     bool Request::IsValidRequest() const {
-        return (IsBusCommand() || IsStopCommand()) && !name_.empty();
+        return (IsBusCommand() || IsStopCommand() || IsMapCommand() || IsRenderSettingsRequest()) && !name_.empty();
     }
 
     RequestCommand& Request::GetCommand() {
@@ -206,8 +215,8 @@ namespace transport_catalogue::io /* RequestEnumConverter implementation */ {
             return "Bus"sv;
         case io::RequestCommand::STOP:
             return "Stop"sv;
-        case io::RequestCommand::RENDER:
-            return "Render"sv;
+        case io::RequestCommand::MAP:
+            return "Map"sv;
         case io::RequestCommand::UNKNOWN:
             return "Unknown"sv;
         default:
@@ -223,8 +232,8 @@ namespace transport_catalogue::io /* RequestEnumConverter implementation */ {
             return io::RequestCommand::BUS;
         } else if (enum_name == "Stop"sv) {
             return io::RequestCommand::STOP;
-        } else if (enum_name == "Render"sv) {
-            return io::RequestCommand::RENDER;
+        } else if (enum_name == "Map"sv) {
+            return io::RequestCommand::MAP;
         } else if (enum_name == "Unknown"sv) {
             return io::RequestCommand::UNKNOWN;
         }
@@ -401,6 +410,9 @@ namespace transport_catalogue::io /* StatRequest implementation */ {
     }
 
     void StatRequest::Build() {
+        if (name_.empty()) {
+            name_ = "TransportLayer";
+        }
         auto request_id__ptr = args_.find("id");
         request_id_ = request_id__ptr != args_.end() ? std::optional<int>(
                                                            (assert(std::holds_alternative<int>(request_id__ptr->second)),
@@ -424,6 +436,10 @@ namespace transport_catalogue::io /* Response implementation */ {
 
     bool Response::IsStopResponse() const {
         return command_ == RequestCommand::STOP;
+    }
+
+    bool Response::IsMapResponse() const {
+        return command_ == RequestCommand::MAP;
     }
 
     bool Response::IsStatResponse() const {

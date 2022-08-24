@@ -168,6 +168,9 @@ namespace transport_catalogue::io /* JsonResponseSender implementation */ {
             } else {
                 map[StatFields::BUSES] = json::Array(std::make_move_iterator(stat->buses.begin()), std::make_move_iterator(stat->buses.end()));
             }
+        } else if (response.IsMapResponse()) {
+            std::cerr << "IsMapResponse" << std::endl;  //!!
+            return {};
         } else {
             throw exceptions::ReadingException("Invalid response (Is not stat response). Response does not contain stat info");
         }
@@ -178,6 +181,9 @@ namespace transport_catalogue::io /* JsonResponseSender implementation */ {
         json::Array json_response;
         std::for_each(std::move_iterator(responses.begin()), std::move_iterator(responses.end()), [this, &json_response](StatResponse&& response) {
             json::Dict resp_value = BuildStatMessage(std::move(response));
+            if (resp_value.empty()) {   //! Mock for map requests
+                return;
+            }
             json_response.emplace_back(std::move(resp_value));
         });
         json::Document doc(std::move(json_response));
