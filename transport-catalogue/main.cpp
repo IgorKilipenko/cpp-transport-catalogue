@@ -27,21 +27,19 @@ int main() {
     using namespace transport_catalogue::tests;
     using namespace svg::tests;
     using namespace json::tests;
-    
-        SvgTester svg_tester;
-        svg_tester.TestSvglib();
 
-        JsonTester json_tester;
-        json_tester.TestJsonlib();
-    
+    SvgTester svg_tester;
+    svg_tester.TestSvglib();
+
+    JsonTester json_tester;
+    json_tester.TestJsonlib();
 
     JsonReaderTester json_reader_tester;
     json_reader_tester.RunTests();
 
-    
-        TransportCatalogueTester tester;
-        tester.TestTransportCatalogue();
-
+    TransportCatalogueTester tester;
+    tester.TestTransportCatalogue();
+    /*
         std::shared_ptr<io::RequestHandler> main_request_handler_ptr;
         std::string json_file = transport_catalogue::detail::io::FileReader::Read(
             std::filesystem::current_path() / "transport-catalogue/tests/data/json_requests/test2.json");
@@ -69,6 +67,6 @@ int main() {
             std::filesystem::current_path() / "transport-catalogue/tests/data/json_requests/test3.json");
         istream << json_file;
         json_reader.ReadDocument();
-    
+    */
     return 0;
 }
