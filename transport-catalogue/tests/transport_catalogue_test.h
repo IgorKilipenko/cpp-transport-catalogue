@@ -246,27 +246,37 @@ namespace transport_catalogue::tests {
             }
         }
 
-        void TestWithJsonReaderFull() const {
+        void TestWithJsonReaderFull(std::string filename = "test4", bool check_result = true) const {
             std::filesystem::path test_dir = std::filesystem::current_path() / "transport-catalogue/tests/data/json_requests";
 
-            std::string json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / "test4.json");
-            std::string json_result_file = transport_catalogue::detail::io::FileReader::Read(test_dir / "test4__result.json");
+            std::string json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / (filename + ".json"));
+            std::string json_result_file =
+                check_result ? transport_catalogue::detail::io::FileReader::Read(test_dir / (filename + "__result.json")) : "";
 
             std::stringstream istream;
             istream << json_file;
 
             json::Document result = TestWithJsonReader(istream);
 
-            istream << json_result_file;
-            json::Document expected_result = json::Document::Load(istream);
+            if (check_result) {
+                istream << json_result_file;
+                json::Document expected_result = json::Document::Load(istream);
 
-            assert(expected_result.GetRoot().IsArray());
-            assert(!expected_result.GetRoot().AsArray().empty());
-            json::Node map_node = expected_result.GetRoot().AsArray().back();
-            expected_result.GetRoot().AsArray().pop_back();
+                assert(expected_result.GetRoot().IsArray());
+                assert(!expected_result.GetRoot().AsArray().empty());
+                json::Node map_node = expected_result.GetRoot().AsArray().back();
+                expected_result.GetRoot().AsArray().pop_back();
 
-            assert(expected_result.GetRoot().IsArray() && result.GetRoot().IsArray());
-            CheckResultsExtend(std::move(expected_result.GetRoot().AsArray()), std::move(result.GetRoot().AsArray()));
+                assert(expected_result.GetRoot().IsArray() && result.GetRoot().IsArray());
+                CheckResultsExtend(std::move(expected_result.GetRoot().AsArray()), std::move(result.GetRoot().AsArray()));
+            }
+        }
+
+        void Benchmark() const {
+            const auto start = std::chrono::steady_clock::now();
+            TestWithJsonReaderFull("test5", false);
+            const auto duration = std::chrono::steady_clock::now() - start;
+            std::cerr << std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() << "ms"sv << std::endl;
         }
 
         void TestTransportCatalogue() const {
@@ -289,6 +299,9 @@ namespace transport_catalogue::tests {
 
             TestWithJsonReaderFull();
             std::cerr << prefix << "TestWithJsonReaderFull : Done." << std::endl;
+
+            Benchmark();
+            std::cerr << prefix << "Benchmark : Done." << std::endl;
 
             std::cerr << std::endl << "All TransportCatalogue Tests : Done." << std::endl << std::endl;
         }
