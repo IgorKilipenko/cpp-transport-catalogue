@@ -80,7 +80,11 @@ namespace transport_catalogue::io /* RequestEnumConverter */ {
         template <>
         RequestType operator()(std::string_view enum_name) const;
     };
+}
 
+namespace transport_catalogue::io /* RawRequest */ {
+
+    /// Выполняет роль адаптера транспорта запросов : IRequestNotifier --> RequestHandler
     class RawRequest : public RequestBase {
         using RequestBase::unordered_map;
 
@@ -319,12 +323,11 @@ namespace transport_catalogue::io /* Response */ {
 }
 
 namespace transport_catalogue::io /* Interfaces */ {
-    class IRequestNotifier;
     class IRequestObserver {
     public:
         virtual void OnBaseRequest(std::vector<RawRequest>&& requests) const = 0;
         virtual void OnStatRequest(std::vector<RawRequest>&& requests) const = 0;
-        virtual void OnRenderSettingsRequest(std::vector<RawRequest>&& requests) const = 0;
+        virtual void OnRenderSettingsRequest(RawRequest&& requests) const = 0;
 
     protected:
         virtual ~IRequestObserver() = default;
@@ -340,7 +343,7 @@ namespace transport_catalogue::io /* Interfaces */ {
         virtual bool HasObserver() const = 0;
         virtual void NotifyBaseRequest(std::vector<RawRequest>&& requests) = 0;
         virtual void NotifyStatRequest(std::vector<RawRequest>&& requests) = 0;
-        virtual void NotifyRenderSettingsRequest(std::vector<RawRequest>&& requests) = 0;
+        virtual void NotifyRenderSettingsRequest(RawRequest&& requests) = 0;
     };
 
     class IStatResponseSender {
@@ -384,7 +387,7 @@ namespace transport_catalogue::io /* RequestHandler */ {
 
         void OnStatRequest(std::vector<RawRequest>&& requests) const override;
 
-        void OnRenderSettingsRequest(std::vector<RawRequest>&& requests) const override;
+        void OnRenderSettingsRequest(RawRequest&& requests) const override;
 
         /// Execute Basic (Insert) request
         void ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const;

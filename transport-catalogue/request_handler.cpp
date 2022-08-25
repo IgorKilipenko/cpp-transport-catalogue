@@ -313,7 +313,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         ExecuteRequest(std::move(reqs));
     }
 
-    void RequestHandler::OnRenderSettingsRequest(std::vector<RawRequest>&& requests) const {
+    void RequestHandler::OnRenderSettingsRequest(RawRequest&& requests) const {
         /*std::vector<StatRequest> reqs;
         reqs.reserve(requests.size());
 

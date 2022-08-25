@@ -52,7 +52,7 @@ namespace transport_catalogue::tests {
             void OnStatRequest(std::vector<io::RawRequest>&& /*requests*/) const override {
                 out_ << "OnStatRequest" << std::endl;
             }
-            void OnRenderSettingsRequest(std::vector<io::RawRequest>&& /*requests*/) const override {
+            void OnRenderSettingsRequest(io::RawRequest&& /*requests*/) const override {
                 out_ << "OnRenderSettingsRequest" << std::endl;
             }
 

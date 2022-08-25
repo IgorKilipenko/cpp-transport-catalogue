@@ -45,7 +45,8 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
             } else if (type == RequestType::STAT) {
                 ptr->second.lock()->OnStatRequest(is_broadcast_ && observers_.size() > 1 ? requests : std::move(requests));
             } else if (type == RequestType::RENDER_SETTINGS) {
-                ptr->second.lock()->OnRenderSettingsRequest(is_broadcast_ && observers_.size() > 1 ? requests : std::move(requests));
+                assert(requests.size() == 1);
+                ptr->second.lock()->OnRenderSettingsRequest(is_broadcast_ && observers_.size() > 1 ? requests.front() : std::move(requests.front()));
             }
 
             ptr = is_broadcast_ ? ++ptr : observers_.end();
@@ -83,9 +84,9 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
             json::Array array = stat_req_ptr->second.ExtractArray();
             NotifyStatRequest(JsonToRequest(std::move(array)));
         }
-        if (render_settings_req_ptr != end && render_settings_req_ptr->second.IsArray()) {
-            json::Array array = render_settings_req_ptr->second.ExtractArray();
-            NotifyRenderSettingsRequest(JsonToRequest(std::move(array)));
+        if (render_settings_req_ptr != end && render_settings_req_ptr->second.IsMap()) {
+            json::Dict dict = render_settings_req_ptr->second.ExtractMap();
+            NotifyRenderSettingsRequest(JsonToRequest(std::move(dict)));
         }
     }
 
@@ -181,7 +182,7 @@ namespace transport_catalogue::io /* JsonResponseSender implementation */ {
         json::Array json_response;
         std::for_each(std::move_iterator(responses.begin()), std::move_iterator(responses.end()), [this, &json_response](StatResponse&& response) {
             json::Dict resp_value = BuildStatMessage(std::move(response));
-            if (resp_value.empty()) {   //! Mock for map requests
+            if (resp_value.empty()) {  //! Mock for map requests
                 return;
             }
             json_response.emplace_back(std::move(resp_value));
