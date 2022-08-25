@@ -76,20 +76,20 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
 
         if (base_req_ptr != end && base_req_ptr->second.IsArray()) {
             json::Array array = base_req_ptr->second.ExtractArray();
-            auto req = JsonToRequest(std::move(array), RequestType::BASE);
+            auto req = JsonToRequest(std::move(array));
             NotifyBaseRequest(std::move(req));
         }
         if (stat_req_ptr != end && stat_req_ptr->second.IsArray()) {
             json::Array array = stat_req_ptr->second.ExtractArray();
-            NotifyStatRequest(JsonToRequest(std::move(array), RequestType::STAT));
+            NotifyStatRequest(JsonToRequest(std::move(array)));
         }
         if (render_settings_req_ptr != end && render_settings_req_ptr->second.IsArray()) {
             json::Array array = render_settings_req_ptr->second.ExtractArray();
-            NotifyRenderSettingsRequest(JsonToRequest(std::move(array), RequestType::RENDER_SETTINGS));
+            NotifyRenderSettingsRequest(JsonToRequest(std::move(array)));
         }
     }
 
-    RawRequest JsonReader::JsonToRequest(json::Dict&& map, RequestType type) {
+    RawRequest JsonReader::JsonToRequest(json::Dict&& map) {
         RawRequest result;
         std::for_each(std::make_move_iterator(map.begin()), std::make_move_iterator(map.end()), [&result](auto&& map_item) {
             std::string key = std::move(map_item.first);
@@ -121,11 +121,11 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
         return result;
     }
 
-    std::vector<RawRequest> JsonReader::JsonToRequest(json::Array&& array, RequestType type) {
+    std::vector<RawRequest> JsonReader::JsonToRequest(json::Array&& array) {
         std::vector<RawRequest> requests;
         requests.reserve(array.size());
-        std::for_each(std::make_move_iterator(array.begin()), std::make_move_iterator(array.end()), [&requests, type](json::Node&& node) {
-            requests.emplace_back(JsonToRequest(node.ExtractMap(), type));
+        std::for_each(std::make_move_iterator(array.begin()), std::make_move_iterator(array.end()), [&requests](json::Node&& node) {
+            requests.emplace_back(JsonToRequest(node.ExtractMap()));
         });
         return requests;
     }

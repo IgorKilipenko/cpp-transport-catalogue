@@ -185,8 +185,8 @@ namespace transport_catalogue::io /* JsonReader */ {
         constexpr static const std::string_view RENDER_SETTINGS_REQUESTS_LITERAL = "render_settings"sv;
 
     public: /* Helpers */
-        static RawRequest JsonToRequest(json::Dict&& map, RequestType type);
+        static RawRequest JsonToRequest(json::Dict&& map);
 
-        static std::vector<RawRequest> JsonToRequest(json::Array&& array, RequestType type);
+        static std::vector<RawRequest> JsonToRequest(json::Array&& array);
     };
 }
