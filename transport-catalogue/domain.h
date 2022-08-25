@@ -85,7 +85,8 @@ namespace transport_catalogue::data /* Db objects (ORM) */ {
         template <
             typename String = std::string, typename Route = data::Route,
             detail::EnableIf<detail::IsConvertibleV<String, std::string> && detail::IsSameV<Route, data::Route>> = true>
-        Bus(String&& name, Route&& route) : name{std::forward<String>(name)}, route{std::forward<Route>(route)} {}
+        Bus(String&& name, Route&& route, bool is_roundtrip)
+            : name{std::forward<String>(name)}, route{std::forward<Route>(route)}, is_roundtrip{is_roundtrip} {}
 
         bool operator==(const Bus& rhs) const noexcept;
 
@@ -97,6 +98,7 @@ namespace transport_catalogue::data /* Db objects (ORM) */ {
         bool operator()(const Bus* lhs, const Bus* rhs) const {
             return string_compare_(lhs->name, rhs->name);
         }
+
     private:
         std::set<std::string>::key_compare string_compare_;
     };

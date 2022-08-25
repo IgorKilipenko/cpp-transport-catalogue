@@ -127,7 +127,7 @@ namespace transport_catalogue::tests {
                 TransportCatalogue catalog;
                 data::Stop stop("Stop1", {0, 0});
                 data::Route route{{}};
-                data::Bus bus("256"s, route);
+                data::Bus bus("256"s, route, false);
                 catalog.AddBus(data::Bus{bus});
                 [[maybe_unused]] const data::Bus *result = catalog.GetBus(bus.name);
                 assert(result && bus == *result);
@@ -138,7 +138,7 @@ namespace transport_catalogue::tests {
                 const auto &db_writer = catalog.GetDataWriter();
                 data::Stop stop("Stop1", {0, 0});
                 data::Route route{{}};
-                data::Bus bus("256"s, route);
+                data::Bus bus("256"s, route, false);
                 db_writer.AddBus(data::Bus{bus});
                 [[maybe_unused]] const data::Bus *result = catalog.GetBus(bus.name);
                 assert(result && bus == *result);
@@ -316,7 +316,7 @@ namespace transport_catalogue::tests {
                       << std::endl;
         }
 
-        void NodeToRequsetConvertBenchmark(size_t size = 100000) const {
+        void NodeToRequsetConvertBenchmark(size_t size = 10000) const {
             const auto converter = [](json::Dict &&map) {
                 io::RawRequest result;
                 std::for_each(std::make_move_iterator(map.begin()), std::make_move_iterator(map.end()), [&result](auto &&map_item) {
@@ -375,9 +375,12 @@ namespace transport_catalogue::tests {
                 raw_requests.emplace_back(converter(std::move(nodes[i])));
             }
             duration = std::chrono::steady_clock::now() - start;
-            std::cerr << "Convert to RawRequest time: " << std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() << "ms"sv
-                      << std::endl;
-            assert(duration.count() / fill_duration < 4);
+            size_t duration_count = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+            std::cerr << "Convert to RawRequest time: " << duration_count << "ms"sv << std::endl;
+
+            if (duration_count / fill_duration > 4) {
+                std::cerr << "WARN Long duration [Convert to RawRequest]: " << duration_count << ", expected < " << fill_duration * 4 << std::endl;
+            }
 
             std::vector<io::BaseRequest> requests;
             requests.reserve(size);
@@ -386,9 +389,12 @@ namespace transport_catalogue::tests {
                 requests.emplace_back(io::BaseRequest(std::move(raw_requests[i])));
             }
             duration = std::chrono::steady_clock::now() - start;
-            std::cerr << "Convert to BaseRequest time: " << std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() << "ms"sv
-                      << std::endl;
-            assert(duration.count() / fill_duration < 4);
+            duration_count = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+            std::cerr << "Convert to BaseRequest time: " << duration_count << "ms"sv << std::endl;
+
+            if (duration_count / fill_duration > 4) {
+                std::cerr << "WARN Long duration [Convert to BaseRequest] " << duration_count << ", expected < " << fill_duration * 4 << std::endl;
+            }
         }
 
         void TestTransportCatalogue() const {
@@ -397,8 +403,8 @@ namespace transport_catalogue::tests {
             [[maybe_unused]] double max_d = std::numeric_limits<double>::max();
             [[maybe_unused]] int max_i = std::numeric_limits<int>::max();
 
-            //! Test1();
-            //! std::cerr << prefix << "Test1 : Done." << std::endl;
+            Test1();
+            std::cerr << prefix << "Test1 : Done." << std::endl;
 
             TestAddBus();
             std::cerr << prefix << "TestAddBus : Done." << std::endl;

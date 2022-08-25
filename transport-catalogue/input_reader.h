@@ -88,7 +88,7 @@ namespace transport_catalogue::obsolete::io {
 
         bool IsRouteRequest(const std::string_view req) const;
 
-        bool IsCircularRoute(const std::string_view args) const;
+        bool IsRoundtripRoute(const std::string_view args) const;
 
         bool IsBidirectionalRoute(const std::string_view args) const;
 
@@ -99,7 +99,7 @@ namespace transport_catalogue::obsolete::io {
         std::vector<DistanceBetween> ParseMeasuredDistancies(const std::string_view str, const std::string_view from_stop) const;
 
     private:
-        static const char CIRCULAR_ROUTE_SEPARATOR = '>';
+        static const char ROUNDTRIP_ROUTE_SEPARATOR = '>';
         static const char BIDIRECTIONAL_ROUTE_SEPARATOR = '-';
         static const char ARGS_SEPARATOR = ',';
     };
