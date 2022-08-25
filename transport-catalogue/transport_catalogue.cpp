@@ -144,7 +144,7 @@ namespace transport_catalogue /* TransportCatalogue::StatReader implementation *
         /*std::sort(buses_names.begin(), buses_names.end(), [](const auto& lhs, const auto& rhs) {
             return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
         });*/
-        std::sort(buses_names.begin(), buses_names.end());
+        //! std::sort(buses_names.begin(), buses_names.end());
         return data::StopStat{std::move(buses_names)};
     }
 

@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <deque>
 #include <execution>
 #include <iterator>
@@ -90,12 +91,29 @@ namespace transport_catalogue::data /* Db objects (ORM) */ {
         bool operator!=(const Bus& rhs) const noexcept;
     };
 
+    class BusByNameCompare {
+    public:
+        /*size_t operator()(const Bus* bus) const {
+            return string_hasher_(bus->name) + pointer_hasher_(bus) * INDEX;
+        }*/
+        bool operator()(const Bus* lhs, const Bus* rhs) const {
+            //return lhs->name < rhs->name;
+            return string_compare_(lhs->name, rhs->name);
+        }
+
+    private:
+        // std::hash<const void*> pointer_hasher_;
+        // std::hash<std::string_view> string_hasher_;
+        // static const size_t INDEX = 42;
+        std::set<std::string>::key_compare string_compare_;
+    };
+
     template <typename T>
     using DbRecord = const T*;
     template <typename T>
     constexpr const T* DbNull = nullptr;
     using BusRecord = const Bus*;
-    using BusRecordSet = std::unordered_set<BusRecord>;
+    using BusRecordSet = std::set<BusRecord, BusByNameCompare>;
 
     struct DistanceBetweenStopsRecord {
         double distance = 0.;
@@ -140,6 +158,7 @@ namespace transport_catalogue::data /* Db objects (ORM) */ {
         std::hash<const void*> pointer_hasher_;
         static const size_t INDEX = 42;
     };
+
 }
 
 namespace transport_catalogue::data /* Db scheme abstraction */ {
