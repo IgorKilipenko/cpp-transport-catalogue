@@ -279,6 +279,42 @@ namespace transport_catalogue::tests {
             std::cerr << std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() << "ms"sv << std::endl;
         }
 
+        void Benchmark2() const {
+            //char ch;
+            //std::cin >> ch;
+
+            std::filesystem::path test_dir = std::filesystem::current_path() / "transport-catalogue/tests/data/json_requests";
+
+            std::string json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / ("test6"s + ".json"s));
+
+            std::stringstream istream;
+            io::JsonReader json_reader{istream};
+            istream << json_file << std::endl;
+            TransportCatalogue catalog;
+            std::stringstream out;
+            io::JsonResponseSender stat_sender(out);
+            maps::MapRenderer renderer;
+            auto main_request_handler_ptr =
+                std::make_shared<io::RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer);
+            json_reader.AddObserver(main_request_handler_ptr);
+
+            auto start = std::chrono::steady_clock::now();
+            json_reader.ReadDocument();
+
+            auto duration = std::chrono::steady_clock::now() - start;
+            std::cerr << "ProcessRequests time: " << std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() << "ms"sv << std::endl;
+
+            start = std::chrono::steady_clock::now();
+
+            auto doc = json::Document::Load(out);
+            doc.Print(out);
+
+            duration = std::chrono::steady_clock::now() - start;
+            std::cerr << "size: " << doc.GetRoot().AsArray().size() << std::endl;
+            std::cerr << "Build response [json::Document] time: " << std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() << "ms"sv
+                      << std::endl;
+        }
+
         void TestTransportCatalogue() const {
             const std::string prefix = "[TransportCatalogue] ";
 
@@ -300,7 +336,7 @@ namespace transport_catalogue::tests {
             TestWithJsonReaderFull();
             std::cerr << prefix << "TestWithJsonReaderFull : Done." << std::endl;
 
-            Benchmark();
+            Benchmark2();
             std::cerr << prefix << "Benchmark : Done." << std::endl;
 
             std::cerr << std::endl << "All TransportCatalogue Tests : Done." << std::endl << std::endl;
