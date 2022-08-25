@@ -215,7 +215,14 @@ namespace transport_catalogue::io /* Requests */ {
         void FillRoadDistances();
     };
 
-    class StatRequest : public Request {
+    class IStatRequest {
+    public:
+        virtual const std::optional<int>& GetRequestId() const = 0;
+        virtual std::optional<int>& GetRequestId() = 0;
+        virtual ~IStatRequest() {}
+    };
+
+    class StatRequest : public Request, public IStatRequest {
     public:
         StatRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args) : Request(std::move(type), std::move(name), std::move(args)) {
             Build();
@@ -230,9 +237,9 @@ namespace transport_catalogue::io /* Requests */ {
 
         bool IsValidRequest() const override;
 
-        const std::optional<int>& GetRequestId() const;
+        const std::optional<int>& GetRequestId() const override;
 
-        std::optional<int>& GetRequestId();
+        std::optional<int>& GetRequestId() override;
 
     protected:
         void Build() override;
@@ -241,7 +248,7 @@ namespace transport_catalogue::io /* Requests */ {
         std::optional<int> request_id_;
     };
 
-    class RenderSettingsRequest : public Request {
+    class RenderSettingsRequest : public Request, public IStatRequest {
     public:
         RenderSettingsRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args)
             : Request(std::move(type), std::move(name), std::move(args)) {
@@ -257,9 +264,9 @@ namespace transport_catalogue::io /* Requests */ {
 
         bool IsValidRequest() const override;
 
-        const std::optional<int>& GetRequestId() const;
+        const std::optional<int>& GetRequestId() const override;
 
-        std::optional<int>& GetRequestId();
+        std::optional<int>& GetRequestId() override;
 
     protected:
         void Build() override;
