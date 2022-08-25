@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <iostream>
 #include <limits>
 #include <string>
@@ -272,19 +273,19 @@ namespace transport_catalogue::tests {
             }
         }
 
+        /*
+                void Benchmark() const {
+                    const auto start = std::chrono::steady_clock::now();
+                    TestWithJsonReaderFull("test5", false);
+                    const auto duration = std::chrono::steady_clock::now() - start;
+                    std::cerr << std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() << "ms"sv << std::endl;
+                }
+        */
         void Benchmark() const {
-            const auto start = std::chrono::steady_clock::now();
-            TestWithJsonReaderFull("test5", false);
-            const auto duration = std::chrono::steady_clock::now() - start;
-            std::cerr << std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() << "ms"sv << std::endl;
-        }
-
-        void Benchmark2() const {
-            //char ch;
-            //std::cin >> ch;
+            // char ch;
+            // std::cin >> ch;
 
             std::filesystem::path test_dir = std::filesystem::current_path() / "transport-catalogue/tests/data/json_requests";
-
             std::string json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / ("test6"s + ".json"s));
 
             std::stringstream istream;
@@ -315,6 +316,81 @@ namespace transport_catalogue::tests {
                       << std::endl;
         }
 
+        void NodeToRequsetConvertBenchmark(size_t size = 100000) const {
+            const auto converter = [](json::Dict &&map) {
+                io::RawRequest result;
+                std::for_each(std::make_move_iterator(map.begin()), std::make_move_iterator(map.end()), [&result](auto &&map_item) {
+                    std::string key = std::move(map_item.first);
+                    assert(result.count(key) == 0);
+                    auto node_val = std::move(map_item.second);
+                    if (node_val.IsArray()) {
+                        json::Array array = node_val.ExtractArray();
+                        std::vector<io::RequestArrayValueType> sub_array;
+                        sub_array.reserve(array.size());
+                        std::for_each(std::make_move_iterator(array.begin()), std::make_move_iterator(array.end()), [&sub_array](auto &&node) {
+                            io::RequestArrayValueType value = detail::converters::VariantCast(node.ExtractValue());
+                            sub_array.emplace_back(std::move(value));
+                        });
+                        result.emplace(std::move(key), std::move(sub_array));
+                    } else if (node_val.IsMap()) {
+                        json::Dict map = node_val.ExtractMap();
+                        std::unordered_map<std::string, io::RequestDictValueType> sub_map;
+                        std::for_each(std::make_move_iterator(map.begin()), std::make_move_iterator(map.end()), [&sub_map](auto &&node) {
+                            std::string key = std::move(node.first);
+                            io::RequestArrayValueType value = detail::converters::VariantCast(node.second.ExtractValue());
+                            sub_map.emplace(std::move(key), std::move(value));
+                        });
+                        result.emplace(std::move(key), std::move(sub_map));
+                    } else {
+                        io::RequestValueType value = detail::converters::VariantCast(node_val.ExtractValue());
+                        result.emplace(std::move(key), std::move(value));
+                    }
+                });
+                return result;
+            };
+
+            // json::Dict node{
+            //     {"type", "Bus"}, {"name", "L9CbY13GWJohpUqsVkPI"}, {"stops", json::Array(2, "L9CbY13GWJohpUqsVkPI")}, {"is_roundtrip", true}};
+            json::Dict node{
+                {"type", "Stop"}, {"name", "A"}, {"latitude", 55.611087}, {"longitude", 37.20829}, {"road_distances", json::Dict{{"B", 1000}}}};
+
+            std::vector<json::Dict> src_nodes(size, node);
+            std::vector<json::Dict> nodes;
+            nodes.reserve(size);
+
+            auto start = std::chrono::steady_clock::now();
+            for (size_t i = 0; i < size; ++i) {
+                nodes.emplace_back(src_nodes[i]);
+            }
+            auto duration = std::chrono::steady_clock::now() - start;
+            std::cerr << "Fill array of nodes time: " << std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() << "ms"sv
+                      << std::endl;
+
+            [[maybe_unused]] const size_t fill_duration = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+
+            std::vector<io::RawRequest> raw_requests;
+            raw_requests.reserve(size);
+            start = std::chrono::steady_clock::now();
+            for (size_t i = 0; i < size; ++i) {
+                raw_requests.emplace_back(converter(std::move(nodes[i])));
+            }
+            duration = std::chrono::steady_clock::now() - start;
+            std::cerr << "Convert to RawRequest time: " << std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() << "ms"sv
+                      << std::endl;
+            assert(duration.count() / fill_duration < 4);
+
+            std::vector<io::BaseRequest> requests;
+            requests.reserve(size);
+            start = std::chrono::steady_clock::now();
+            for (size_t i = 0; i < size; ++i) {
+                requests.emplace_back(io::BaseRequest(std::move(raw_requests[i])));
+            }
+            duration = std::chrono::steady_clock::now() - start;
+            std::cerr << "Convert to BaseRequest time: " << std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() << "ms"sv
+                      << std::endl;
+            assert(duration.count() / fill_duration < 4);
+        }
+
         void TestTransportCatalogue() const {
             const std::string prefix = "[TransportCatalogue] ";
 
@@ -335,9 +411,17 @@ namespace transport_catalogue::tests {
 
             TestWithJsonReaderFull();
             std::cerr << prefix << "TestWithJsonReaderFull : Done." << std::endl;
-
-            Benchmark2();
+#if (!DEBUG)
+            Benchmark();
             std::cerr << prefix << "Benchmark : Done." << std::endl;
+#endif
+
+#if (!DEBUG)
+            NodeToRequsetConvertBenchmark(1000000);
+#else
+            NodeToRequsetConvertBenchmark();
+#endif
+            std::cerr << prefix << "NodeToRequsetConvertBenchmark : Done." << std::endl;
 
             std::cerr << std::endl << "All TransportCatalogue Tests : Done." << std::endl << std::endl;
         }
