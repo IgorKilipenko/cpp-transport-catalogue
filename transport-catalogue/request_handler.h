@@ -8,6 +8,7 @@
 #include <functional>
 #include <iostream>
 #include <iterator>
+#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -250,6 +251,23 @@ namespace transport_catalogue::io /* Requests */ {
 
     class RenderSettingsRequest : public Request, public IStatRequest {
     public:
+        using Color = std::variant<std::string, std::vector<uint8_t>>;
+        struct Fields {
+            inline static const std::string WIDTH{"width"};
+            inline static const std::string HEIGHT{"height"};
+            inline static const std::string PADDING{"padding"};
+            inline static const std::string STOP_RADIUS{"stop_radius"};
+            inline static const std::string LINE_WIDTH{"line_width"};
+            inline static const std::string BUS_LABEL_FONT_SIZE{"bus_label_font_size"};
+            inline static const std::string BUS_LABEL_OFFSET{"bus_label_offset"};
+            inline static const std::string STOP_LABEL_FONT_SIZE{"stop_label_font_size"};
+            inline static const std::string STOP_LABEL_OFFSET{"stop_label_offset"};
+            inline static const std::string UNDERLAYER_WIDTH{"underlayer_width"};
+            inline static const std::string UNDERLAYER_COLOR{"underlayer_color"};
+            inline static const std::string COLOR_PALETTE{"color_palette"};
+        };
+
+    public:
         RenderSettingsRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args)
             : Request(std::move(type), std::move(name), std::move(args)) {
             Build();
@@ -269,10 +287,133 @@ namespace transport_catalogue::io /* Requests */ {
         std::optional<int>& GetRequestId() override;
 
     protected:
-        void Build() override;
+        static std::optional<double> GetNumberValue(const Request::RequestArgsMap::mapped_type& value) {
+            const double* double_ptr = std::get_if<double>(&value);
+            if (double_ptr != nullptr) {
+                return *double_ptr;
+            }
+            const int* int_ptr = std::get_if<int>(&value);
+            if (int_ptr != nullptr) {
+                return *int_ptr;
+            }
+            return std::nullopt;
+        }
+
+        static std::optional<Color> GetColorValue(Request::RequestArgsMap::mapped_type&& value) {
+            const std::string* string_ptr = std::get_if<std::string>(&value);
+            if (string_ptr != nullptr) {
+                assert(!string_ptr->empty());
+
+                return std::move(*string_ptr);
+            }
+            const Array* rgb_ptr = std::get_if<Array>(std::move(&value));
+            if (rgb_ptr != nullptr) {
+                assert(rgb_ptr->size() >= 3 && rgb_ptr->size() <= 4);
+
+                std::vector<uint8_t> rgb_result(rgb_ptr->size());
+                std::transform(
+                    std::make_move_iterator(rgb_ptr->begin()), std::make_move_iterator(rgb_ptr->end()), rgb_result.begin(), [](auto&& arg) {
+                        assert(std::holds_alternative<int>(arg));
+                        int rgb_item = std::get<int>(arg);
+                        assert(rgb_item >= 0 && rgb_item <= std::numeric_limits<uint8_t>::max());
+                        return static_cast<uint8_t>(rgb_item);
+                    });
+                return rgb_result;
+            }
+            return std::nullopt;
+        }
+
+        void Build() override {
+            {
+                auto request_id__ptr = args_.find(RequestFields::ID);
+                request_id_ = request_id__ptr != args_.end() ? std::optional<int>(
+                                                                   (assert(std::holds_alternative<int>(request_id__ptr->second)),
+                                                                    std::get<int>(std::move(args_.extract(request_id__ptr).mapped()))))
+                                                             : std::nullopt;
+            }
+            {
+                auto width_ptr = args_.find(Fields::WIDTH);
+                width_ = width_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(width_ptr).mapped())) : std::nullopt;
+            }
+            {
+                auto height_ptr = args_.find(Fields::HEIGHT);
+                height_ = height_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(height_ptr).mapped())) : std::nullopt;
+            }
+            {
+                auto padding_ptr = args_.find(Fields::PADDING);
+                padding_ = padding_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(padding_ptr).mapped())) : std::nullopt;
+            }
+            {
+                auto stop_radius_ptr = args_.find(Fields::STOP_RADIUS);
+                stop_radius_ = stop_radius_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(stop_radius_ptr).mapped())) : std::nullopt;
+            }
+            {
+                auto line_width_ptr = args_.find(Fields::LINE_WIDTH);
+                line_width_ = line_width_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(line_width_ptr).mapped())) : std::nullopt;
+            }
+            {
+                auto bus_label_font_size_ptr = args_.find(Fields::BUS_LABEL_FONT_SIZE);
+                bus_label_font_size_ = bus_label_font_size_ptr != args_.end()
+                                           ? std::optional<int>(
+                                                 (assert(std::holds_alternative<int>(bus_label_font_size_ptr->second)),
+                                                  std::get<int>(std::move(args_.extract(bus_label_font_size_ptr).mapped()))))
+                                           : std::nullopt;
+            }
+            {
+                auto bus_label_offset_ptr = args_.find(Fields::BUS_LABEL_OFFSET);
+                bus_label_offset_ =
+                    bus_label_offset_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(bus_label_offset_ptr).mapped())) : std::nullopt;
+            }
+            {
+                auto stop_label_font_size_ptr = args_.find(Fields::STOP_LABEL_FONT_SIZE);
+                stop_label_font_size_ = stop_label_font_size_ptr != args_.end()
+                                            ? std::optional<int>(
+                                                  (assert(std::holds_alternative<int>(stop_label_font_size_ptr->second)),
+                                                   std::get<int>(std::move(args_.extract(stop_label_font_size_ptr).mapped()))))
+                                            : std::nullopt;
+            }
+            {
+                auto stop_label_offset_ptr = args_.find(Fields::STOP_LABEL_OFFSET);
+                stop_label_offset_ =
+                    stop_label_offset_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(stop_label_offset_ptr).mapped())) : std::nullopt;
+            }
+            {
+                auto underlayer_width_ptr = args_.find(Fields::UNDERLAYER_WIDTH);
+                underlayer_width_ =
+                    underlayer_width_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(underlayer_width_ptr).mapped())) : std::nullopt;
+            }
+            {
+                auto underlayer_color_ptr = args_.find(Fields::UNDERLAYER_COLOR);
+                underlayer_color_ = underlayer_color_ptr != args_.end()
+                                        ? GetColorValue(std::move(args_.extract(underlayer_color_ptr).mapped()))
+                                        : std::nullopt;
+            }
+            /*{
+                //! Not implemented yet
+                auto color_palette_ptr = args_.find(Fields::COLOR_PALETTE);
+                color_palette_ =
+                    color_palette_ptr != args_.end() ? (assert(std::holds_alternative<Array>(const variant<Types...> &v) color_palette_ptr)): std::nullopt;
+            }*/
+        }
 
     private:
         std::optional<int> request_id_;
+        std::optional<double> width_;
+        std::optional<double> height_;
+        std::optional<double> padding_;
+        std::optional<double> stop_radius_;
+        std::optional<double> line_width_;
+
+        std::optional<int> bus_label_font_size_;
+        std::optional<double> bus_label_offset_;
+
+        std::optional<int> stop_label_font_size_;
+        std::optional<double> stop_label_offset_;
+
+        std::optional<double> underlayer_width_;
+        std::optional<Color> underlayer_color_;
+
+        std::vector<Color> color_palette_;
     };
 }
 
