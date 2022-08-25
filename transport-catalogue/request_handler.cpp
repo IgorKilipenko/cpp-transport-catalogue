@@ -60,6 +60,7 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
         ConvertToRoundtrip(stops_);
 
         is_roundtrip_ = true;
+        is_converted_to_roundtrip_ = true;
     }
 
     void BaseRequest::ConvertToRoundtrip(std::vector<std::string>& stops) {
@@ -333,8 +334,9 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
             std::move(raw_req.GetroadDistances().begin(), raw_req.GetroadDistances().end(), std::back_inserter(out_distances));
 
         } else {
+            bool is_roundtrip = raw_req.IsRoundtrip();
             raw_req.ConvertToRoundtrip();
-            db_writer_.AddBus(std::move(raw_req.GetName()), std::move(raw_req.GetStops()));
+            db_writer_.AddBus(std::move(raw_req.GetName()), std::move(raw_req.GetStops()), is_roundtrip);
         }
     }
 

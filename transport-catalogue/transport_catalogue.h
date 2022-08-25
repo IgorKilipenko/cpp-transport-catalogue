@@ -32,8 +32,8 @@ namespace transport_catalogue /* TransportCatalogue */ {
         void AddStop(data::Stop&& stop) const override;
         void AddStop(std::string&& name, Coordinates&& coordinates) const override;
         void AddBus(data::Bus&& bus) const override;
-        void AddBus(std::string&& name, const std::vector<std::string_view>& stops) const override;
-        void AddBus(std::string&& name, std::vector<std::string>&& stops) const override;
+        void AddBus(std::string&& name, const std::vector<std::string_view>& stops, bool is_roundtrip) const override;
+        void AddBus(std::string&& name, std::vector<std::string>&& stops, bool is_roundtrip) const override;
         void SetMeasuredDistance(const std::string_view from_stop_name, const std::string_view to_stop_name, double distance) const override;
         void SetMeasuredDistance(data::MeasuredRoadDistance&& distance) const override;
 

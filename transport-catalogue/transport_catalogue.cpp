@@ -68,12 +68,12 @@ namespace transport_catalogue /* TransportCatalogue < ITransportDataWriter imple
         db_writer_.AddBus(std::move(bus));
     }
 
-    void TransportCatalogue::AddBus(std::string&& name, const std::vector<std::string_view>& stops) const {
-        db_writer_.AddBus(std::move(name), stops);
+    void TransportCatalogue::AddBus(std::string&& name, const std::vector<std::string_view>& stops, bool is_roundtrip) const {
+        db_writer_.AddBus(std::move(name), stops, is_roundtrip);
     }
 
-    void TransportCatalogue::AddBus(std::string&& name, std::vector<std::string>&& stops) const {
-        db_writer_.AddBus(std::move(name), std::move(stops));
+    void TransportCatalogue::AddBus(std::string&& name, std::vector<std::string>&& stops, bool is_roundtrip) const {
+        db_writer_.AddBus(std::move(name), std::move(stops), is_roundtrip);
     }
 
     void TransportCatalogue::SetMeasuredDistance(const std::string_view from_stop_name, const std::string_view to_stop_name, double distance) const {

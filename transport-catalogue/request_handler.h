@@ -177,6 +177,10 @@ namespace transport_catalogue::io /* Requests */ {
 
         bool IsRoundtrip() const;
 
+        bool IsConvertedToRoundtrip() const {
+            return is_converted_to_roundtrip_;
+        }
+
         const std::optional<data::Coordinates>& GetCoordinates() const;
 
         std::optional<data::Coordinates>& GetCoordinates();
@@ -201,6 +205,7 @@ namespace transport_catalogue::io /* Requests */ {
         std::optional<bool> is_roundtrip_;
         std::optional<data::Coordinates> coordinates_;
         std::vector<data::MeasuredRoadDistance> road_distances_;
+        bool is_converted_to_roundtrip_ = false;
 
     private:
         void FillBus();

@@ -80,6 +80,7 @@ namespace transport_catalogue::data /* Db objects (ORM) */ {
     struct Bus {
         std::string name;
         Route route;
+        bool is_roundtrip = false;  //! Need update logic for Response and Request
         Bus() = default;
         template <
             typename String = std::string, typename Route = data::Route,
@@ -248,8 +249,8 @@ namespace transport_catalogue::data /* Interfaces */ {
     class ITransportDataWriter {
     public:
         virtual void AddBus(Bus&& bus) const = 0;
-        virtual void AddBus(std::string&& name, const std::vector<std::string_view>& stops) const = 0;
-        virtual void AddBus(std::string&& name, std::vector<std::string>&& stops) const = 0;
+        virtual void AddBus(std::string&& name, const std::vector<std::string_view>& stops, bool is_roundtrip) const = 0;
+        virtual void AddBus(std::string&& name, std::vector<std::string>&& stops, bool is_roundtrip) const = 0;
 
         virtual void AddStop(Stop&& stop) const = 0;
         virtual void AddStop(std::string&&, Coordinates&& coordinates) const = 0;
@@ -314,20 +315,20 @@ namespace transport_catalogue::data /* Database */ {
         template <
             typename String = std::string, typename Route = data::Route,
             detail::EnableIf<detail::IsSameV<String, std::string> && detail::IsSameV<Route, data::Route>> = true>
-        const Bus& AddBus(String&& name, Route&& route);
+        const Bus& AddBus(String&& name, Route&& route, bool is_roundtrip);
 
         template <
             typename String = std::string, typename StopsNameContainer = std::vector<std::string_view>,
             detail::EnableIf<
                 detail::IsConvertibleV<String, std::string> && (detail::IsSameV<StopsNameContainer, std::vector<std::string>> ||
                                                                 detail::IsSameV<StopsNameContainer, std::vector<std::string_view>>)> = true>
-        const Bus& AddBus(String&& name, StopsNameContainer&& route);
+        const Bus& AddBus(String&& name, StopsNameContainer&& route, bool is_roundtrip);
 
         template <
             typename String = std::string, typename StopsNameContainer = std::vector<std::string_view>,
             detail::EnableIf<detail::IsConvertibleV<String, std::string> && detail::IsSameV<StopsNameContainer, std::vector<std::string_view>>> =
                 true>
-        const Bus* AddBusForce(String&& name, StopsNameContainer&& stops);
+        const Bus* AddBusForce(String&& name, StopsNameContainer&& stops, bool is_roundtrip);
 
         const Bus* GetBus(const std::string_view name) const;
 
@@ -379,9 +380,9 @@ namespace transport_catalogue::data /* Database inner classes (Read/Write interf
 
         void AddBus(Bus&& bus) const override;
 
-        void AddBus(std::string&& name, const std::vector<std::string_view>& stops) const override;
+        void AddBus(std::string&& name, const std::vector<std::string_view>& stops, bool is_roundtrip) const override;
 
-        void AddBus(std::string&& name, std::vector<std::string>&& stops) const override;
+        void AddBus(std::string&& name, std::vector<std::string>&& stops, bool is_roundtrip) const override;
 
         void AddStop(Stop&& stop) const override;
 
@@ -465,8 +466,8 @@ namespace transport_catalogue::data /* Database implementation */ {
 
     template <class Owner>
     template <typename String, typename Route, detail::EnableIf<detail::IsSameV<String, std::string> && detail::IsSameV<Route, data::Route>>>
-    const Bus& Database<Owner>::AddBus(String&& name, Route&& route) {
-        return AddBus(Bus{std::forward<String>(name), std::forward<Route>(route)});
+    const Bus& Database<Owner>::AddBus(String&& name, Route&& route, bool is_roundtrip) {
+        return AddBus(Bus{std::forward<String>(name), std::forward<Route>(route), is_roundtrip});
     }
 
     template <class Owner>
@@ -475,16 +476,16 @@ namespace transport_catalogue::data /* Database implementation */ {
         detail::EnableIf<
             detail::IsConvertibleV<String, std::string> &&
             (detail::IsSameV<StopsNameContainer, std::vector<std::string>> || detail::IsSameV<StopsNameContainer, std::vector<std::string_view>>)>>
-    const Bus& Database<Owner>::AddBus(String&& name, StopsNameContainer&& stops) {
+    const Bus& Database<Owner>::AddBus(String&& name, StopsNameContainer&& stops, bool is_roundtrip) {
         Route route = ToRoute(std::forward<StopsNameContainer>(stops));
-        return AddBus(std::forward<String>(name), std::move(route));
+        return AddBus(std::forward<String>(name), std::move(route), is_roundtrip);
     }
 
     template <class Owner>
     template <
         typename String, typename StopsNameContainer,
         detail::EnableIf<detail::IsConvertibleV<String, std::string> && detail::IsSameV<StopsNameContainer, std::vector<std::string_view>>>>
-    const Bus* Database<Owner>::AddBusForce(String&& name, StopsNameContainer&& stops) {
+    const Bus* Database<Owner>::AddBusForce(String&& name, StopsNameContainer&& stops, bool is_roundtrip) {
         Route route;
         route.reserve(stops.size());
         std::for_each(stops.begin(), stops.end(), [&](const std::string_view stop) {
@@ -494,7 +495,7 @@ namespace transport_catalogue::data /* Database implementation */ {
             }
         });
 
-        return AddBus(std::forward<String>(name), std::move(route));
+        return AddBus(std::forward<String>(name), std::move(route), is_roundtrip);
     }
 
     template <class Owner>
@@ -592,13 +593,13 @@ namespace transport_catalogue::data /* Database::DataWriter implementation */ {
     }
 
     template <class Owner>
-    void Database<Owner>::DataWriter::AddBus(std::string&& name, const std::vector<std::string_view>& stops) const {
-        db_.AddBus(std::move(name), stops);
+    void Database<Owner>::DataWriter::AddBus(std::string&& name, const std::vector<std::string_view>& stops, bool is_roundtrip) const {
+        db_.AddBus(std::move(name), stops, is_roundtrip);
     }
 
     template <class Owner>
-    void Database<Owner>::DataWriter::AddBus(std::string&& name, std::vector<std::string>&& stops) const {
-        db_.AddBus(std::move(name), std::move(stops));
+    void Database<Owner>::DataWriter::AddBus(std::string&& name, std::vector<std::string>&& stops, bool is_roundtrip) const {
+        db_.AddBus(std::move(name), std::move(stops), is_roundtrip);
     }
 
     template <class Owner>
