@@ -91,20 +91,12 @@ namespace transport_catalogue::data /* Db objects (ORM) */ {
         bool operator!=(const Bus& rhs) const noexcept;
     };
 
-    class BusByNameCompare {
+    struct ByNameCompare {
     public:
-        /*size_t operator()(const Bus* bus) const {
-            return string_hasher_(bus->name) + pointer_hasher_(bus) * INDEX;
-        }*/
         bool operator()(const Bus* lhs, const Bus* rhs) const {
-            //return lhs->name < rhs->name;
             return string_compare_(lhs->name, rhs->name);
         }
-
     private:
-        // std::hash<const void*> pointer_hasher_;
-        // std::hash<std::string_view> string_hasher_;
-        // static const size_t INDEX = 42;
         std::set<std::string>::key_compare string_compare_;
     };
 
@@ -113,7 +105,7 @@ namespace transport_catalogue::data /* Db objects (ORM) */ {
     template <typename T>
     constexpr const T* DbNull = nullptr;
     using BusRecord = const Bus*;
-    using BusRecordSet = std::set<BusRecord, BusByNameCompare>;
+    using BusRecordSet = std::set<BusRecord, ByNameCompare>;
 
     struct DistanceBetweenStopsRecord {
         double distance = 0.;
