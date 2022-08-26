@@ -32,26 +32,60 @@ namespace transport_catalogue::exceptions {
 }
 
 namespace transport_catalogue::io /* Requests aliases */ {
-    using RequestArrayValueType = std::variant<std::monostate, std::string, int, double, bool>;
-    using RequestDictValueType = std::variant<std::monostate, std::string, int, double, bool>;
+    using RawColorValueType = std::variant<std::monostate, std::string, std::vector<std::variant<int, double>>>;
+    using ColorPaletteValueType = std::vector<RawColorValueType>;
+    using RawSizeValueType = std::variant<std::monostate, int, double>;
+
+    using RequestInnerArrayValueType = std::variant<std::monostate, std::string, int, double, bool>;
+    using RequestArrayValueType = std::variant<std::monostate, std::string, int, double, bool, std::vector<RequestInnerArrayValueType>>;
+    using RequestDictValueType = std::variant<std::monostate, std::string, int, double, bool, RequestInnerArrayValueType>;
+
     using RequestValueType = std::variant<
         std::monostate, std::string, int, double, bool, std::vector<RequestArrayValueType>, std::unordered_map<std::string, RequestDictValueType>>;
     using RequestBase = std::unordered_map<std::string, RequestValueType>;
+}
+
+namespace transport_catalogue::io /* Requests field enums */ {
 
     enum class RequestType : int8_t { BASE, STAT, RENDER_SETTINGS, UNKNOWN };
+
     enum class RequestCommand : uint8_t { STOP, BUS, MAP, UNKNOWN };
+
     struct RequestFields {
         inline static const std::string BASE_REQUESTS{"base_requests"};
         inline static const std::string STAT_REQUESTS{"stat_requests"};
         inline static const std::string RENDER_SETTINGS{"render_settings"};
         inline static const std::string TYPE{"type"};
         inline static const std::string NAME{"name"};
+    };
+    struct BaseRequestFields {
+        inline static const std::string TYPE = RequestFields::TYPE;
+        inline static const std::string NAME = RequestFields::NAME;
         inline static const std::string STOPS{"stops"};
         inline static const std::string IS_ROUNDTRIP{"is_roundtrip"};
         inline static const std::string LATITUDE{"latitude"};
         inline static const std::string LONGITUDE{"longitude"};
         inline static const std::string ROAD_DISTANCES{"road_distances"};
+    };
+    struct StatRequestFields {
+        inline static const std::string TYPE = RequestFields::TYPE;
+        inline static const std::string NAME = RequestFields::NAME;
         inline static const std::string ID{"id"};
+    };
+    struct RenderSettingsRequestFields {
+        inline static const std::string ID = StatRequestFields::ID;
+        inline static const std::string WIDTH{"width"};
+        inline static const std::string HEIGHT{"height"};
+        inline static const std::string PADDING{"padding"};
+        inline static const std::string STOP_RADIUS{"stop_radius"};
+        inline static const std::string LINE_WIDTH{"line_width"};
+        inline static const std::string BUS_LABEL_FONT_SIZE{"bus_label_font_size"};
+        inline static const std::string BUS_LABEL_OFFSET{"bus_label_offset"};
+        inline static const std::string STOP_LABEL_FONT_SIZE{"stop_label_font_size"};
+        inline static const std::string STOP_LABEL_OFFSET{"stop_label_offset"};
+        inline static const std::string UNDERLAYER_WIDTH{"underlayer_width"};
+        inline static const std::string UNDERLAYER_COLOR{"underlayer_color"};
+        inline static const std::string COLOR_PALETTE{"color_palette"};
     };
 }
 
@@ -257,20 +291,6 @@ namespace transport_catalogue::io /* Requests */ {
     class RenderSettingsRequest : public Request, public IStatRequest {
     public:
         using Color = std::variant<std::string, std::vector<uint8_t>>;
-        struct Fields {
-            inline static const std::string WIDTH{"width"};
-            inline static const std::string HEIGHT{"height"};
-            inline static const std::string PADDING{"padding"};
-            inline static const std::string STOP_RADIUS{"stop_radius"};
-            inline static const std::string LINE_WIDTH{"line_width"};
-            inline static const std::string BUS_LABEL_FONT_SIZE{"bus_label_font_size"};
-            inline static const std::string BUS_LABEL_OFFSET{"bus_label_offset"};
-            inline static const std::string STOP_LABEL_FONT_SIZE{"stop_label_font_size"};
-            inline static const std::string STOP_LABEL_OFFSET{"stop_label_offset"};
-            inline static const std::string UNDERLAYER_WIDTH{"underlayer_width"};
-            inline static const std::string UNDERLAYER_COLOR{"underlayer_color"};
-            inline static const std::string COLOR_PALETTE{"color_palette"};
-        };
 
     public:
         RenderSettingsRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args)
@@ -330,34 +350,34 @@ namespace transport_catalogue::io /* Requests */ {
 
         void Build() override {
             {
-                auto request_id__ptr = args_.find(RequestFields::ID);
+                auto request_id__ptr = args_.find(RenderSettingsRequestFields::ID);
                 request_id_ = request_id__ptr != args_.end() ? std::optional<int>(
                                                                    (assert(std::holds_alternative<int>(request_id__ptr->second)),
                                                                     std::get<int>(std::move(args_.extract(request_id__ptr).mapped()))))
                                                              : std::nullopt;
             }
             {
-                auto width_ptr = args_.find(Fields::WIDTH);
+                auto width_ptr = args_.find(RenderSettingsRequestFields::WIDTH);
                 width_ = width_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(width_ptr).mapped())) : std::nullopt;
             }
             {
-                auto height_ptr = args_.find(Fields::HEIGHT);
+                auto height_ptr = args_.find(RenderSettingsRequestFields::HEIGHT);
                 height_ = height_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(height_ptr).mapped())) : std::nullopt;
             }
             {
-                auto padding_ptr = args_.find(Fields::PADDING);
+                auto padding_ptr = args_.find(RenderSettingsRequestFields::PADDING);
                 padding_ = padding_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(padding_ptr).mapped())) : std::nullopt;
             }
             {
-                auto stop_radius_ptr = args_.find(Fields::STOP_RADIUS);
+                auto stop_radius_ptr = args_.find(RenderSettingsRequestFields::STOP_RADIUS);
                 stop_radius_ = stop_radius_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(stop_radius_ptr).mapped())) : std::nullopt;
             }
             {
-                auto line_width_ptr = args_.find(Fields::LINE_WIDTH);
+                auto line_width_ptr = args_.find(RenderSettingsRequestFields::LINE_WIDTH);
                 line_width_ = line_width_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(line_width_ptr).mapped())) : std::nullopt;
             }
             {
-                auto bus_label_font_size_ptr = args_.find(Fields::BUS_LABEL_FONT_SIZE);
+                auto bus_label_font_size_ptr = args_.find(RenderSettingsRequestFields::BUS_LABEL_FONT_SIZE);
                 bus_label_font_size_ = bus_label_font_size_ptr != args_.end()
                                            ? std::optional<int>(
                                                  (assert(std::holds_alternative<int>(bus_label_font_size_ptr->second)),
@@ -365,12 +385,12 @@ namespace transport_catalogue::io /* Requests */ {
                                            : std::nullopt;
             }
             {
-                auto bus_label_offset_ptr = args_.find(Fields::BUS_LABEL_OFFSET);
+                auto bus_label_offset_ptr = args_.find(RenderSettingsRequestFields::BUS_LABEL_OFFSET);
                 bus_label_offset_ =
                     bus_label_offset_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(bus_label_offset_ptr).mapped())) : std::nullopt;
             }
             {
-                auto stop_label_font_size_ptr = args_.find(Fields::STOP_LABEL_FONT_SIZE);
+                auto stop_label_font_size_ptr = args_.find(RenderSettingsRequestFields::STOP_LABEL_FONT_SIZE);
                 stop_label_font_size_ = stop_label_font_size_ptr != args_.end()
                                             ? std::optional<int>(
                                                   (assert(std::holds_alternative<int>(stop_label_font_size_ptr->second)),
@@ -378,26 +398,26 @@ namespace transport_catalogue::io /* Requests */ {
                                             : std::nullopt;
             }
             {
-                auto stop_label_offset_ptr = args_.find(Fields::STOP_LABEL_OFFSET);
+                auto stop_label_offset_ptr = args_.find(RenderSettingsRequestFields::STOP_LABEL_OFFSET);
                 stop_label_offset_ =
                     stop_label_offset_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(stop_label_offset_ptr).mapped())) : std::nullopt;
             }
             {
-                auto underlayer_width_ptr = args_.find(Fields::UNDERLAYER_WIDTH);
+                auto underlayer_width_ptr = args_.find(RenderSettingsRequestFields::UNDERLAYER_WIDTH);
                 underlayer_width_ =
                     underlayer_width_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(underlayer_width_ptr).mapped())) : std::nullopt;
             }
             {
-                auto underlayer_color_ptr = args_.find(Fields::UNDERLAYER_COLOR);
-                underlayer_color_ = underlayer_color_ptr != args_.end()
-                                        ? GetColorValue(std::move(args_.extract(underlayer_color_ptr).mapped()))
-                                        : std::nullopt;
+                auto underlayer_color_ptr = args_.find(RenderSettingsRequestFields::UNDERLAYER_COLOR);
+                underlayer_color_ =
+                    underlayer_color_ptr != args_.end() ? GetColorValue(std::move(args_.extract(underlayer_color_ptr).mapped())) : std::nullopt;
             }
             /*{
                 //! Not implemented yet
-                auto color_palette_ptr = args_.find(Fields::COLOR_PALETTE);
+                auto color_palette_ptr = args_.find(RenderSettingsRequestFields::COLOR_PALETTE);
                 color_palette_ =
-                    color_palette_ptr != args_.end() ? (assert(std::holds_alternative<Array>(const variant<Types...> &v) color_palette_ptr)): std::nullopt;
+                    color_palette_ptr != args_.end() ? (assert(std::holds_alternative<Array>(const variant<Types...> &v) color_palette_ptr)):
+            std::nullopt;
             }*/
         }
 

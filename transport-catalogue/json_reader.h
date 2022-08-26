@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <fstream>
 #include <functional>
+#include <iostream>
 #include <iterator>
 #include <memory>
 #include <optional>
@@ -21,6 +22,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "domain.h"
@@ -36,6 +38,20 @@ namespace transport_catalogue::exceptions {
 }
 
 namespace transport_catalogue::detail::converters {
+
+    template <typename T, typename... Ts>
+    struct UniqueTypeProxy {
+        using type = T;
+    };
+
+    template <typename... Ts, typename U, typename... Us>
+    struct UniqueTypeProxy<std::variant<Ts...>, U, Us...>
+        : std::conditional_t<
+              (std::is_same_v<U, Ts> || ...), UniqueTypeProxy<std::variant<Ts...>, Us...>, UniqueTypeProxy<std::variant<Ts..., U>, Us...>> {};
+
+    template <typename... Ts>
+    using VariantType = typename UniqueTypeProxy<std::variant<>, std::conditional_t<std::is_same_v<Ts, void>, std::monostate, Ts>...>::type;
+
     template <class... Args>
     struct VariantCastProxy {
         std::variant<Args...> v;
@@ -48,6 +64,9 @@ namespace transport_catalogue::detail::converters {
                     if constexpr (detail::IsConvertibleV<T, std::variant<ToArgs...>>) {
                         return std::move(arg);
                     } else {
+                        if constexpr (detail::IsSameV<T, json::Array>) {
+                            std::cerr << "Array: Conversion" << std::endl;
+                        }
                         if constexpr (detail::IsConvertibleV<std::monostate, std::variant<ToArgs...>>) {
                             return std::monostate();
                         } else {
@@ -61,6 +80,36 @@ namespace transport_catalogue::detail::converters {
 
     template <class... Args>
     auto VariantCast(std::variant<Args...>&& v) -> VariantCastProxy<Args...> {
+        return {std::move(v)};
+    }
+
+    template <typename ToArgs, typename... FromArgs>
+    struct VariantCastProxy2 {
+        std::variant<FromArgs...> v;
+
+        operator std::variant<FromArgs...>() const {
+            return std::visit(
+                [](auto&& arg) -> ToArgs {
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (detail::IsConvertibleV<T, ToArgs>) {
+                        return std::move(arg);
+                    } else {
+                        if constexpr (detail::IsSameV<T, json::Array>) {
+                            std::cerr << "Array: Conversion" << std::endl;
+                        }
+                        if constexpr (detail::IsConvertibleV<std::monostate, ToArgs>) {
+                            return std::monostate();
+                        } else {
+                            return nullptr;
+                        }
+                    }
+                },
+                v);
+        }
+    };
+
+    template <typename ToArgs, typename... FromArgs>
+    VariantCastProxy<ToArgs, FromArgs...> VariantCast2(std::variant<FromArgs...>&& v) {
         return {std::move(v)};
     }
 }
@@ -213,12 +262,39 @@ namespace transport_catalogue::io /* JsonReader */ {
             return array;
         }
 
-        static RequestValueType ConvertFromJsonArray(json::Array&& array) {
-            std::vector<RequestArrayValueType> result;
-            result.reserve(array.size());
+        /*static void ExtractInnerArray(json::Array&& array, ColorPaletteValueType& result) {
             std::for_each(std::make_move_iterator(array.begin()), std::make_move_iterator(array.end()), [&result](json::Node&& node) {
-                RequestArrayValueType value = detail::converters::VariantCast(node.ExtractValue());
+                if (node.IsArray()) {
+                    ExtractInnerArray(std::move(node.AsArray()), result);
+                }
+                RawColorValueType value = detail::converters::VariantCast(node.ExtractValue());
                 result.emplace_back(std::move(value));
+            });
+        }*/
+
+        template <typename T1, typename... T2>
+        using Union = std::variant<std::nullptr_t, T1, T2...>;
+
+        static std::vector<RequestArrayValueType> ConvertFromJsonArray(json::Array&& array) {
+            if (array.empty()) {
+                return {};
+            }
+            std::vector<RequestArrayValueType> result;
+            std::for_each(std::make_move_iterator(array.begin()), std::make_move_iterator(array.end()), [&result](json::Node&& node) {
+                if (node.IsArray()) {
+                    std::vector<RequestArrayValueType> value = ConvertFromJsonArray(node.ExtractArray());
+                    std::vector<RequestInnerArrayValueType> subarray;
+                    subarray.reserve(value.size());
+                    std::for_each(
+                        std::make_move_iterator(value.begin()), std::make_move_iterator(value.end()), [&subarray](RequestArrayValueType&& item) {
+                            RequestInnerArrayValueType result = detail::converters::VariantCast(std::move(item));
+                            subarray.emplace_back(std::move(result));
+                        });
+                    result.emplace_back(std::move(subarray));
+                } else {
+                    RequestArrayValueType value = detail::converters::VariantCast(node.ExtractValue());
+                    result.emplace_back(std::move(value));
+                }
             });
             return result;
         }
@@ -227,7 +303,7 @@ namespace transport_catalogue::io /* JsonReader */ {
             std::unordered_map<std::string, RequestDictValueType> result;
             std::for_each(std::make_move_iterator(dict.begin()), std::make_move_iterator(dict.end()), [&result](auto&& node) {
                 std::string key = std::move(node.first);
-                RequestArrayValueType value = detail::converters::VariantCast(node.second.ExtractValue());
+                RequestDictValueType value = detail::converters::VariantCast(node.second.ExtractValue());
                 result.emplace(std::move(key), std::move(value));
             });
             return result;
