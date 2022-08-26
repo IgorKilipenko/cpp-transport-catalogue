@@ -96,7 +96,7 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
     }
 
     void BaseRequest::FillStops() {
-        auto stops_ptr = args_.find(RequestFields::STOPS);
+        auto stops_ptr = args_.find(BaseRequestFields::STOPS);
         Array stops_tmp =
             stops_ptr == args_.end()
                 ? Array{}
@@ -109,7 +109,7 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
     }
 
     void BaseRequest::FillRoundtrip() {
-        auto is_roundtrip_ptr = args_.find(RequestFields::IS_ROUNDTRIP);
+        auto is_roundtrip_ptr = args_.find(BaseRequestFields::IS_ROUNDTRIP);
         is_roundtrip_ = is_roundtrip_ptr != args_.end() ? std::optional<bool>(
                                                               (assert(std::holds_alternative<bool>(is_roundtrip_ptr->second)),
                                                                std::get<bool>(std::move(args_.extract(is_roundtrip_ptr).mapped()))))
@@ -117,12 +117,12 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
     }
 
     void BaseRequest::FillCoordinates() {
-        auto latitude_ptr = args_.find(RequestFields::LATITUDE);
+        auto latitude_ptr = args_.find(BaseRequestFields::LATITUDE);
         std::optional<double> latitude = latitude_ptr != args_.end() ? std::optional<double>(
                                                                            (assert(std::holds_alternative<double>(latitude_ptr->second)),
                                                                             std::get<double>(std::move(args_.extract(latitude_ptr).mapped()))))
                                                                      : std::nullopt;
-        auto longitude_ptr = args_.find(RequestFields::LONGITUDE);
+        auto longitude_ptr = args_.find(BaseRequestFields::LONGITUDE);
         std::optional<double> longitude = longitude_ptr != args_.end() ? std::optional<double>(
                                                                              (assert(std::holds_alternative<double>(longitude_ptr->second)),
                                                                               std::get<double>(std::move(args_.extract(longitude_ptr).mapped()))))
@@ -133,7 +133,7 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
     }
 
     void BaseRequest::FillRoadDistances() {
-        auto road_distance_ptr = args_.find(RequestFields::ROAD_DISTANCES);
+        auto road_distance_ptr = args_.find(BaseRequestFields::ROAD_DISTANCES);
         Dict road_distances_tmp =
             road_distance_ptr == args_.end()
                 ? Dict{}
@@ -314,16 +314,9 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         ExecuteRequest(std::move(reqs));
     }
 
-    void RequestHandler::OnRenderSettingsRequest(RawRequest&& requests) const {
-        /*std::vector<StatRequest> reqs;
-        reqs.reserve(requests.size());
-
-        std::for_each(std::make_move_iterator(requests.begin()), std::make_move_iterator(requests.end()), [&reqs](RawRequest&& raw_req) {
-            Request stat_req(std::move(raw_req));
-            reqs.emplace_back(std::move(stat_req));
-        });
-
-        ExecuteRequest(std::move(reqs));*/
+    void RequestHandler::OnRenderSettingsRequest(RawRequest&& request) const {
+        //[[maybe_unused]]RenderSettingsRequest reqs(std::move(request));
+        //std::cerr << "" << std::endl;
     }
 
     void RequestHandler::ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const {
@@ -415,7 +408,7 @@ namespace transport_catalogue::io /* StatRequest implementation */ {
         if (name_.empty()) {
             name_ = "TransportLayer";
         }
-        auto request_id__ptr = args_.find(RequestFields::ID);
+        auto request_id__ptr = args_.find(StatRequestFields::ID);
         request_id_ = request_id__ptr != args_.end() ? std::optional<int>(
                                                            (assert(std::holds_alternative<int>(request_id__ptr->second)),
                                                             std::get<int>(std::move(args_.extract(request_id__ptr).mapped()))))
