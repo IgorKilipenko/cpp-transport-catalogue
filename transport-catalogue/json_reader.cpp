@@ -97,23 +97,11 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
             assert(result.count(key) == 0);
             auto node_val = std::move(map_item.second);
             if (node_val.IsArray()) {
-                json::Array array = node_val.ExtractArray();
-                std::vector<RequestArrayValueType> sub_array;
-                sub_array.reserve(array.size());
-                std::for_each(std::make_move_iterator(array.begin()), std::make_move_iterator(array.end()), [&sub_array](auto&& node) {
-                    RequestArrayValueType value = detail::converters::VariantCast(node.ExtractValue());
-                    sub_array.emplace_back(std::move(value));
-                });
-                result.emplace(std::move(key), std::move(sub_array));
+                RequestValueType array = ConvertFromJsonArray(node_val.ExtractArray());
+                result.emplace(std::move(key), std::move(array));
             } else if (node_val.IsMap()) {
-                json::Dict map = node_val.ExtractMap();
-                std::unordered_map<std::string, RequestDictValueType> sub_map;
-                std::for_each(std::make_move_iterator(map.begin()), std::make_move_iterator(map.end()), [&sub_map](auto&& node) {
-                    std::string key = std::move(node.first);
-                    RequestArrayValueType value = detail::converters::VariantCast(node.second.ExtractValue());
-                    sub_map.emplace(std::move(key), std::move(value));
-                });
-                result.emplace(std::move(key), std::move(sub_map));
+                std::unordered_map<std::string, RequestDictValueType> map = ConvertFromJsonDict(node_val.ExtractMap());
+                result.emplace(std::move(key), std::move(map));
             } else {
                 RequestValueType value = detail::converters::VariantCast(node_val.ExtractValue());
                 result.emplace(std::move(key), std::move(value));

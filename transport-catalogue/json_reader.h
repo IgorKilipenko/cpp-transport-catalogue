@@ -212,5 +212,25 @@ namespace transport_catalogue::io /* JsonReader */ {
             });
             return array;
         }
+
+        static RequestValueType ConvertFromJsonArray(json::Array&& array) {
+            std::vector<RequestArrayValueType> result;
+            result.reserve(array.size());
+            std::for_each(std::make_move_iterator(array.begin()), std::make_move_iterator(array.end()), [&result](json::Node&& node) {
+                RequestArrayValueType value = detail::converters::VariantCast(node.ExtractValue());
+                result.emplace_back(std::move(value));
+            });
+            return result;
+        }
+
+        static std::unordered_map<std::string, RequestDictValueType> ConvertFromJsonDict(json::Dict&& dict) {
+            std::unordered_map<std::string, RequestDictValueType> result;
+            std::for_each(std::make_move_iterator(dict.begin()), std::make_move_iterator(dict.end()), [&result](auto&& node) {
+                std::string key = std::move(node.first);
+                RequestArrayValueType value = detail::converters::VariantCast(node.second.ExtractValue());
+                result.emplace(std::move(key), std::move(value));
+            });
+            return result;
+        }
     };
 }
