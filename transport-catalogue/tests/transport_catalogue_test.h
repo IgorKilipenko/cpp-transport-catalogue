@@ -294,7 +294,7 @@ namespace transport_catalogue::tests {
                         std::unordered_map<std::string, io::RequestDictValueType> sub_map;
                         std::for_each(std::make_move_iterator(map.begin()), std::make_move_iterator(map.end()), [&sub_map](auto &&node) {
                             std::string key = std::move(node.first);
-                            io::RequestArrayValueType value = detail::converters::VariantCast(node.second.ExtractValue());
+                            io::RequestDictValueType value = detail::converters::VariantCast(node.second.ExtractValue());
                             sub_map.emplace(std::move(key), std::move(value));
                         });
                         result.emplace(std::move(key), std::move(sub_map));
