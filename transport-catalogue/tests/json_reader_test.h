@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <iostream>
 #include <istream>
 #include <iterator>
@@ -11,6 +12,8 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <variant>
+#include <vector>
 
 #include "../json_reader.h"
 #include "../request_handler.h"
@@ -117,13 +120,16 @@ namespace transport_catalogue::tests {
             assert(json_reader.HasObserver());
 
             json::Dict dict{
-                {"base_requests",
-                 json::Array{
-                     json::Dict{
-                         {"id", 1}, {"observer address", print_address(static_cast<const void*>(observer_ptr.get()))}, {"name", observer_ptr->GetName()}},
-                     json::Dict{
-                         {"id", 2}, {"observer address", print_address(static_cast<const void*>(observer2_ptr.get()))}, {"name", observer2_ptr->GetName()}},
-                 }}};
+                {"base_requests", json::Array{
+                                      json::Dict{
+                                          {"id", 1},
+                                          {"observer address", print_address(static_cast<const void*>(observer_ptr.get()))},
+                                          {"name", observer_ptr->GetName()}},
+                                      json::Dict{
+                                          {"id", 2},
+                                          {"observer address", print_address(static_cast<const void*>(observer2_ptr.get()))},
+                                          {"name", observer2_ptr->GetName()}},
+                                  }}};
             json::Document request{dict};
 
             request.Print(stream);
@@ -227,6 +233,18 @@ namespace transport_catalogue::tests {
                         }
                     }
                 )";
+            /*std::string json_file =
+                R"(
+                    {
+                        "render_settings": {
+                            "color_palette": [
+                                [172, 209, 42],
+                                "chocolate",
+                                [77, 118, 127]
+                            ]
+                        }
+                    }
+                )";*/
 
             std::stringstream stream;
             std::ostringstream out;
@@ -247,8 +265,62 @@ namespace transport_catalogue::tests {
             CheckResults(std::move(expected_node), std::move(render_settings));
         }
 
+        template <typename T1, typename... T2>
+        using Union = std::variant<T1, T2...>;
+
+        void TestJsonConverter() const {
+            // base
+            {
+                std::string expected = "from";
+                std::variant<std::nullptr_t, int, std::string, bool> from = "from";
+                std::variant<std::nullptr_t, int, std::string> to = detail::converters::VariantCast(std::move(from));
+                assert(std::get_if<std::string>(&to));
+                assert(std::get<std::string>(to) == expected);
+            }
+            {
+                using ToType = std::vector<std::string>;
+                std::string expected = "success";
+                std::variant<std::nullptr_t, std::string, ToType> from = ToType({expected});
+                std::variant<std::nullptr_t, int, ToType> to = detail::converters::VariantCast(std::move(from));
+                assert(std::get_if<ToType>(&to));
+                assert(!std::get<ToType>(to).empty());
+                assert(std::get<ToType>(to).front() == expected);
+            }
+
+            {
+                using ToType = std::vector<std::variant<std::string, int>>;
+                std::string expected = "success";
+                std::variant<std::nullptr_t, std::string, ToType> from = ToType({expected});
+                std::variant<std::nullptr_t, int, ToType> to = detail::converters::VariantCast(std::move(from));
+
+                assert(std::get_if<ToType>(&to));
+                assert(!std::get<ToType>(to).empty());
+
+                ToType::value_type result = std::get<ToType>(to).front();
+                assert(std::holds_alternative<std::string>(result));
+                assert(std::get<std::string>(result) == expected);
+            }
+
+            {/*
+                using Request = std::variant<std::nullptr_t, int, std::string, bool>;
+                using NodeValueType = std::vector<std::variant<std::string, int>>;
+                using Node = std::variant<std::nullptr_t, NodeValueType, std::vector<NodeValueType>>;
+                Request request = "success";
+
+                [[maybe_unused]]Union<Node, Request> union_result = detail::converters::VariantCast(std::move(request));
+                
+                assert(std::holds_alternative<std::string>(union_result));
+                assert(std::get<std::string>(std::get<Request>(union_result)) == "success");
+
+                */
+            }
+        }
+
         void RunTests() const {
             const std::string prefix = "[JsonReader] ";
+
+            TestJsonConverter();
+            std::cerr << prefix << "TestConvert : Done." << std::endl;
 
             TestObserver();
             std::cerr << prefix << "TestObserver : Done." << std::endl;
