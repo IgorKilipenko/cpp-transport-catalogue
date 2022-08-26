@@ -39,19 +39,6 @@ namespace transport_catalogue::exceptions {
 
 namespace transport_catalogue::detail::converters {
 
-    template <typename T, typename... Ts>
-    struct UniqueTypeProxy {
-        using type = T;
-    };
-
-    template <typename... Ts, typename U, typename... Us>
-    struct UniqueTypeProxy<std::variant<Ts...>, U, Us...>
-        : std::conditional_t<
-              (std::is_same_v<U, Ts> || ...), UniqueTypeProxy<std::variant<Ts...>, Us...>, UniqueTypeProxy<std::variant<Ts..., U>, Us...>> {};
-
-    template <typename... Ts>
-    using VariantType = typename UniqueTypeProxy<std::variant<>, std::conditional_t<std::is_same_v<Ts, void>, std::monostate, Ts>...>::type;
-
     template <class... Args>
     struct VariantCastProxy {
         std::variant<Args...> v;
@@ -64,9 +51,6 @@ namespace transport_catalogue::detail::converters {
                     if constexpr (detail::IsConvertibleV<T, std::variant<ToArgs...>>) {
                         return std::move(arg);
                     } else {
-                        if constexpr (detail::IsSameV<T, json::Array>) {
-                            std::cerr << "Array: Conversion" << std::endl;
-                        }
                         if constexpr (detail::IsConvertibleV<std::monostate, std::variant<ToArgs...>>) {
                             return std::monostate();
                         } else {
@@ -80,36 +64,6 @@ namespace transport_catalogue::detail::converters {
 
     template <class... Args>
     auto VariantCast(std::variant<Args...>&& v) -> VariantCastProxy<Args...> {
-        return {std::move(v)};
-    }
-
-    template <typename ToArgs, typename... FromArgs>
-    struct VariantCastProxy2 {
-        std::variant<FromArgs...> v;
-
-        operator std::variant<FromArgs...>() const {
-            return std::visit(
-                [](auto&& arg) -> ToArgs {
-                    using T = std::decay_t<decltype(arg)>;
-                    if constexpr (detail::IsConvertibleV<T, ToArgs>) {
-                        return std::move(arg);
-                    } else {
-                        if constexpr (detail::IsSameV<T, json::Array>) {
-                            std::cerr << "Array: Conversion" << std::endl;
-                        }
-                        if constexpr (detail::IsConvertibleV<std::monostate, ToArgs>) {
-                            return std::monostate();
-                        } else {
-                            return nullptr;
-                        }
-                    }
-                },
-                v);
-        }
-    };
-
-    template <typename ToArgs, typename... FromArgs>
-    VariantCastProxy<ToArgs, FromArgs...> VariantCast2(std::variant<FromArgs...>&& v) {
         return {std::move(v)};
     }
 }
