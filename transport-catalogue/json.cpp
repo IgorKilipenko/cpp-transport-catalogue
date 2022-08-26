@@ -537,4 +537,8 @@ namespace json /* Node implementation */ {
         // std::visit(NodePrinter{output, pretty_print}, GetValue());
         Print(NodePrinter{output, pretty_print});
     }
+
+    void Node::Print(const ValueType& value, std::ostream& output, bool pretty_print) {
+        std::visit(NodePrinter(output, pretty_print), value);
+    }
 }

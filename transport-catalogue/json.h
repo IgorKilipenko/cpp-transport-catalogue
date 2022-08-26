@@ -126,8 +126,8 @@ namespace json /* Node */ {
     class Node : private NodeValueType {
     public:
         // Делаем доступными все конструкторы родительского класса variant
-        using variant::variant;
-        using ValueType = variant;
+        using NodeValueType::variant;
+        using ValueType = NodeValueType;
 
     public:
         Node(const Node& other) = default;
@@ -212,6 +212,8 @@ namespace json /* Node */ {
         static Node LoadNode(InputStream&& stream, const std::function<void(const Node&, const void*)>* = nullptr);
 
         void Print(std::ostream& output, bool pretty_print = true) const;
+
+        static void Print(const ValueType& value, std::ostream& output, bool pretty_print = true);
 
         template <typename Printer, detail::EnableIf<!std::is_reference_v<Printer>> = true>
         void Print(Printer&& printer) const;
@@ -493,7 +495,7 @@ namespace json /* Node class template implementation */ {
 
     template <typename InputStream, detail::EnableIf<detail::IsBaseOfV<std::istream, InputStream> && !std::is_reference_v<InputStream>>>
     Node Node::LoadNode(InputStream&& stream, const std::function<void(const Node&, const void*)>* on_load) {
-        LoadNode(stream, on_load);
+        return LoadNode(stream, on_load);
     }
 }
 
