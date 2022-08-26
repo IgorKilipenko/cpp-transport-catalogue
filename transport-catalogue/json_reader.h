@@ -188,5 +188,29 @@ namespace transport_catalogue::io /* JsonReader */ {
         static RawRequest JsonToRequest(json::Dict&& map);
 
         static std::vector<RawRequest> JsonToRequest(json::Array&& array);
+
+        static json::Dict ConvertToJsonDict(io::RawRequest&& request) {
+            json::Dict dict;
+            std::for_each(std::make_move_iterator(request.begin()), std::make_move_iterator(request.end()), [&dict](auto&& req_val) {
+                std::string key = std::move(req_val.first);
+                json::Node::ValueType val = detail::converters::VariantCast(std::move(req_val.second));
+
+                std::visit(
+                    [&key, &dict](auto&& val) {
+                        dict.emplace(std::move(key), std::move(val));
+                    },
+                    std::move(val));
+            });
+
+            return dict;
+        }
+
+        static json::Array ConvertToJsonArray(std::vector<io::RawRequest>&& requests) {
+            json::Array array;
+            std::for_each(std::make_move_iterator(requests.begin()), std::make_move_iterator(requests.end()), [&array](auto&& req) {
+                array.push_back(io::JsonReader::ConvertToJsonDict(std::move(req)));
+            });
+            return array;
+        }
     };
 }
