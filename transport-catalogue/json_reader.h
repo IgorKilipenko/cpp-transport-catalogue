@@ -216,19 +216,6 @@ namespace transport_catalogue::io /* JsonReader */ {
             return array;
         }
 
-        /*static void ExtractInnerArray(json::Array&& array, ColorPaletteValueType& result) {
-            std::for_each(std::make_move_iterator(array.begin()), std::make_move_iterator(array.end()), [&result](json::Node&& node) {
-                if (node.IsArray()) {
-                    ExtractInnerArray(std::move(node.AsArray()), result);
-                }
-                RawColorValueType value = detail::converters::VariantCast(node.ExtractValue());
-                result.emplace_back(std::move(value));
-            });
-        }*/
-
-        template <typename T1, typename... T2>
-        using Union = std::variant<std::nullptr_t, T1, T2...>;
-
         static std::vector<RequestArrayValueType> ConvertFromJsonArray(json::Array&& array) {
             if (array.empty()) {
                 return {};
