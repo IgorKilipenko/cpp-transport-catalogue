@@ -32,13 +32,13 @@ namespace transport_catalogue::exceptions {
 }
 
 namespace transport_catalogue::io /* Requests aliases */ {
-    using RawColorValueType = std::variant<std::monostate, std::string, std::vector<std::variant<int, double>>>;
-    using ColorPaletteValueType = std::vector<RawColorValueType>;
-    using RawSizeValueType = std::variant<std::monostate, int, double>;
+    //!using RawColorValueType = std::variant<std::monostate, std::string, std::vector<std::variant<int, double>>>;
+    //!using ColorPaletteValueType = std::vector<RawColorValueType>;
+    //!using RawSizeValueType = std::variant<std::monostate, int, double>;
 
     using RequestInnerArrayValueType = std::variant<std::monostate, std::string, int, double, bool>;
     using RequestArrayValueType = std::variant<std::monostate, std::string, int, double, bool, std::vector<RequestInnerArrayValueType>>;
-    using RequestDictValueType = std::variant<std::monostate, std::string, int, double, bool, RequestInnerArrayValueType>;
+    using RequestDictValueType = std::variant<std::monostate, std::string, int, double, bool, std::vector<RequestInnerArrayValueType>>;
 
     using RequestValueType = std::variant<
         std::monostate, std::string, int, double, bool, std::vector<RequestArrayValueType>, std::unordered_map<std::string, RequestDictValueType>>;
