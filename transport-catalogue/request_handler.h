@@ -13,6 +13,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -32,9 +33,9 @@ namespace transport_catalogue::exceptions {
 }
 
 namespace transport_catalogue::io /* Requests aliases */ {
-    //!using RawColorValueType = std::variant<std::monostate, std::string, std::vector<std::variant<int, double>>>;
-    //!using ColorPaletteValueType = std::vector<RawColorValueType>;
-    //!using RawSizeValueType = std::variant<std::monostate, int, double>;
+    //! using RawColorValueType = std::variant<std::monostate, std::string, std::vector<std::variant<int, double>>>;
+    //! using ColorPaletteValueType = std::vector<RawColorValueType>;
+    //! using RawSizeValueType = std::variant<std::monostate, int, double>;
 
     using RequestInnerArrayValueType = std::variant<std::monostate, std::string, int, double, bool>;
     using RequestArrayValueType = std::variant<std::monostate, std::string, int, double, bool, std::vector<RequestInnerArrayValueType>>;
@@ -122,12 +123,78 @@ namespace transport_catalogue::io /* RawRequest */ {
     /// Выполняет роль адаптера транспорта запросов : IRequestNotifier --> RequestHandler
     class RawRequest : public RequestBase {
         using RequestBase::unordered_map;
+        using ValueType = RequestBase::mapped_type;
+        using ItemType = RequestBase::value_type;
 
     public:
         RawRequest(const RawRequest& other) = default;
         RawRequest& operator=(const RawRequest& other) = default;
         RawRequest(RawRequest&& other) = default;
         RawRequest& operator=(RawRequest&& other) = default;
+
+        template <
+            typename ReturnType, detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
+        static ReturnType& Get(const ValueType& v) noexcept {
+            assert(std::holds_alternative<ReturnType>(v));
+            return std::get<ReturnType>(v);
+        }
+
+        template <
+            typename ReturnType, detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
+        static ReturnType& Get(ValueType&& v) noexcept {
+            assert(std::holds_alternative<ReturnType>(v));
+            return std::get<ReturnType>(std::move(v));
+        }
+
+        template <
+            typename ReturnType, detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
+        static std::optional<ReturnType> GetIf(const ValueType& v) noexcept {
+            auto* result_ptr = std::get_if<ReturnType>(&v);
+            return result_ptr ? std::optional<ReturnType>(*result_ptr) : std::nullopt;
+        }
+
+        template <
+            typename ReturnType, detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
+        static std::optional<ReturnType> GetIf(ValueType&& v) noexcept {
+            auto* result_ptr = std::get_if<ReturnType>(std::move(&v));
+            return result_ptr ? std::optional<ReturnType>{std::move(*result_ptr)} : std::nullopt;
+        }
+
+        template <
+            typename ReturnType, typename KeyType,
+            detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
+        ReturnType* MoveIf(KeyType&& key) noexcept {
+            auto ptr = find(std::forward<KeyType>(key));
+            if (ptr == end()) {
+                return nullptr;
+            }
+            auto* result_ptr = std::get_if<ReturnType>(std::move(&ptr->second));
+            return result_ptr ? std::move(result_ptr) : nullptr;
+        }
+
+        template <
+            typename ReturnType, typename KeyType,
+            detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
+        ReturnType* ExtractIf(KeyType&& key) noexcept {
+            auto ptr = find(std::forward<KeyType>(key));
+            if (ptr == end()) {
+                return nullptr;
+            }
+            auto* result_ptr = std::get_if<ReturnType>(std::move(std::move(&extract(ptr).mapped())));
+            return result_ptr ? std::move(result_ptr) : nullptr;
+        }
+
+        template <
+            typename ReturnType, typename KeyType,
+            detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
+        ReturnType* GetIf(KeyType&& key) noexcept {
+            auto ptr = find(std::forward<KeyType>(key));
+            if (ptr == end()) {
+                return nullptr;
+            }
+            auto* result_ptr = std::get_if<ReturnType>(ptr.second);
+            return result_ptr;
+        }
     };
 }
 
@@ -349,14 +416,15 @@ namespace transport_catalogue::io /* Requests */ {
         }
 
         void Build() override {
+            auto* request_id_ptr = args_.ExtractIf<int>(RenderSettingsRequestFields::ID);
+            request_id_ = request_id_ptr ? std::optional<int>(*request_id_ptr) : std::nullopt;
             {
-                auto request_id__ptr = args_.find(RenderSettingsRequestFields::ID);
+                /*auto request_id__ptr = args_.find(RenderSettingsRequestFields::ID);
                 request_id_ = request_id__ptr != args_.end() ? std::optional<int>(
                                                                    (assert(std::holds_alternative<int>(request_id__ptr->second)),
                                                                     std::get<int>(std::move(args_.extract(request_id__ptr).mapped()))))
-                                                             : std::nullopt;
-            }
-            {
+                                                             : std::nullopt;*/
+            } {
                 auto width_ptr = args_.find(RenderSettingsRequestFields::WIDTH);
                 width_ = width_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(width_ptr).mapped())) : std::nullopt;
             }
