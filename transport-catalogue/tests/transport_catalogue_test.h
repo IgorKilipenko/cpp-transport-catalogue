@@ -274,38 +274,6 @@ namespace transport_catalogue::tests {
         }
 
         void NodeToRequsetConvertBenchmark(size_t size = 10000) const {
-            const auto converter = [](json::Dict &&map) {
-                io::RawRequest result;
-                std::for_each(std::make_move_iterator(map.begin()), std::make_move_iterator(map.end()), [&result](auto &&map_item) {
-                    std::string key = std::move(map_item.first);
-                    assert(result.count(key) == 0);
-                    auto node_val = std::move(map_item.second);
-                    if (node_val.IsArray()) {
-                        json::Array array = node_val.ExtractArray();
-                        std::vector<io::RequestArrayValueType> sub_array;
-                        sub_array.reserve(array.size());
-                        std::for_each(std::make_move_iterator(array.begin()), std::make_move_iterator(array.end()), [&sub_array](auto &&node) {
-                            io::RequestArrayValueType value = detail::converters::VariantCast(node.ExtractValue());
-                            sub_array.emplace_back(std::move(value));
-                        });
-                        result.emplace(std::move(key), std::move(sub_array));
-                    } else if (node_val.IsMap()) {
-                        json::Dict map = node_val.ExtractMap();
-                        std::unordered_map<std::string, io::RequestDictValueType> sub_map;
-                        std::for_each(std::make_move_iterator(map.begin()), std::make_move_iterator(map.end()), [&sub_map](auto &&node) {
-                            std::string key = std::move(node.first);
-                            io::RequestDictValueType value = detail::converters::VariantCast(node.second.ExtractValue());
-                            sub_map.emplace(std::move(key), std::move(value));
-                        });
-                        result.emplace(std::move(key), std::move(sub_map));
-                    } else {
-                        io::RequestValueType value = detail::converters::VariantCast(node_val.ExtractValue());
-                        result.emplace(std::move(key), std::move(value));
-                    }
-                });
-                return result;
-            };
-
             // json::Dict node{
             //     {"type", "Bus"}, {"name", "L9CbY13GWJohpUqsVkPI"}, {"stops", json::Array(2, "L9CbY13GWJohpUqsVkPI")}, {"is_roundtrip", true}};
             json::Dict node{
@@ -329,7 +297,7 @@ namespace transport_catalogue::tests {
             raw_requests.reserve(size);
             start = std::chrono::steady_clock::now();
             for (size_t i = 0; i < size; ++i) {
-                raw_requests.emplace_back(converter(std::move(nodes[i])));
+                raw_requests.emplace_back(io::JsonReader::JsonToRequest(std::move(nodes[i])));
             }
             duration = std::chrono::steady_clock::now() - start;
             size_t duration_count = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
