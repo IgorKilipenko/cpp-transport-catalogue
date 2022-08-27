@@ -49,6 +49,7 @@ namespace transport_catalogue::io /* Requests aliases */ {
         using AtomicValueType = std::variant<std::monostate, std::string, int, double, bool>;
         using Color = std::variant<std::string, std::vector<std::variant<uint8_t, double>>>;
         using Array = std::vector<RequestArrayValueType>;
+        using Dict = std::vector<RequestDictValueType>;
         using InnerArray = std::vector<RequestInnerArrayValueType>;
 
         bool IsArray() const {
@@ -60,41 +61,7 @@ namespace transport_catalogue::io /* Requests aliases */ {
         }
 
         std::optional<Color> ExtractColorIf() {
-            std::string* string_ptr = std::get_if<std::string>(this);
-            if (string_ptr != nullptr) {
-                assert(!string_ptr->empty());
-
-                return std::move(*string_ptr);
-            }
-
-            Array* rgb_ptr = std::get_if<Array>(std::move(this));
-            if (rgb_ptr != nullptr) {
-                assert(rgb_ptr->size() >= 3 && rgb_ptr->size() <= 4);
-                std::vector<std::variant<uint8_t, double>> rgb_result(rgb_ptr->size());
-                std::transform(
-                    std::make_move_iterator(rgb_ptr->begin()), std::make_move_iterator(rgb_ptr->end()), rgb_result.begin(), [](auto&& arg) {
-                        assert(std::holds_alternative<int>(arg) || std::holds_alternative<double>(arg));
-                        auto rgb_item = std::visit(
-                            [](auto&& arg) -> std::variant<uint8_t, double> {
-                                using T = std::decay_t<decltype(arg)>;
-                                if constexpr (detail::IsConvertibleV<T, std::variant<int, double>>) {
-                                    if constexpr (detail::IsSameV<T, int>) {
-                                        assert(arg >= 0 && arg <= std::numeric_limits<uint8_t>::max());
-                                        return static_cast<uint8_t>(std::move(arg));
-                                    } else {
-                                        assert(arg >= 0. && arg <= 1.);
-                                        return std::move(arg);
-                                    }
-                                } else {
-                                    throw std::invalid_argument("Invalid Rgb[a] item");
-                                }
-                            },
-                            arg);
-                        return rgb_item;
-                    });
-                return rgb_result;
-            }
-            return std::nullopt;
+            return RequestValueType::ExtractColorIf(std::move(*this));
         }
 
         template <typename... Args>
@@ -118,8 +85,11 @@ namespace transport_catalogue::io /* Requests aliases */ {
         }
 
         template <
-            typename ArrayType, detail::EnableIf<!std::is_lvalue_reference_v<ArrayType> && detail::IsSameV<ArrayType, Array::value_type>> = true>
-        static std::optional<Color> ExtractColorIf(ArrayType&& value) {
+            typename ValueType,
+            detail::EnableIf<
+                !std::is_lvalue_reference_v<ValueType> &&
+                (detail::IsConvertibleV<ValueType, Array::value_type> || detail::IsConvertibleV<ValueType, RequestValueType::ValueType>)> = true>
+        static std::optional<Color> ExtractColorIf(ValueType&& value) {
             std::string* string_ptr = std::get_if<std::string>(&value);
             if (string_ptr != nullptr) {
                 assert(!string_ptr->empty());
@@ -127,21 +97,35 @@ namespace transport_catalogue::io /* Requests aliases */ {
                 return std::move(*string_ptr);
             }
 
-            InnerArray* rgb_ptr = std::get_if<InnerArray>(std::move(&value));
-            if (rgb_ptr != nullptr) {
-                assert(rgb_ptr->size() >= 3 && rgb_ptr->size() <= 4);
-                std::vector<std::variant<uint8_t, double>> rgb_result(rgb_ptr->size());
-                std::transform(
-                    std::make_move_iterator(rgb_ptr->begin()), std::make_move_iterator(rgb_ptr->end()), rgb_result.begin(), [](auto&& arg) {
-                        assert(std::holds_alternative<int>(arg) || std::holds_alternative<double>(arg));
-                        auto rgb_item = ExtractRgbaColorItemIf(std::move(arg));
-                        if (!rgb_item.has_value()) {
-                            throw std::invalid_argument("Invalid RGB(a) color item");
-                        }
-                        return rgb_item.value();
-                    });
+            const auto convert = [](auto&& rgb) -> std::vector<std::variant<uint8_t, double>> {
+                assert(rgb.size() >= 3 && rgb.size() <= 4);
+                std::vector<std::variant<uint8_t, double>> rgb_result(rgb.size());
+                std::transform(std::make_move_iterator(rgb.begin()), std::make_move_iterator(rgb.end()), rgb_result.begin(), [](auto&& arg) {
+                    assert(std::holds_alternative<int>(arg) || std::holds_alternative<double>(arg));
+                    auto rgb_item = ExtractRgbaColorItemIf(std::move(arg));
+                    if (!rgb_item.has_value()) {
+                        throw std::invalid_argument("Invalid RGB(a) color item");
+                    }
+                    return rgb_item.value();
+                });
                 return rgb_result;
+            };
+
+            if constexpr (detail::IsConvertibleV<ValueType, Array::value_type>) {
+                InnerArray* rgb_ptr = std::get_if<InnerArray>(std::move(&value));
+                if (rgb_ptr == nullptr) {
+                    return std::nullopt;
+                }
+                return convert(std::move(*rgb_ptr));
+
+            } else if constexpr (detail::IsConvertibleV<ValueType, RequestValueType::ValueType>) {
+                Array* rgb_ptr = std::get_if<Array>(std::move(&value));
+                if (rgb_ptr == nullptr) {
+                    return std::nullopt;
+                }
+                return convert(std::move(*rgb_ptr));
             }
+
             return std::nullopt;
         }
     };
@@ -377,46 +361,6 @@ namespace transport_catalogue::io /* RawRequest */ {
             }
 
             ValueType value = std::move(extract(it).mapped());
-
-            /*
-            std::string* string_ptr = std::get_if<std::string>(&value);
-            if (string_ptr != nullptr) {
-                assert(!string_ptr->empty());
-
-                return std::move(*string_ptr);
-            }
-
-            Array* rgb_ptr = std::get_if<Array>(std::move(&value));
-            if (rgb_ptr != nullptr) {
-                assert(rgb_ptr->size() >= 3 && rgb_ptr->size() <= 4);
-                std::vector<std::variant<uint8_t, double>> rgb_result(rgb_ptr->size());
-                std::transform(
-                    std::make_move_iterator(rgb_ptr->begin()), std::make_move_iterator(rgb_ptr->end()), rgb_result.begin(), [](auto&& arg) {
-                        assert(std::holds_alternative<int>(arg) || std::holds_alternative<double>(arg));
-                        auto rgb_item = std::visit(
-                            [](auto&& arg) -> std::variant<uint8_t, double> {
-                                using T = std::decay_t<decltype(arg)>;
-                                if constexpr (detail::IsConvertibleV<T, std::variant<int, double>>) {
-                                    if constexpr (detail::IsSameV<T, int>) {
-                                        assert(arg >= 0 && arg <= std::numeric_limits<uint8_t>::max());
-                                        return static_cast<uint8_t>(std::move(arg));
-                                    } else {
-                                        assert(arg >= 0. && arg <= 1.);
-                                        return std::move(arg);
-                                    }
-                                } else {
-                                    throw std::invalid_argument("Invalid Rgb[a] item");
-                                }
-                            },
-                            arg);
-                        // assert(rgb_item >= 0 && rgb_item <= std::numeric_limits<uint8_t>::max());
-                        return rgb_item;
-                    });
-                return rgb_result;
-            }
-            return std::nullopt;
-            */
-
             auto color = value.ExtractColorIf();
             return color;
         }
@@ -670,13 +614,6 @@ namespace transport_catalogue::io /* Requests */ {
             stop_label_offset_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::UNDERLAYER_WIDTH);
             underlayer_color_ = args_.ExtractColorValueIf(RenderSettingsRequestFields::UNDERLAYER_COLOR);
             color_palette_ = args_.ExtractColorPaletteIf(RenderSettingsRequestFields::COLOR_PALETTE);
-            /*{
-                //! Not implemented yet
-                auto color_palette_ptr = args_.find(RenderSettingsRequestFields::COLOR_PALETTE);
-                color_palette_ =
-                    color_palette_ptr != args_.end() ? (assert(std::holds_alternative<Array>(const variant<Types...> &v) color_palette_ptr)):
-            std::nullopt;
-            }*/
         }
 
     private:
