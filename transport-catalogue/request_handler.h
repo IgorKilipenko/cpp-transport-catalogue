@@ -10,6 +10,7 @@
 #include <iterator>
 #include <limits>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -66,7 +67,7 @@ namespace transport_catalogue::io /* Requests field enums */ {
 
     enum class RequestType : int8_t { BASE, STAT, RENDER_SETTINGS, UNKNOWN };
 
-    enum class RequestCommand : uint8_t { STOP, BUS, MAP, UNKNOWN };
+    enum class RequestCommand : uint8_t { STOP, BUS, MAP, SET_SETTINGS, UNKNOWN };
 
     struct RequestFields {
         inline static const std::string BASE_REQUESTS{"base_requests"};
@@ -245,6 +246,28 @@ namespace transport_catalogue::io /* RawRequest */ {
             return result_ptr;
         }
 
+        template <typename KeyType>
+        std::optional<double> ExtractNumberValue(KeyType&& key) {
+            auto it = find(key);
+
+            if (it == end()) {
+                return std::nullopt;
+            }
+
+            ValueType value = std::move(extract(it).mapped());
+
+            const double* double_ptr = std::get_if<double>(&value);
+            if (double_ptr != nullptr) {
+                return *double_ptr;
+            }
+
+            const int* int_ptr = std::get_if<int>(&value);
+            if (int_ptr != nullptr) {
+                return *int_ptr;
+            }
+            return std::nullopt;
+        }
+
         template <typename Filter = ValueType, typename... Args>
         static ValueType VariantCast(std::variant<Args...>&& value) {
             return std::visit(
@@ -419,28 +442,31 @@ namespace transport_catalogue::io /* Requests */ {
         std::optional<int> request_id_;
     };
 
-    class RenderSettingsRequest : public Request, public IStatRequest {
+    class RenderSettingsRequest : public Request /*, public IStatRequest*/ {
     public:
-        using Color = std::variant<std::string, std::vector<uint8_t>>;
+        using Color = std::variant<std::string, std::vector<std::variant<uint8_t, double>>>;
 
     public:
         RenderSettingsRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args)
             : Request(std::move(type), std::move(name), std::move(args)) {
             Build();
         }
-        explicit RenderSettingsRequest(RawRequest&& raw_request) : Request(std::move(raw_request)) {
+        explicit RenderSettingsRequest(RawRequest&& raw_request) 
+        : RenderSettingsRequest(RequestCommand::SET_SETTINGS, "", std::move(raw_request)) {
             Build();
         }
 
-        bool IsBaseRequest() const override;
+        bool IsBaseRequest() const override {
+            return false;
+        }
 
-        bool IsStatRequest() const override;
+        bool IsStatRequest() const override {
+            return false;
+        }
 
-        bool IsValidRequest() const override;
-
-        const std::optional<int>& GetRequestId() const override;
-
-        std::optional<int>& GetRequestId() override;
+        bool IsValidRequest() const override {
+            throw std::runtime_error("Not implemented");
+        }
 
     protected:
         static std::optional<double> GetNumberValue(const Request::RequestArgsMap::mapped_type& value) {
@@ -465,14 +491,26 @@ namespace transport_catalogue::io /* Requests */ {
             const Array* rgb_ptr = std::get_if<Array>(std::move(&value));
             if (rgb_ptr != nullptr) {
                 assert(rgb_ptr->size() >= 3 && rgb_ptr->size() <= 4);
-
-                std::vector<uint8_t> rgb_result(rgb_ptr->size());
+                std::vector<std::variant<uint8_t, double>> rgb_result(rgb_ptr->size());
                 std::transform(
                     std::make_move_iterator(rgb_ptr->begin()), std::make_move_iterator(rgb_ptr->end()), rgb_result.begin(), [](auto&& arg) {
-                        assert(std::holds_alternative<int>(arg));
-                        int rgb_item = std::get<int>(arg);
-                        assert(rgb_item >= 0 && rgb_item <= std::numeric_limits<uint8_t>::max());
-                        return static_cast<uint8_t>(rgb_item);
+                        assert(std::holds_alternative<int>(arg) || std::holds_alternative<double>(arg));
+                        auto rgb_item = std::visit([](auto&& arg) -> std::variant<uint8_t, double> {
+                                using T = std::decay_t<decltype(arg)>;
+                                if constexpr (detail::IsConvertibleV<T, std::variant<int, double>>) {
+                                    if constexpr (detail::IsSameV<T, int>) {
+                                        assert(arg >= 0 && arg <= std::numeric_limits<uint8_t>::max());
+                                        return static_cast<uint8_t>(std::move(arg));
+                                    } else {
+                                        assert(arg >= 0. && arg <= 1.);
+                                        return std::move(arg);
+                                    }
+                                } else {
+                                    throw std::invalid_argument("Invalid Rgb[a] item");
+                                }
+                            }, arg);
+                        //assert(rgb_item >= 0 && rgb_item <= std::numeric_limits<uint8_t>::max());
+                        return rgb_item;
                     });
                 return rgb_result;
             }
@@ -480,20 +518,13 @@ namespace transport_catalogue::io /* Requests */ {
         }
 
         void Build() override {
-            //! auto* request_id_ptr = args_.ExtractIf<int>(RenderSettingsRequestFields::ID);
-            //! request_id_ = request_id_ptr ? std::optional<int>(*request_id_ptr) : std::nullopt;
             {
-                auto request_id__ptr = args_.find(RenderSettingsRequestFields::ID);
-                request_id_ = request_id__ptr != args_.end() ? std::optional<int>(
-                                                                   (assert(std::holds_alternative<int>(request_id__ptr->second)),
-                                                                    std::get<int>(std::move(args_.extract(request_id__ptr).mapped()))))
-                                                             : std::nullopt;
-            }
-            {
+                width_ = args_.ExtractNumberValue(RenderSettingsRequestFields::HEIGHT);
+                /*
                 auto width_ptr = args_.find(RenderSettingsRequestFields::WIDTH);
                 width_ = width_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(width_ptr).mapped())) : std::nullopt;
-            }
-            {
+                */
+            } {
                 auto height_ptr = args_.find(RenderSettingsRequestFields::HEIGHT);
                 height_ = height_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(height_ptr).mapped())) : std::nullopt;
             }
@@ -555,7 +586,6 @@ namespace transport_catalogue::io /* Requests */ {
         }
 
     private:
-        std::optional<int> request_id_;
         std::optional<double> width_;
         std::optional<double> height_;
         std::optional<double> padding_;

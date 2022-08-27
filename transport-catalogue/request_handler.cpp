@@ -225,6 +225,9 @@ namespace transport_catalogue::io /* RequestEnumConverter implementation */ {
             return io::RequestCommand::STOP;
         } else if (enum_name == "Map"sv) {
             return io::RequestCommand::MAP;
+        } else if (enum_name == "SetSettings"sv) {
+            return io::RequestCommand::SET_SETTINGS;
+
         } else if (enum_name == "Unknown"sv) {
             return io::RequestCommand::UNKNOWN;
         }
@@ -305,8 +308,8 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
     }
 
     void RequestHandler::OnRenderSettingsRequest(RawRequest&& request) const {
-        //[[maybe_unused]]RenderSettingsRequest reqs(std::move(request));
-        // std::cerr << "" << std::endl;
+        [[maybe_unused]] RenderSettingsRequest reqs(std::move(request));
+        std::cerr << "" << std::endl;
     }
 
     void RequestHandler::ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const {
