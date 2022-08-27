@@ -215,13 +215,6 @@ namespace transport_catalogue::io /* JsonReader */ {
             json::Dict dict;
             std::for_each(std::make_move_iterator(request.begin()), std::make_move_iterator(request.end()), [&dict](auto&& req_val) {
                 std::string key = std::move(req_val.first);
-                /*json::Node::ValueType val = detail::converters::VariantCast(std::move(req_val.second));
-
-                std::visit(
-                    [&key, &dict](auto&& val) {
-                        dict.emplace(std::move(key), std::move(val));
-                    },
-                    std::move(val));*/
                 if (req_val.second.IsArray()) {
                     io::RawRequest::Array raw_array = std::get<io::RawRequest::Array>(req_val.second);
                     json::Array array(raw_array.size());
