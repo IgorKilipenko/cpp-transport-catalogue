@@ -177,10 +177,13 @@ namespace transport_catalogue::io /* RawRequest */ {
             detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
         std::optional<ReturnType> ExtractIf(KeyType&& key) noexcept {
             auto ptr = find(std::forward<KeyType>(key));
+
             if (ptr == end()) {
                 return std::nullopt;
             }
+
             assert(std::holds_alternative<ReturnType>(ptr->second));
+            
             auto mapped = std::move(extract(ptr).mapped());
             auto* result_ptr = std::get_if<ReturnType>(std::move(&mapped));
             return result_ptr ? std::optional<ReturnType>(std::move(*result_ptr)) : std::nullopt;
