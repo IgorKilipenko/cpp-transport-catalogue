@@ -39,34 +39,6 @@ int main() {
 
     TransportCatalogueTester tester;
     tester.TestTransportCatalogue();
-    /*
-        std::shared_ptr<io::RequestHandler> main_request_handler_ptr;
-        std::string json_file = transport_catalogue::detail::io::FileReader::Read(
-            std::filesystem::current_path() / "transport-catalogue/tests/data/json_requests/test2.json");
-        std::stringstream istream;
-        io::JsonReader json_reader{istream};
-        istream << json_file << std::endl;
-        TransportCatalogue catalog;
-        io::JsonResponseSender stat_sender(std::cerr);
-        maps::MapRenderer renderer;
-        main_request_handler_ptr = std::make_shared<io::RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer);
-        json_reader.AddObserver(main_request_handler_ptr);
-        json_reader.ReadDocument();
-        {
-            TransportCatalogue catalog;
-            json_file = transport_catalogue::detail::io::FileReader::Read(
-                std::filesystem::current_path() / "transport-catalogue/tests/data/json_requests/test1.json");
-            istream << json_file;
-            // std::cerr << istream.str() << std::endl;
-            const auto request_handler_ptr =
-                std::make_shared<io::RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer);
-            json_reader.AddObserver(request_handler_ptr);
-            json_reader.ReadDocument();
-        }
-        json_file = transport_catalogue::detail::io::FileReader::Read(
-            std::filesystem::current_path() / "transport-catalogue/tests/data/json_requests/test3.json");
-        istream << json_file;
-        json_reader.ReadDocument();
-    */
+
     return 0;
 }
