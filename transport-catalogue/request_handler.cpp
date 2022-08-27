@@ -109,38 +109,61 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
     }
 
     void BaseRequest::FillRoundtrip() {
+        //! auto* is_roundtrip_ptr = args_.ExtractIf<bool>(BaseRequestFields::IS_ROUNDTRIP);
+        //! is_roundtrip_ = is_roundtrip_ptr ? std::optional<bool>(*is_roundtrip_ptr) : std::nullopt;
+        is_roundtrip_ = args_.ExtractIf<bool>(BaseRequestFields::IS_ROUNDTRIP);
+        
+        /*
         auto is_roundtrip_ptr = args_.find(BaseRequestFields::IS_ROUNDTRIP);
         is_roundtrip_ = is_roundtrip_ptr != args_.end() ? std::optional<bool>(
                                                               (assert(std::holds_alternative<bool>(is_roundtrip_ptr->second)),
                                                                std::get<bool>(std::move(args_.extract(is_roundtrip_ptr).mapped()))))
-                                                        : std::nullopt;
+                                                        : std::nullopt;*/
     }
 
     void BaseRequest::FillCoordinates() {
+        //! auto* latitude_ptr = args_.ExtractIf<double>(BaseRequestFields::LATITUDE);
+        //! std::optional<double> latitude = latitude_ptr ? std::optional<double>(*latitude_ptr) : std::nullopt;
+        std::optional<double> latitude  = args_.ExtractIf<double>(BaseRequestFields::LATITUDE);
+
+        /*
         auto latitude_ptr = args_.find(BaseRequestFields::LATITUDE);
         std::optional<double> latitude = latitude_ptr != args_.end() ? std::optional<double>(
                                                                            (assert(std::holds_alternative<double>(latitude_ptr->second)),
                                                                             std::get<double>(std::move(args_.extract(latitude_ptr).mapped()))))
-                                                                     : std::nullopt;
+                                                                     : std::nullopt;*/
+
+        //! auto* longitude_ptr = args_.ExtractIf<double>(BaseRequestFields::LONGITUDE);
+        //! std::optional<double> longitude = longitude_ptr ? std::optional<double>(*longitude_ptr) : std::nullopt;
+        std::optional<double> longitude = args_.ExtractIf<double>(BaseRequestFields::LONGITUDE);
+
+        /*
         auto longitude_ptr = args_.find(BaseRequestFields::LONGITUDE);
         std::optional<double> longitude = longitude_ptr != args_.end() ? std::optional<double>(
                                                                              (assert(std::holds_alternative<double>(longitude_ptr->second)),
                                                                               std::get<double>(std::move(args_.extract(longitude_ptr).mapped()))))
-                                                                       : std::nullopt;
+                                                                       : std::nullopt;*/
+
         assert((latitude.has_value() && longitude.has_value()) || !(latitude.has_value() && longitude.has_value()));
         coordinates_ = !latitude.has_value() ? std::nullopt : std::optional<Coordinates>({latitude.value(), longitude.value()});
         assert(coordinates_.has_value());
     }
 
     void BaseRequest::FillRoadDistances() {
+        //! auto* road_distance_ptr = args_.ExtractIf<Dict>(BaseRequestFields::ROAD_DISTANCES);
+        //! std::optional<Dict> road_distances_tmp = road_distance_ptr ? std::optional<Dict>(*road_distance_ptr) : std::nullopt;
+        auto road_distances_tmp = args_.ExtractIf<Dict>(BaseRequestFields::ROAD_DISTANCES);
+        /*
         auto road_distance_ptr = args_.find(BaseRequestFields::ROAD_DISTANCES);
         Dict road_distances_tmp =
             road_distance_ptr == args_.end()
                 ? Dict{}
                 : std::get<Dict>(
                       (assert(std::holds_alternative<Dict>(road_distance_ptr->second)), std::move(args_.extract(road_distance_ptr).mapped())));
-        if (!road_distances_tmp.empty()) {
-            for (auto&& item : road_distances_tmp) {
+        */       
+
+        if (road_distances_tmp.has_value() && !road_distances_tmp.value().empty()) {
+            for (auto&& item : road_distances_tmp.value()) {
                 assert(std::holds_alternative<int>(item.second) || std::holds_alternative<double>(item.second));
                 std::string to_stop = std::move(item.first);
                 double distance =
@@ -316,7 +339,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
 
     void RequestHandler::OnRenderSettingsRequest(RawRequest&& request) const {
         //[[maybe_unused]]RenderSettingsRequest reqs(std::move(request));
-        //std::cerr << "" << std::endl;
+        // std::cerr << "" << std::endl;
     }
 
     void RequestHandler::ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const {
@@ -408,11 +431,16 @@ namespace transport_catalogue::io /* StatRequest implementation */ {
         if (name_.empty()) {
             name_ = "TransportLayer";
         }
+        //! auto* request_id_ptr = args_.ExtractIf<int>(StatRequestFields::ID);
+        //! request_id_ = request_id_ptr ? std::optional<int>(*request_id_ptr) : std::nullopt;
+        request_id_ = args_.ExtractIf<int>(StatRequestFields::ID);
+
+        /*
         auto request_id__ptr = args_.find(StatRequestFields::ID);
         request_id_ = request_id__ptr != args_.end() ? std::optional<int>(
                                                            (assert(std::holds_alternative<int>(request_id__ptr->second)),
                                                             std::get<int>(std::move(args_.extract(request_id__ptr).mapped()))))
-                                                     : std::nullopt;
+                                                     : std::nullopt;*/
     }
 }
 

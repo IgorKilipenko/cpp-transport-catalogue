@@ -175,13 +175,15 @@ namespace transport_catalogue::io /* RawRequest */ {
         template <
             typename ReturnType, typename KeyType,
             detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
-        ReturnType* ExtractIf(KeyType&& key) noexcept {
+        std::optional<ReturnType> ExtractIf(KeyType&& key) noexcept {
             auto ptr = find(std::forward<KeyType>(key));
             if (ptr == end()) {
-                return nullptr;
+                return std::nullopt;
             }
-            auto* result_ptr = std::get_if<ReturnType>(std::move(std::move(&extract(ptr).mapped())));
-            return result_ptr ? std::move(result_ptr) : nullptr;
+            assert(std::holds_alternative<ReturnType>(ptr->second));
+            auto mapped = std::move(extract(ptr).mapped());
+            auto* result_ptr = std::get_if<ReturnType>(std::move(&mapped));
+            return result_ptr ? std::optional<ReturnType>(std::move(*result_ptr)) : std::nullopt;
         }
 
         template <
@@ -203,6 +205,7 @@ namespace transport_catalogue::io /* Requests */ {
     struct Request {
     public: /* Aliases */
         using RequestArgsMap = RawRequest;
+        using InnerArray = std::vector<RequestInnerArrayValueType>;
         using Array = std::vector<RequestArrayValueType>;
         using Dict = std::unordered_map<std::string, RequestDictValueType>;
 
@@ -416,15 +419,16 @@ namespace transport_catalogue::io /* Requests */ {
         }
 
         void Build() override {
-            auto* request_id_ptr = args_.ExtractIf<int>(RenderSettingsRequestFields::ID);
-            request_id_ = request_id_ptr ? std::optional<int>(*request_id_ptr) : std::nullopt;
+            //! auto* request_id_ptr = args_.ExtractIf<int>(RenderSettingsRequestFields::ID);
+            //! request_id_ = request_id_ptr ? std::optional<int>(*request_id_ptr) : std::nullopt;
             {
-                /*auto request_id__ptr = args_.find(RenderSettingsRequestFields::ID);
+                auto request_id__ptr = args_.find(RenderSettingsRequestFields::ID);
                 request_id_ = request_id__ptr != args_.end() ? std::optional<int>(
                                                                    (assert(std::holds_alternative<int>(request_id__ptr->second)),
                                                                     std::get<int>(std::move(args_.extract(request_id__ptr).mapped()))))
-                                                             : std::nullopt;*/
-            } {
+                                                             : std::nullopt;
+            } 
+            {
                 auto width_ptr = args_.find(RenderSettingsRequestFields::WIDTH);
                 width_ = width_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(width_ptr).mapped())) : std::nullopt;
             }
