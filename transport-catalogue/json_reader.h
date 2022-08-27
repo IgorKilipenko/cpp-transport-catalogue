@@ -25,6 +25,7 @@
 #include <variant>
 #include <vector>
 
+#include "detail/type_traits.h"
 #include "domain.h"
 #include "json.h"
 #include "request_handler.h"
@@ -41,7 +42,7 @@ namespace transport_catalogue::detail::converters {
 
     template <class... Args>
     struct VariantCastProxy {
-        std::variant<Args...> v;
+        std::variant<Args...> value;
 
         template <class... ToArgs>
         operator std::variant<ToArgs...>() const {
@@ -58,13 +59,26 @@ namespace transport_catalogue::detail::converters {
                         }
                     }
                 },
-                v);
+                value);
         }
     };
 
     template <class... Args>
-    auto VariantCast(std::variant<Args...>&& v) -> VariantCastProxy<Args...> {
-        return {std::move(v)};
+    auto VariantCast(std::variant<Args...>&& value) -> VariantCastProxy<Args...> {
+        return {std::move(value)};
+    }
+
+    template <typename ReturnType, typename Filter = ReturnType, typename... Args>
+    ReturnType VariantCast(std::variant<Args...>&& value) {
+        return std::visit(
+            [](auto&& arg) -> ReturnType {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (detail::IsConvertibleV<T, Filter>) {
+                    return std::move(arg);
+                }
+                return std::monostate();
+            },
+            value);
     }
 }
 

@@ -1,4 +1,6 @@
 #include "json_reader.h"
+#include <type_traits>
+#include <variant>
 
 /*
  * Здесь можно разместить код наполнения транспортного справочника данными из JSON,
@@ -97,13 +99,13 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
             assert(result.count(key) == 0);
             auto node_val = std::move(map_item.second);
             if (node_val.IsArray()) {
-                RequestValueType array = ConvertFromJsonArray(node_val.ExtractArray());
+                RawRequest::Array array = ConvertFromJsonArray(node_val.ExtractArray());
                 result.emplace(std::move(key), std::move(array));
             } else if (node_val.IsMap()) {
-                std::unordered_map<std::string, RequestDictValueType> map = ConvertFromJsonDict(node_val.ExtractMap());
+                RawRequest::Dict map = ConvertFromJsonDict(node_val.ExtractMap());
                 result.emplace(std::move(key), std::move(map));
             } else {
-                RequestValueType value = detail::converters::VariantCast(node_val.ExtractValue());
+                RequestValueType value = RawRequest::VariantCast<RequestValueType::AtomicValueType>(node_val.ExtractValue());
                 result.emplace(std::move(key), std::move(value));
             }
         });

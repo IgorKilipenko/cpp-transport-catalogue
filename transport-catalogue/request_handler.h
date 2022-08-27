@@ -41,8 +41,24 @@ namespace transport_catalogue::io /* Requests aliases */ {
     using RequestArrayValueType = std::variant<std::monostate, std::string, int, double, bool, std::vector<RequestInnerArrayValueType>>;
     using RequestDictValueType = std::variant<std::monostate, std::string, int, double, bool, std::vector<RequestInnerArrayValueType>>;
 
-    using RequestValueType = std::variant<
+    using RequestValueTypeBase = std::variant<
         std::monostate, std::string, int, double, bool, std::vector<RequestArrayValueType>, std::unordered_map<std::string, RequestDictValueType>>;
+
+    class RequestValueType : public RequestValueTypeBase {
+    public:
+        using RequestValueTypeBase::variant;
+        using ValueType = RequestValueTypeBase;
+        using AtomicValueType = std::variant<std::monostate, std::string, int, double, bool>;
+
+        bool IsArray() const {
+            return std::holds_alternative<std::vector<RequestArrayValueType>>(*this);
+        }
+
+        bool IsDictionary() const {
+            return std::holds_alternative<std::unordered_map<std::string, RequestDictValueType>>(*this);
+        }
+    };
+
     using RequestBase = std::unordered_map<std::string, RequestValueType>;
 }
 
@@ -122,9 +138,14 @@ namespace transport_catalogue::io /* RawRequest */ {
 
     /// Выполняет роль адаптера транспорта запросов : IRequestNotifier --> RequestHandler
     class RawRequest : public RequestBase {
+    public:
         using RequestBase::unordered_map;
         using ValueType = RequestBase::mapped_type;
         using ItemType = RequestBase::value_type;
+        using Array = std::vector<RequestArrayValueType>;
+        using InnerArray = std::vector<RequestInnerArrayValueType>;
+        using Dict = std::unordered_map<std::string, RequestDictValueType>;
+        using NullValie = std::monostate;
 
     public:
         RawRequest(const RawRequest& other) = default;
@@ -222,6 +243,20 @@ namespace transport_catalogue::io /* RawRequest */ {
             }
             auto* result_ptr = std::get_if<ReturnType>(ptr.second);
             return result_ptr;
+        }
+
+        template <typename Filter = ValueType, typename... Args>
+        static ValueType VariantCast(std::variant<Args...>&& value) {
+            return std::visit(
+                [](auto&& arg) -> ValueType {
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (detail::IsConvertibleV<T, Filter>) {
+                        return std::move(arg);
+                    } else {
+                        return NullValie();
+                    }
+                },
+                value);
         }
     };
 }
