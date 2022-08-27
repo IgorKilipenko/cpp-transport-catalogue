@@ -519,7 +519,7 @@ namespace transport_catalogue::io /* Requests */ {
 
         void Build() override {
             {
-                width_ = args_.ExtractNumberValue(RenderSettingsRequestFields::HEIGHT);
+                width_ = args_.ExtractNumberValue(RenderSettingsRequestFields::WIDTH);
                 /*
                 auto width_ptr = args_.find(RenderSettingsRequestFields::WIDTH);
                 width_ = width_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(width_ptr).mapped())) : std::nullopt;
