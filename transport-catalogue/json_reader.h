@@ -75,8 +75,13 @@ namespace transport_catalogue::detail::converters {
                 using T = std::decay_t<decltype(arg)>;
                 if constexpr (detail::IsConvertibleV<T, Filter>) {
                     return std::move(arg);
+                } else {
+                    if constexpr (detail::IsConvertibleV<std::monostate, ReturnType>) {
+                        return std::monostate();
+                    } else {
+                        return nullptr;
+                    }
                 }
-                return std::monostate();
             },
             value);
     }
@@ -206,17 +211,36 @@ namespace transport_catalogue::io /* JsonReader */ {
 
         static std::vector<RawRequest> JsonToRequest(json::Array&& array);
 
-        static json::Dict ConvertToJsonDict(io::RawRequest&& request) {
+        static json::Dict ConvertToJson(io::RawRequest&& request) {
             json::Dict dict;
             std::for_each(std::make_move_iterator(request.begin()), std::make_move_iterator(request.end()), [&dict](auto&& req_val) {
                 std::string key = std::move(req_val.first);
-                json::Node::ValueType val = detail::converters::VariantCast(std::move(req_val.second));
+                /*json::Node::ValueType val = detail::converters::VariantCast(std::move(req_val.second));
 
                 std::visit(
                     [&key, &dict](auto&& val) {
                         dict.emplace(std::move(key), std::move(val));
                     },
-                    std::move(val));
+                    std::move(val));*/
+                if (req_val.second.IsArray()) {
+                    io::RawRequest::Array raw_array = std::get<io::RawRequest::Array>(req_val.second);
+                    json::Array array(raw_array.size());
+                    std::transform(raw_array.begin(), raw_array.end(), array.begin(), [](auto&& val) -> json::Node{
+                        if (std::holds_alternative<io::RawRequest::InnerArray>(val)) {
+                            io::RawRequest::InnerArray inner_array = std::get<io::RawRequest::InnerArray>(val);
+                            json::Array array(inner_array.size());
+                            std::transform(inner_array.begin(), inner_array.end(), array.begin(), [](auto&& val) {
+                                return detail::converters::VariantCast<json::Node>(std::move(val));
+                            });
+                            return array;
+                        }
+                        return detail::converters::VariantCast<json::Node>(std::move(val));
+                    });
+                    dict.emplace(std::move(key), std::move(array));
+                } else {
+                    json::Node val = detail::converters::VariantCast<json::Node>(std::move(req_val.second));
+                    dict.emplace(std::move(key), std::move(val));
+                }
             });
 
             return dict;
@@ -225,7 +249,7 @@ namespace transport_catalogue::io /* JsonReader */ {
         static json::Array ConvertToJsonArray(std::vector<io::RawRequest>&& requests) {
             json::Array array;
             std::for_each(std::make_move_iterator(requests.begin()), std::make_move_iterator(requests.end()), [&array](auto&& req) {
-                array.push_back(io::JsonReader::ConvertToJsonDict(std::move(req)));
+                array.push_back(io::JsonReader::ConvertToJson(std::move(req)));
             });
             return array;
         }

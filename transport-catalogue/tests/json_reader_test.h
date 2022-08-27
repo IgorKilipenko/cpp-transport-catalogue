@@ -56,7 +56,7 @@ namespace transport_catalogue::tests {
             }
             void OnRenderSettingsRequest(io::RawRequest&& request) const override {
                 out_ << "OnRenderSettingsRequest" << std::endl;
-                render_settings_requests_->emplace_back(io::JsonReader::ConvertToJsonDict(std::move(request)));
+                render_settings_requests_->emplace_back(io::JsonReader::ConvertToJson(std::move(request)));
             }
 
             std::string& GetName() {
