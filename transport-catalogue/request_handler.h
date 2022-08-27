@@ -183,10 +183,33 @@ namespace transport_catalogue::io /* RawRequest */ {
             }
 
             assert(std::holds_alternative<ReturnType>(ptr->second));
-            
+
             auto mapped = std::move(extract(ptr).mapped());
             auto* result_ptr = std::get_if<ReturnType>(std::move(&mapped));
             return result_ptr ? std::optional<ReturnType>(std::move(*result_ptr)) : std::nullopt;
+        }
+
+        template <
+            typename ReturnType, typename KeyType,
+            detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
+        ReturnType Extract(KeyType&& key) noexcept {
+            auto ptr = find(std::forward<KeyType>(key));
+
+            if (ptr == end()) {
+                return {};
+            }
+
+            assert(std::holds_alternative<ReturnType>(ptr->second));
+
+            return std::get<ReturnType>(std::move(extract(ptr).mapped()));
+        }
+
+        template <
+            typename ReturnType, typename KeyType,
+            detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
+        ReturnType ExtractWithThrow(KeyType&& key) {
+            assert(std::holds_alternative<ReturnType>(at(key)));
+            return std::get<ReturnType>(std::move(extract(key).mapped()));
         }
 
         template <
@@ -430,7 +453,7 @@ namespace transport_catalogue::io /* Requests */ {
                                                                    (assert(std::holds_alternative<int>(request_id__ptr->second)),
                                                                     std::get<int>(std::move(args_.extract(request_id__ptr).mapped()))))
                                                              : std::nullopt;
-            } 
+            }
             {
                 auto width_ptr = args_.find(RenderSettingsRequestFields::WIDTH);
                 width_ = width_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(width_ptr).mapped())) : std::nullopt;
