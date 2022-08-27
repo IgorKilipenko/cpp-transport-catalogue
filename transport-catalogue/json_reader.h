@@ -233,19 +233,6 @@ namespace transport_catalogue::io /* JsonReader */ {
             std::for_each(std::make_move_iterator(request.begin()), std::make_move_iterator(request.end()), [&dict](auto&& req_val) {
                 std::string key = std::move(req_val.first);
                 if (req_val.second.IsArray()) {
-                    /*io::RawRequest::Array raw_array = std::get<io::RawRequest::Array>(req_val.second);
-                    json::Array array(raw_array.size());
-                    std::transform(raw_array.begin(), raw_array.end(), array.begin(), [](auto&& val) -> json::Node{
-                        if (std::holds_alternative<io::RawRequest::InnerArray>(val)) {
-                            io::RawRequest::InnerArray inner_array = std::get<io::RawRequest::InnerArray>(val);
-                            json::Array array(inner_array.size());
-                            std::transform(inner_array.begin(), inner_array.end(), array.begin(), [](auto&& val) {
-                                return detail::converters::VariantCast<json::Node>(std::move(val));
-                            });
-                            return array;
-                        }
-                        return detail::converters::VariantCast<json::Node>(std::move(val));
-                    });*/
                     io::RawRequest::Array raw_array = std::get<io::RawRequest::Array>(std::move(req_val.second));
                     json::Array array = ConvertToJson(std::move(raw_array));
                     dict.emplace(std::move(key), std::move(array));
@@ -266,20 +253,19 @@ namespace transport_catalogue::io /* JsonReader */ {
             return array;
         }
 
-        static std::vector<RequestArrayValueType> ConvertFromJsonArray(json::Array&& array) {
+        static io::RawRequest::Array ConvertFromJsonArray(json::Array&& array) {
             if (array.empty()) {
                 return {};
             }
-            std::vector<RequestArrayValueType> result;
+            io::RawRequest::Array result;
             std::for_each(std::make_move_iterator(array.begin()), std::make_move_iterator(array.end()), [&result](json::Node&& node) {
                 if (node.IsArray()) {
-                    std::vector<RequestArrayValueType> value = ConvertFromJsonArray(node.ExtractArray());
-                    std::vector<RequestInnerArrayValueType> subarray;
-                    subarray.reserve(value.size());
-                    std::for_each(
-                        std::make_move_iterator(value.begin()), std::make_move_iterator(value.end()), [&subarray](RequestArrayValueType&& item) {
-                            RequestInnerArrayValueType result = detail::converters::VariantCast(std::move(item));
-                            subarray.emplace_back(std::move(result));
+                    io::RawRequest::Array value = ConvertFromJsonArray(node.ExtractArray());
+                    io::RawRequest::InnerArray subarray(value.size());
+                    std::transform(
+                        std::make_move_iterator(value.begin()), std::make_move_iterator(value.end()), subarray.begin(),
+                        [](io::RawRequest::Array::value_type&& item) {
+                            return detail::converters::VariantCast<io::RawRequest::InnerArray::value_type>(std::move(item));
                         });
                     result.emplace_back(std::move(subarray));
                 } else {
@@ -291,10 +277,11 @@ namespace transport_catalogue::io /* JsonReader */ {
         }
 
         static io::RawRequest::Dict ConvertFromJsonDict(json::Dict&& dict) {
-            std::unordered_map<std::string, RequestDictValueType> result;
+            io::RawRequest::Dict result;
             std::for_each(std::make_move_iterator(dict.begin()), std::make_move_iterator(dict.end()), [&result](auto&& node) {
                 std::string key = std::move(node.first);
-                RequestDictValueType value = detail::converters::VariantCast(node.second.ExtractValue());
+                io::RawRequest::Dict::mapped_type value =
+                    detail::converters::VariantCast<io::RawRequest::Dict::mapped_type>(node.second.ExtractValue());
                 result.emplace(std::move(key), std::move(value));
             });
             return result;
