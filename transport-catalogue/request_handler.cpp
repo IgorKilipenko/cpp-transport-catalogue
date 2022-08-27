@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iterator>
 #include <optional>
 #include <vector>
 
@@ -97,17 +98,19 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
 
     void BaseRequest::FillStops() {
         assert(stops_.empty());
-        auto stops_tmp = args_.ExtractIf<Array>(BaseRequestFields::STOPS); 
-         
+        auto stops_tmp = args_.ExtractIf<Array>(BaseRequestFields::STOPS);
+
         if (!stops_tmp.has_value()) {
             return;
         }
 
         stops_.resize(stops_tmp.value().size());
-        std::transform(stops_tmp.value().begin(), stops_tmp.value().end(), stops_.begin(), [&](auto&& stop_name) {
-            assert(std::holds_alternative<std::string>(stop_name));
-            return std::get<std::string>(std::move(stop_name));
-        });
+        std::transform(
+            std::make_move_iterator(stops_tmp.value().begin()), std::make_move_iterator(stops_tmp.value().end()), stops_.begin(),
+            [](auto&& stop_name) {
+                assert(std::holds_alternative<std::string>(stop_name));
+                return std::get<std::string>(std::move(stop_name));
+            });
     }
 
     void BaseRequest::FillRoundtrip() {
@@ -115,7 +118,7 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
     }
 
     void BaseRequest::FillCoordinates() {
-        std::optional<double> latitude  = args_.ExtractIf<double>(BaseRequestFields::LATITUDE);
+        std::optional<double> latitude = args_.ExtractIf<double>(BaseRequestFields::LATITUDE);
         std::optional<double> longitude = args_.ExtractIf<double>(BaseRequestFields::LONGITUDE);
 
         assert((latitude.has_value() && longitude.has_value()) || !(latitude.has_value() && longitude.has_value()));
@@ -124,7 +127,7 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
     }
 
     void BaseRequest::FillRoadDistances() {
-        auto road_distances_tmp = args_.ExtractIf<Dict>(BaseRequestFields::ROAD_DISTANCES);   
+        auto road_distances_tmp = args_.ExtractIf<Dict>(BaseRequestFields::ROAD_DISTANCES);
 
         if (road_distances_tmp.has_value() && !road_distances_tmp.value().empty()) {
             for (auto&& item : road_distances_tmp.value()) {
