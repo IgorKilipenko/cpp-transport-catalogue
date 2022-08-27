@@ -13,6 +13,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <variant>
@@ -34,10 +35,6 @@ namespace transport_catalogue::exceptions {
 }
 
 namespace transport_catalogue::io /* Requests aliases */ {
-    //! using RawColorValueType = std::variant<std::monostate, std::string, std::vector<std::variant<int, double>>>;
-    //! using ColorPaletteValueType = std::vector<RawColorValueType>;
-    //! using RawSizeValueType = std::variant<std::monostate, int, double>;
-
     using RequestInnerArrayValueType = std::variant<std::monostate, std::string, int, double, bool>;
     using RequestArrayValueType = std::variant<std::monostate, std::string, int, double, bool, std::vector<RequestInnerArrayValueType>>;
     using RequestDictValueType = std::variant<std::monostate, std::string, int, double, bool, std::vector<RequestInnerArrayValueType>>;
@@ -50,13 +47,102 @@ namespace transport_catalogue::io /* Requests aliases */ {
         using RequestValueTypeBase::variant;
         using ValueType = RequestValueTypeBase;
         using AtomicValueType = std::variant<std::monostate, std::string, int, double, bool>;
+        using Color = std::variant<std::string, std::vector<std::variant<uint8_t, double>>>;
+        using Array = std::vector<RequestArrayValueType>;
+        using InnerArray = std::vector<RequestInnerArrayValueType>;
 
         bool IsArray() const {
-            return std::holds_alternative<std::vector<RequestArrayValueType>>(*this);
+            return std::holds_alternative<Array>(*this);
         }
 
         bool IsDictionary() const {
             return std::holds_alternative<std::unordered_map<std::string, RequestDictValueType>>(*this);
+        }
+
+        std::optional<Color> ExtractColorIf() {
+            std::string* string_ptr = std::get_if<std::string>(this);
+            if (string_ptr != nullptr) {
+                assert(!string_ptr->empty());
+
+                return std::move(*string_ptr);
+            }
+
+            Array* rgb_ptr = std::get_if<Array>(std::move(this));
+            if (rgb_ptr != nullptr) {
+                assert(rgb_ptr->size() >= 3 && rgb_ptr->size() <= 4);
+                std::vector<std::variant<uint8_t, double>> rgb_result(rgb_ptr->size());
+                std::transform(
+                    std::make_move_iterator(rgb_ptr->begin()), std::make_move_iterator(rgb_ptr->end()), rgb_result.begin(), [](auto&& arg) {
+                        assert(std::holds_alternative<int>(arg) || std::holds_alternative<double>(arg));
+                        auto rgb_item = std::visit(
+                            [](auto&& arg) -> std::variant<uint8_t, double> {
+                                using T = std::decay_t<decltype(arg)>;
+                                if constexpr (detail::IsConvertibleV<T, std::variant<int, double>>) {
+                                    if constexpr (detail::IsSameV<T, int>) {
+                                        assert(arg >= 0 && arg <= std::numeric_limits<uint8_t>::max());
+                                        return static_cast<uint8_t>(std::move(arg));
+                                    } else {
+                                        assert(arg >= 0. && arg <= 1.);
+                                        return std::move(arg);
+                                    }
+                                } else {
+                                    throw std::invalid_argument("Invalid Rgb[a] item");
+                                }
+                            },
+                            arg);
+                        return rgb_item;
+                    });
+                return rgb_result;
+            }
+            return std::nullopt;
+        }
+
+        template <typename... Args>
+        static std::optional<std::variant<uint8_t, double>> ExtractRgbaColorItemIf(std::variant<Args...>&& value) {
+            return std::visit(
+                [](auto&& arg) -> std::optional<std::variant<uint8_t, double>> {
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (detail::IsConvertibleV<T, std::variant<int, double>>) {
+                        if constexpr (detail::IsSameV<T, int>) {
+                            assert(arg >= 0 && arg <= std::numeric_limits<uint8_t>::max());
+                            return static_cast<uint8_t>(std::move(arg));
+                        } else {
+                            assert(arg >= 0. && arg <= 1.);
+                            return std::move(arg);
+                        }
+                    } else {
+                        return std::nullopt;
+                    }
+                },
+                value);
+        }
+
+        template <
+            typename ArrayType, detail::EnableIf<!std::is_lvalue_reference_v<ArrayType> && detail::IsSameV<ArrayType, Array::value_type>> = true>
+        static std::optional<Color> ExtractColorIf(ArrayType&& value) {
+            std::string* string_ptr = std::get_if<std::string>(&value);
+            if (string_ptr != nullptr) {
+                assert(!string_ptr->empty());
+
+                return std::move(*string_ptr);
+            }
+
+            InnerArray* rgb_ptr = std::get_if<InnerArray>(std::move(&value));
+            if (rgb_ptr != nullptr) {
+                assert(rgb_ptr->size() >= 3 && rgb_ptr->size() <= 4);
+                std::vector<std::variant<uint8_t, double>> rgb_result(rgb_ptr->size());
+                std::transform(
+                    std::make_move_iterator(rgb_ptr->begin()), std::make_move_iterator(rgb_ptr->end()), rgb_result.begin(), [](auto&& arg) {
+                        assert(std::holds_alternative<int>(arg) || std::holds_alternative<double>(arg));
+                        auto rgb_item = ExtractRgbaColorItemIf(std::move(arg));
+                        if (!rgb_item.has_value()) {
+                            throw std::invalid_argument("Invalid RGB(a) color item");
+                        }
+                        return rgb_item.value();
+                    });
+                return rgb_result;
+            }
+            return std::nullopt;
         }
     };
 
@@ -64,7 +150,6 @@ namespace transport_catalogue::io /* Requests aliases */ {
 }
 
 namespace transport_catalogue::io /* Requests field enums */ {
-
     enum class RequestType : int8_t { BASE, STAT, RENDER_SETTINGS, UNKNOWN };
 
     enum class RequestCommand : uint8_t { STOP, BUS, MAP, SET_SETTINGS, UNKNOWN };
@@ -143,11 +228,12 @@ namespace transport_catalogue::io /* RawRequest */ {
         using RequestBase::unordered_map;
         using ValueType = RequestBase::mapped_type;
         using ItemType = RequestBase::value_type;
+        using KeyType = RequestBase::key_type;
         using Array = std::vector<RequestArrayValueType>;
         using InnerArray = std::vector<RequestInnerArrayValueType>;
         using Dict = std::unordered_map<std::string, RequestDictValueType>;
-        using NullValie = std::monostate;
-        using Color = std::variant<std::string, std::vector<std::variant<uint8_t, double>>>;
+        using NullValue = std::monostate;
+        using Color = ValueType::Color;
 
     public:
         RawRequest(const RawRequest& other) = default;
@@ -193,6 +279,19 @@ namespace transport_catalogue::io /* RawRequest */ {
             }
             auto* result_ptr = std::get_if<ReturnType>(std::move(&ptr->second));
             return result_ptr ? std::move(result_ptr) : nullptr;
+        }
+
+        template <
+            typename ReturnType = ValueType, typename KeyType,
+            detail::EnableIf<detail::IsConvertibleV<KeyType, RawRequest::KeyType> && detail::IsSameV<ReturnType, ValueType>> = true>
+        ValueType Extract(KeyType&& key) {
+            auto it = find(std::forward<KeyType>(key));
+
+            if (it == end()) {
+                return NullValue();
+            }
+
+            return std::move(extract(it).mapped());
         }
 
         template <
@@ -248,7 +347,7 @@ namespace transport_catalogue::io /* RawRequest */ {
         }
 
         template <typename KeyType>
-        std::optional<double> ExtractNumberValue(KeyType&& key) {
+        std::optional<double> ExtractNumberValueIf(KeyType&& key) {
             auto it = find(std::forward<KeyType>(key));
 
             if (it == end()) {
@@ -270,7 +369,7 @@ namespace transport_catalogue::io /* RawRequest */ {
         }
 
         template <typename KeyType>
-        std::optional<Color> ExtractColorValue(KeyType&& key) {
+        std::optional<Color> ExtractColorValueIf(KeyType&& key) {
             auto it = find(std::forward<KeyType>(key));
 
             if (it == end()) {
@@ -279,6 +378,7 @@ namespace transport_catalogue::io /* RawRequest */ {
 
             ValueType value = std::move(extract(it).mapped());
 
+            /*
             std::string* string_ptr = std::get_if<std::string>(&value);
             if (string_ptr != nullptr) {
                 assert(!string_ptr->empty());
@@ -315,6 +415,32 @@ namespace transport_catalogue::io /* RawRequest */ {
                 return rgb_result;
             }
             return std::nullopt;
+            */
+
+            auto color = value.ExtractColorIf();
+            return color;
+        }
+
+        template <typename KeyType>
+        std::optional<std::vector<Color>> ExtractColorPaletteIf(KeyType&& key) {
+            std::optional<std::vector<Color>> result = std::nullopt;
+
+            auto array = ExtractIf<Array>(std::forward<KeyType>(key));
+            if (!array.has_value()) {
+                return std::nullopt;
+            }
+
+            std::vector<Color> color_palette;
+            color_palette.reserve(array.value().size());
+            std::for_each(
+                std::make_move_iterator(array.value().begin()), std::make_move_iterator(array.value().end()), [&color_palette](auto&& raw_color) {
+                    std::optional<Color> color = RawRequest::ValueType::ExtractColorIf(std::move(raw_color));
+                    if ((assert(color.has_value()), color.has_value())) {
+                        color_palette.emplace_back(std::move(color.value()));
+                    }
+                });
+
+            return color_palette;
         }
 
         template <typename Filter = ValueType, typename... Args>
@@ -325,7 +451,21 @@ namespace transport_catalogue::io /* RawRequest */ {
                     if constexpr (detail::IsConvertibleV<T, Filter>) {
                         return std::move(arg);
                     } else {
-                        return NullValie();
+                        return NullValue();
+                    }
+                },
+                value);
+        }
+
+        template <typename Filter = Array, typename... Args>
+        static std::optional<Array> CastToArray(std::variant<Args...>&& value) {
+            return std::visit(
+                [](auto&& arg) -> std::optional<Array> {
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (detail::IsConvertibleV<T, Filter>) {
+                        return std::move(arg);
+                    } else {
+                        return std::nullopt;
                     }
                 },
                 value);
@@ -517,145 +657,19 @@ namespace transport_catalogue::io /* Requests */ {
         }
 
     protected:
-        /*static std::optional<double> GetNumberValue(const Request::RequestArgsMap::mapped_type& value) {
-            const double* double_ptr = std::get_if<double>(&value);
-            if (double_ptr != nullptr) {
-                return *double_ptr;
-            }
-            const int* int_ptr = std::get_if<int>(&value);
-            if (int_ptr != nullptr) {
-                return *int_ptr;
-            }
-            return std::nullopt;
-        }*/
-
-        static std::optional<Color> GetColorValue(Request::RequestArgsMap::mapped_type&& value) {
-            const std::string* string_ptr = std::get_if<std::string>(&value);
-            if (string_ptr != nullptr) {
-                assert(!string_ptr->empty());
-
-                return std::move(*string_ptr);
-            }
-            const Array* rgb_ptr = std::get_if<Array>(std::move(&value));
-            if (rgb_ptr != nullptr) {
-                assert(rgb_ptr->size() >= 3 && rgb_ptr->size() <= 4);
-                std::vector<std::variant<uint8_t, double>> rgb_result(rgb_ptr->size());
-                std::transform(
-                    std::make_move_iterator(rgb_ptr->begin()), std::make_move_iterator(rgb_ptr->end()), rgb_result.begin(), [](auto&& arg) {
-                        assert(std::holds_alternative<int>(arg) || std::holds_alternative<double>(arg));
-                        auto rgb_item = std::visit(
-                            [](auto&& arg) -> std::variant<uint8_t, double> {
-                                using T = std::decay_t<decltype(arg)>;
-                                if constexpr (detail::IsConvertibleV<T, std::variant<int, double>>) {
-                                    if constexpr (detail::IsSameV<T, int>) {
-                                        assert(arg >= 0 && arg <= std::numeric_limits<uint8_t>::max());
-                                        return static_cast<uint8_t>(std::move(arg));
-                                    } else {
-                                        assert(arg >= 0. && arg <= 1.);
-                                        return std::move(arg);
-                                    }
-                                } else {
-                                    throw std::invalid_argument("Invalid Rgb[a] item");
-                                }
-                            },
-                            arg);
-                        // assert(rgb_item >= 0 && rgb_item <= std::numeric_limits<uint8_t>::max());
-                        return rgb_item;
-                    });
-                return rgb_result;
-            }
-            return std::nullopt;
-        }
-
         void Build() override {
-            {
-                width_ = args_.ExtractNumberValue(RenderSettingsRequestFields::WIDTH);
-                /*
-                auto width_ptr = args_.find(RenderSettingsRequestFields::WIDTH);
-                width_ = width_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(width_ptr).mapped())) : std::nullopt;
-                */
-            }
-            {
-                height_ = args_.ExtractNumberValue(RenderSettingsRequestFields::HEIGHT);
-                /*
-                auto height_ptr = args_.find(RenderSettingsRequestFields::HEIGHT);
-                height_ = height_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(height_ptr).mapped())) : std::nullopt;
-                */
-            }
-            {
-                padding_ = args_.ExtractNumberValue(RenderSettingsRequestFields::PADDING);
-                /*
-                auto padding_ptr = args_.find(RenderSettingsRequestFields::PADDING);
-                padding_ = padding_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(padding_ptr).mapped())) : std::nullopt;
-                */
-            }
-            {
-                stop_radius_ = args_.ExtractNumberValue(RenderSettingsRequestFields::STOP_RADIUS);
-                /*
-                auto stop_radius_ptr = args_.find(RenderSettingsRequestFields::STOP_RADIUS);
-                stop_radius_ = stop_radius_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(stop_radius_ptr).mapped())) : std::nullopt;
-                */
-            }
-            {
-                line_width_ = args_.ExtractNumberValue(RenderSettingsRequestFields::LINE_WIDTH);
-                /*
-                auto line_width_ptr = args_.find(RenderSettingsRequestFields::LINE_WIDTH);
-                line_width_ = line_width_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(line_width_ptr).mapped())) : std::nullopt;
-                */
-            }
-            {
-                bus_label_font_size_ = args_.ExtractIf<int>(RenderSettingsRequestFields::BUS_LABEL_FONT_SIZE);
-                /*
-                auto bus_label_font_size_ptr = args_.find(RenderSettingsRequestFields::BUS_LABEL_FONT_SIZE);
-                bus_label_font_size_ = bus_label_font_size_ptr != args_.end()
-                                           ? std::optional<int>(
-                                                 (assert(std::holds_alternative<int>(bus_label_font_size_ptr->second)),
-                                                  std::get<int>(std::move(args_.extract(bus_label_font_size_ptr).mapped()))))
-                                           : std::nullopt;
-                                           */
-            }
-            {
-                bus_label_offset_ = args_.ExtractNumberValue(RenderSettingsRequestFields::BUS_LABEL_OFFSET);
-                /*
-                auto bus_label_offset_ptr = args_.find(RenderSettingsRequestFields::BUS_LABEL_OFFSET);
-                bus_label_offset_ =
-                    bus_label_offset_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(bus_label_offset_ptr).mapped())) : std::nullopt;
-                    */
-            }
-            {
-                bus_label_font_size_ = args_.ExtractIf<int>(RenderSettingsRequestFields::STOP_LABEL_FONT_SIZE);
-                /*
-                auto stop_label_font_size_ptr = args_.find(RenderSettingsRequestFields::STOP_LABEL_FONT_SIZE);
-                stop_label_font_size_ = stop_label_font_size_ptr != args_.end()
-                                            ? std::optional<int>(
-                                                  (assert(std::holds_alternative<int>(stop_label_font_size_ptr->second)),
-                                                   std::get<int>(std::move(args_.extract(stop_label_font_size_ptr).mapped()))))
-                                            : std::nullopt;*/
-            }
-            {
-                stop_label_offset_ = args_.ExtractNumberValue(RenderSettingsRequestFields::STOP_LABEL_OFFSET);
-                /*
-                auto stop_label_offset_ptr = args_.find(RenderSettingsRequestFields::STOP_LABEL_OFFSET);
-                stop_label_offset_ =
-                    stop_label_offset_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(stop_label_offset_ptr).mapped())) : std::nullopt;
-                    */
-            }
-            {
-                stop_label_offset_ = args_.ExtractNumberValue(RenderSettingsRequestFields::UNDERLAYER_WIDTH);
-                /*
-                auto underlayer_width_ptr = args_.find(RenderSettingsRequestFields::UNDERLAYER_WIDTH);
-                underlayer_width_ =
-                    underlayer_width_ptr != args_.end() ? GetNumberValue(std::move(args_.extract(underlayer_width_ptr).mapped())) : std::nullopt;
-                    */
-            }
-            {
-                underlayer_color_ = args_.ExtractColorValue(RenderSettingsRequestFields::UNDERLAYER_COLOR);
-                /*
-                auto underlayer_color_ptr = args_.find(RenderSettingsRequestFields::UNDERLAYER_COLOR);
-                underlayer_color_ =
-                    underlayer_color_ptr != args_.end() ? GetColorValue(std::move(args_.extract(underlayer_color_ptr).mapped())) : std::nullopt;
-                    */
-            }
+            width_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::WIDTH);
+            height_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::HEIGHT);
+            padding_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::PADDING);
+            stop_radius_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::STOP_RADIUS);
+            line_width_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::LINE_WIDTH);
+            bus_label_font_size_ = args_.ExtractIf<int>(RenderSettingsRequestFields::BUS_LABEL_FONT_SIZE);
+            bus_label_offset_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::BUS_LABEL_OFFSET);
+            bus_label_font_size_ = args_.ExtractIf<int>(RenderSettingsRequestFields::STOP_LABEL_FONT_SIZE);
+            stop_label_offset_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::STOP_LABEL_OFFSET);
+            stop_label_offset_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::UNDERLAYER_WIDTH);
+            underlayer_color_ = args_.ExtractColorValueIf(RenderSettingsRequestFields::UNDERLAYER_COLOR);
+            color_palette_ = args_.ExtractColorPaletteIf(RenderSettingsRequestFields::COLOR_PALETTE);
             /*{
                 //! Not implemented yet
                 auto color_palette_ptr = args_.find(RenderSettingsRequestFields::COLOR_PALETTE);
@@ -681,7 +695,7 @@ namespace transport_catalogue::io /* Requests */ {
         std::optional<double> underlayer_width_;
         std::optional<Color> underlayer_color_;
 
-        std::vector<Color> color_palette_;
+        std::optional<std::vector<Color>> color_palette_;
     };
 }
 
