@@ -383,12 +383,80 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         response_sender_.Send(std::move(responses));
     }
 
+    void RequestHandler::ExecuteRequest(RenderSettingsRequest&& request) const {
+        maps::RenderSettings settings = SettingsBuilder::BuildMapRenderSettings(std::move(request));
+        renderer_.SetRenderSettings(std::move(settings));
+    }
+
     void RequestHandler::SendStatResponse(StatResponse&& response) const {
         response_sender_.Send(std::move(response));
     }
 
     void RequestHandler::SendStatResponse(std::vector<StatResponse>&& responses) const {
         response_sender_.Send(std::move(responses));
+    }
+
+    void RequestHandler::RenderMap(/*maps::RenderSettings settings*/) const {
+        const auto& all_stops = db_reader_.GetDataReader().GetStopsTable();
+        std::vector<geo::Coordinates> points{all_stops.size()};
+        std::transform(all_stops.begin(), all_stops.end(), points.begin(), [](const auto& stop) {
+            return stop.coordinates;
+        });
+        geo::MockProjection projection = geo::MockProjection::CalculateFromParams(std::move(points), {renderer_.GetRenderSettings().map_size}, renderer_.GetRenderSettings().padding);
+
+        renderer_.UpdateMapProjection(projection);
+        const data::BusRecord bus = db_reader_.GetDataReader().GetBus(all_stops.front().name);
+        renderer_.DrawTransportTracksLayer(bus);
+    }
+}
+
+namespace transport_catalogue::io /* RequestHandler::SettingsBuilder implementation */ {
+
+    maps::RenderSettings RequestHandler::SettingsBuilder::BuildMapRenderSettings(RenderSettingsRequest&& request) {
+        maps::RenderSettings settings;
+
+        assert(request.GetHeight().has_value() && request.GetWidth().has_value());
+        settings.map_size = {std::move(request.GetHeight()).value(), std::move(request.GetWidth().value())};
+
+        settings.line_width = std::move(request.GetLineWidth().value_or(0.));
+        settings.padding = std::move(request.GetPadding().value_or(0.));
+        settings.underlayer_width = std::move(request.GetUnderlayerWidth().value_or(0.));
+
+        auto raw_underlayer_color = std::move(request.GetUnderlayerColor());
+        if (!raw_underlayer_color.has_value()) {
+            settings.underlayer_color = {};
+        } else {
+            std::optional<maps::Color> color = ConvertColor(std::move(raw_underlayer_color.value()));
+
+            assert(color.has_value());
+            settings.underlayer_color = std::move(color.value());
+        }
+
+        settings.stop_label_font_size = std::move(request.GetStopLabelFontSize().value_or(0));
+        auto stop_label_offset = std::move(request.GetStopLabelOffset());
+        if ((assert(stop_label_offset.has_value()), stop_label_offset.has_value())) {
+            settings.stop_label_offset = {stop_label_offset.value()[0], stop_label_offset.value()[1]};
+        }
+
+        settings.bus_label_font_size = std::move(request.GetBusLabelFontSize().value_or(0));
+        auto bus_label_offset = std::move(request.GetStopLabelOffset());
+        if ((assert(bus_label_offset.has_value()), bus_label_offset.has_value())) {
+            settings.bus_label_offset = {bus_label_offset.value()[0], bus_label_offset.value()[1]};
+        }
+
+        settings.stop_marker_radius = std::move(request.GetStopRadius().value_or(0.));
+
+        auto raw_color_palette = std::move(request.GetColorPalette());
+        if (raw_color_palette.has_value()) {
+            std::for_each(
+                std::make_move_iterator(raw_color_palette->begin()), std::make_move_iterator(raw_color_palette->end()),
+                [&color_palette = settings.color_palette](auto&& raw_color) {
+                    auto color = ConvertColor(std::move(raw_color));
+                    color_palette.emplace_back((assert(color.has_value()), std::move(color.value())));
+                });
+        }
+
+        return settings;
     }
 }
 
@@ -476,6 +544,55 @@ namespace transport_catalogue::io /* StatResponse implementation */ {
 }
 
 namespace transport_catalogue::io /* RenderSettingsRequest implementation */ {
+    bool RenderSettingsRequest::IsBaseRequest() const {
+        return false;
+    }
+
+    bool RenderSettingsRequest::IsStatRequest() const {
+        return false;
+    }
+
+    bool RenderSettingsRequest::IsValidRequest() const {
+        throw std::runtime_error("Not implemented");
+    }
+
+    std::optional<double>& RenderSettingsRequest::GetWidth() {
+        return width_;
+    }
+    std::optional<double>& RenderSettingsRequest::GetHeight() {
+        return height_;
+    }
+    std::optional<double>& RenderSettingsRequest::GetPadding() {
+        return padding_;
+    }
+    std::optional<double>& RenderSettingsRequest::GetStopRadius() {
+        return stop_radius_;
+    }
+    std::optional<double>& RenderSettingsRequest::GetLineWidth() {
+        return line_width_;
+    }
+    std::optional<int>& RenderSettingsRequest::GetBusLabelFontSize() {
+        return bus_label_font_size_;
+    }
+    std::optional<RenderSettingsRequest::Offset>& RenderSettingsRequest::GetBusLabelOffset() {
+        return bus_label_offset_;
+    }
+    std::optional<int>& RenderSettingsRequest::GetStopLabelFontSize() {
+        return stop_label_font_size_;
+    }
+    std::optional<RenderSettingsRequest::Offset>& RenderSettingsRequest::GetStopLabelOffset() {
+        return stop_label_offset_;
+    }
+    std::optional<double>& RenderSettingsRequest::GetUnderlayerWidth() {
+        return underlayer_width_;
+    }
+    std::optional<RenderSettingsRequest::Color>& RenderSettingsRequest::GetUnderlayerColor() {
+        return underlayer_color_;
+    }
+    std::optional<std::vector<RenderSettingsRequest::Color>>& RenderSettingsRequest::GetColorPalette() {
+        return color_palette_;
+    }
+
     void RenderSettingsRequest::Build() {
         width_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::WIDTH);
         height_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::HEIGHT);

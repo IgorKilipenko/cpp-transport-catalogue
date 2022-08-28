@@ -19,6 +19,7 @@
 #include <variant>
 #include <vector>
 
+#include "detail/type_traits.h"
 #include "domain.h"
 #include "geo.h"
 #include "map_renderer.h"
@@ -363,54 +364,24 @@ namespace transport_catalogue::io /* Requests */ {
 
         explicit RenderSettingsRequest(RawRequest&& raw_request) : RenderSettingsRequest(RequestCommand::SET_SETTINGS, "", std::move(raw_request)) {}
 
-        bool IsBaseRequest() const override {
-            return false;
-        }
+        bool IsBaseRequest() const override;
 
-        bool IsStatRequest() const override {
-            return false;
-        }
+        bool IsStatRequest() const override;
 
-        bool IsValidRequest() const override {
-            throw std::runtime_error("Not implemented");
-        }
+        bool IsValidRequest() const override;
 
-        std::optional<double>& GetWidth() {
-            return width_;
-        }
-        std::optional<double>& GetHeight() {
-            return height_;
-        }
-        std::optional<double>& GetPadding() {
-            return padding_;
-        }
-        std::optional<double>& GetStopRadius() {
-            return stop_radius_;
-        }
-        std::optional<double>& GetLineWidth() {
-            return line_width_;
-        }
-        std::optional<int>& GetBusLabelFontSize() {
-            return bus_label_font_size_;
-        }
-        std::optional<Offset>& GetBusLabelOffset() {
-            return bus_label_offset_;
-        }
-        std::optional<int>& GetStopLabelFontSize() {
-            return stop_label_font_size_;
-        }
-        std::optional<Offset>& GetStopLabelOffset() {
-            return stop_label_offset_;
-        }
-        std::optional<double>& GetUnderlayerWidth() {
-            return underlayer_width_;
-        }
-        std::optional<Color>& GetUnderlayerColor() {
-            return underlayer_color_;
-        }
-        std::optional<std::vector<Color>>& GetColorPalette() {
-            return color_palette_;
-        }
+        std::optional<double>& GetWidth();
+        std::optional<double>& GetHeight();
+        std::optional<double>& GetPadding();
+        std::optional<double>& GetStopRadius();
+        std::optional<double>& GetLineWidth();
+        std::optional<int>& GetBusLabelFontSize();
+        std::optional<Offset>& GetBusLabelOffset();
+        std::optional<int>& GetStopLabelFontSize();
+        std::optional<Offset>& GetStopLabelOffset();
+        std::optional<double>& GetUnderlayerWidth();
+        std::optional<Color>& GetUnderlayerColor();
+        std::optional<std::vector<Color>>& GetColorPalette();
 
     protected:
         void Build() override;
@@ -536,87 +507,9 @@ namespace transport_catalogue::io /* RequestHandler */ {
 #endif
         };
 
-        class SettingsBuilder {
-        public:
-            static maps::RenderSettings BuildMapRenderSettings(RenderSettingsRequest&& request) {
-                maps::RenderSettings settings;
+        class SettingsBuilder;
 
-                assert(request.GetHeight().has_value() && request.GetWidth().has_value());
-                settings.map_size = {std::move(request.GetHeight()).value(), std::move(request.GetWidth().value())};
-
-                settings.line_width = std::move(request.GetLineWidth().value_or(0.));
-                settings.padding = std::move(request.GetPadding().value_or(0.));
-                settings.underlayer_width = std::move(request.GetUnderlayerWidth().value_or(0.));
-
-                auto raw_underlayer_color = std::move(request.GetUnderlayerColor());
-                if (!raw_underlayer_color.has_value()) {
-                    settings.underlayer_color = {};
-                } else {
-                    std::optional<maps::Color> color = ConvertColor(std::move(raw_underlayer_color.value()));
-
-                    assert(color.has_value());
-                    settings.underlayer_color = std::move(color.value());
-                }
-
-                settings.stop_label_font_size = std::move(request.GetStopLabelFontSize().value_or(0));
-                auto stop_label_offset = std::move(request.GetStopLabelOffset());
-                if ((assert(stop_label_offset.has_value()), stop_label_offset.has_value())) {
-                    settings.stop_label_offset = {stop_label_offset.value()[0], stop_label_offset.value()[1]};
-                }
-
-                settings.bus_label_font_size = std::move(request.GetBusLabelFontSize().value_or(0));
-                auto bus_label_offset = std::move(request.GetStopLabelOffset());
-                if ((assert(bus_label_offset.has_value()), bus_label_offset.has_value())) {
-                    settings.bus_label_offset = {bus_label_offset.value()[0], bus_label_offset.value()[1]};
-                }
-
-                settings.stop_marker_radius = std::move(request.GetStopRadius().value_or(0.));
-
-                auto raw_color_palette = std::move(request.GetColorPalette());
-                if (raw_color_palette.has_value()) {
-                    std::for_each(
-                        std::make_move_iterator(raw_color_palette->begin()), std::make_move_iterator(raw_color_palette->end()),
-                        [&color_palette = settings.color_palette](auto&& raw_color) {
-                            auto color = ConvertColor(std::move(raw_color));
-                            color_palette.emplace_back((assert(color.has_value()), std::move(color.value())));
-                        });
-                }
-
-                return settings;
-            }
-
-        private:
-            static std::optional<maps::Color> ConvertColor(RawRequest::Color&& raw_color) {
-                return std::visit(
-                    [](auto&& arg) -> std::optional<maps::Color> {
-                        using T = std::decay_t<decltype(arg)>;
-                        if constexpr (detail::IsConvertibleV<T, maps::Color>) {
-                            return std::move(arg);
-                        } else if constexpr (detail::IsConvertibleV<T, std::vector<std::variant<uint8_t, double>>>) {
-                            if (arg.size() == 3) {
-                                return svg::Rgb::FromVariant(std::move(arg));
-                            } else if (arg.size() > 3) {
-                                return svg::Rgba::FromVariant(std::move(arg));
-                            }
-                        }
-                        return std::nullopt;
-                    },
-                    std::move(raw_color));
-            }
-        };
-
-        void RenderMap(maps::RenderSettings settings) const {
-            const auto& all_stops = db_reader_.GetDataReader().GetStopsTable();
-            std::vector<geo::Coordinates> points{all_stops.size()};
-            std::transform(all_stops.begin(), all_stops.end(), points.begin(), [](const auto& stop) {
-                return stop.coordinates;
-            });
-            geo::MockProjection projection = geo::MockProjection::CalculateFromParams(std::move(points), {settings.map_size}, settings.padding);
-
-            renderer_.UpdateMapProjection(projection);
-            const data::BusRecord bus = db_reader_.GetDataReader().GetBus(all_stops.front().name);
-            renderer_.DrawTransportTracksLayer(bus);
-        }
+        void RenderMap(/*maps::RenderSettings settings*/) const;
 
         void OnBaseRequest(std::vector<RawRequest>&& requests) const override;
 
@@ -636,10 +529,8 @@ namespace transport_catalogue::io /* RequestHandler */ {
         /// Execute Stat (Get) requests
         void ExecuteRequest(std::vector<StatRequest>&& stat_req) const;
 
-        void ExecuteRequest(RenderSettingsRequest&& request) const {
-            maps::RenderSettings settings = SettingsBuilder::BuildMapRenderSettings(std::move(request));
-            renderer_.SetRenderSettings(std::move(settings));
-        }
+        /// Execute RenderSettings (Set) request
+        void ExecuteRequest(RenderSettingsRequest&& request) const;
 
         /// Send Stat Response
         void SendStatResponse(StatResponse&& response) const;
@@ -648,11 +539,21 @@ namespace transport_catalogue::io /* RequestHandler */ {
         void SendStatResponse(std::vector<StatResponse>&& responses) const;
 
     private:
-        // RequestHandler использует агрегацию объектов "Транспортный Справочник" и "Визуализатор Карты"
         const data::ITransportStatDataReader& db_reader_;
         const data::ITransportDataWriter& db_writer_;
         const IStatResponseSender& response_sender_;
         io::renderer::IRenderer& renderer_;
+    };
+}
+
+namespace transport_catalogue::io /* RequestHandler::SettingsBuilder */ {
+
+    class RequestHandler::SettingsBuilder {
+    public:
+        static maps::RenderSettings BuildMapRenderSettings(RenderSettingsRequest&& request);
+
+        template <typename RawColor_, detail::EnableIf<!std::is_lvalue_reference_v<RawColor_>> = true>
+        static std::optional<maps::Color> ConvertColor(RawColor_&& raw_color);
     };
 }
 
@@ -861,5 +762,27 @@ namespace transport_catalogue::io /* RawRequest template implementation */ {
         auto second_val = ValueType::ExtractNumericIf(std::move(array->back()));
 
         return Offset{first_val.value(), second_val.value()};
+    }
+}
+
+namespace transport_catalogue::io /* RequestHandler::SettingsBuilder template implementation */ {
+
+    template <typename RawColor_, detail::EnableIf<!std::is_lvalue_reference_v<RawColor_>>>
+    std::optional<maps::Color> RequestHandler::SettingsBuilder::ConvertColor(RawColor_ && raw_color) {
+        return std::visit(
+            [](auto&& arg) -> std::optional<maps::Color> {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (detail::IsConvertibleV<T, maps::Color>) {
+                    return std::move(arg);
+                } else if constexpr (detail::IsConvertibleV<T, std::vector<std::variant<uint8_t, double>>>) {
+                    if (arg.size() == 3) {
+                        return svg::Rgb::FromVariant(std::move(arg));
+                    } else if (arg.size() > 3) {
+                        return svg::Rgba::FromVariant(std::move(arg));
+                    }
+                }
+                return std::nullopt;
+            },
+            std::move(raw_color));
     }
 }
