@@ -416,16 +416,7 @@ namespace transport_catalogue::io /* StatRequest implementation */ {
         if (name_.empty()) {
             name_ = "TransportLayer";
         }
-        //! auto* request_id_ptr = args_.ExtractIf<int>(StatRequestFields::ID);
-        //! request_id_ = request_id_ptr ? std::optional<int>(*request_id_ptr) : std::nullopt;
         request_id_ = args_.ExtractIf<int>(StatRequestFields::ID);
-
-        /*
-        auto request_id__ptr = args_.find(StatRequestFields::ID);
-        request_id_ = request_id__ptr != args_.end() ? std::optional<int>(
-                                                           (assert(std::holds_alternative<int>(request_id__ptr->second)),
-                                                            std::get<int>(std::move(args_.extract(request_id__ptr).mapped()))))
-                                                     : std::nullopt;*/
     }
 }
 
@@ -491,11 +482,11 @@ namespace transport_catalogue::io /* RenderSettingsRequest implementation */ {
         stop_radius_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::STOP_RADIUS);
         line_width_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::LINE_WIDTH);
         bus_label_font_size_ = args_.ExtractIf<int>(RenderSettingsRequestFields::BUS_LABEL_FONT_SIZE);
-        bus_label_offset_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::BUS_LABEL_OFFSET);
+        bus_label_offset_ = args_.ExtractOffestValueIf(RenderSettingsRequestFields::BUS_LABEL_OFFSET);
         bus_label_font_size_ = args_.ExtractIf<int>(RenderSettingsRequestFields::STOP_LABEL_FONT_SIZE);
-        stop_label_offset_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::STOP_LABEL_OFFSET);
-        stop_label_offset_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::UNDERLAYER_WIDTH);
+        stop_label_offset_ = args_.ExtractOffestValueIf(RenderSettingsRequestFields::STOP_LABEL_OFFSET);
         underlayer_color_ = args_.ExtractColorValueIf(RenderSettingsRequestFields::UNDERLAYER_COLOR);
+        underlayer_width_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::UNDERLAYER_WIDTH);
         color_palette_ = args_.ExtractColorPaletteIf(RenderSettingsRequestFields::COLOR_PALETTE);
     }
 }
