@@ -22,17 +22,7 @@
 #include "svg.h"
 #include "transport_catalogue.h"
 
-namespace transport_catalogue::io::renderer /* MapRenderer */ {
 
-    class IRenderer {
-    public:
-        virtual void UpdateMapProjection(geo::Projection projection) = 0;
-        // virtual void DrawTransportTracksLayer(std::vector<data::BusRecord>&& records) = 0;
-        virtual void DrawTransportTracksLayer(data::BusRecord bus) = 0;
-        virtual void DrawTransportStopsLayer(std::vector<data::BusRecord>&& records) = 0;
-        virtual ~IRenderer() = default;
-    };
-}
 
 namespace transport_catalogue::maps /* Aliases */ {
     using Color = svg::Color;
@@ -202,6 +192,19 @@ namespace transport_catalogue::maps {
     };
 }
 
+namespace transport_catalogue::io::renderer /* IRenderer */ {
+
+    class IRenderer {
+    public:
+        virtual void UpdateMapProjection(geo::Projection projection) = 0;
+        // virtual void DrawTransportTracksLayer(std::vector<data::BusRecord>&& records) = 0;
+        virtual void DrawTransportTracksLayer(data::BusRecord bus) = 0;
+        virtual void DrawTransportStopsLayer(std::vector<data::BusRecord>&& records) = 0;
+        virtual void SetRenderSettings(maps::RenderSettings&& settings) = 0;
+        virtual ~IRenderer() = default;
+    };
+}
+
 namespace transport_catalogue::maps /* MapRenderer */ {
     class MapRenderer : public io::renderer::IRenderer {
     public:
@@ -312,8 +315,14 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
         void DrawTransportStopsLayer(std::vector<data::BusRecord>&& records) override {}
 
+        void SetRenderSettings(RenderSettings&& settings) override {
+            settings_ = std::move(settings);
+            UpdateLayers();
+        }
+
     private:
         MapLayer transport_layer_;
         geo::Projection* projection_;
+        RenderSettings settings_;
     };
 }
