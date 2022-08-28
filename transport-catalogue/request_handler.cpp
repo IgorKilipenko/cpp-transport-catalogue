@@ -16,6 +16,21 @@
 
 #include "domain.h"
 
+namespace transport_catalogue::io /* RequestValueType implementation */ {
+
+    bool RequestValueType::IsArray() const {
+        return std::holds_alternative<Array>(*this);
+    }
+
+    bool RequestValueType::IsDictionary() const {
+        return std::holds_alternative<std::unordered_map<std::string, RequestDictValueType>>(*this);
+    }
+
+    std::optional<RequestValueType::Color> RequestValueType::ExtractColorIf() {
+        return RequestValueType::ExtractColorIf(std::move(*this));
+    }
+}
+
 namespace transport_catalogue::io /* BaseRequest implementation */ {
     const std::vector<std::string>& BaseRequest::GetStops() const {
         return stops_;
@@ -465,5 +480,22 @@ namespace transport_catalogue::io /* StatResponse implementation */ {
 
     bool StatResponse::IsStatResponse() const {
         return true;
+    }
+}
+
+namespace transport_catalogue::io /* RenderSettingsRequest implementation */ {
+    void RenderSettingsRequest::Build() {
+        width_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::WIDTH);
+        height_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::HEIGHT);
+        padding_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::PADDING);
+        stop_radius_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::STOP_RADIUS);
+        line_width_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::LINE_WIDTH);
+        bus_label_font_size_ = args_.ExtractIf<int>(RenderSettingsRequestFields::BUS_LABEL_FONT_SIZE);
+        bus_label_offset_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::BUS_LABEL_OFFSET);
+        bus_label_font_size_ = args_.ExtractIf<int>(RenderSettingsRequestFields::STOP_LABEL_FONT_SIZE);
+        stop_label_offset_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::STOP_LABEL_OFFSET);
+        stop_label_offset_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::UNDERLAYER_WIDTH);
+        underlayer_color_ = args_.ExtractColorValueIf(RenderSettingsRequestFields::UNDERLAYER_COLOR);
+        color_palette_ = args_.ExtractColorPaletteIf(RenderSettingsRequestFields::COLOR_PALETTE);
     }
 }

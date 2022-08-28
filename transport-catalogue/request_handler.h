@@ -52,88 +52,27 @@ namespace transport_catalogue::io /* Requests aliases */ {
         using Dict = std::vector<RequestDictValueType>;
         using InnerArray = std::vector<RequestInnerArrayValueType>;
 
-        bool IsArray() const {
-            return std::holds_alternative<Array>(*this);
-        }
+        bool IsArray() const;
 
-        bool IsDictionary() const {
-            return std::holds_alternative<std::unordered_map<std::string, RequestDictValueType>>(*this);
-        }
+        bool IsDictionary() const;
 
-        std::optional<Color> ExtractColorIf() {
-            return RequestValueType::ExtractColorIf(std::move(*this));
-        }
+        std::optional<Color> ExtractColorIf();
 
         template <typename... Args>
-        static std::optional<std::variant<uint8_t, double>> ExtractRgbaColorItemIf(std::variant<Args...>&& value) {
-            return std::visit(
-                [](auto&& arg) -> std::optional<std::variant<uint8_t, double>> {
-                    using T = std::decay_t<decltype(arg)>;
-                    if constexpr (detail::IsConvertibleV<T, std::variant<int, double>>) {
-                        if constexpr (detail::IsSameV<T, int>) {
-                            assert(arg >= 0 && arg <= std::numeric_limits<uint8_t>::max());
-                            return static_cast<uint8_t>(std::move(arg));
-                        } else {
-                            assert(arg >= 0. && arg <= 1.);
-                            return std::move(arg);
-                        }
-                    } else {
-                        return std::nullopt;
-                    }
-                },
-                value);
-        }
+        static std::optional<std::variant<uint8_t, double>> ExtractRgbaColorItemIf(std::variant<Args...>&& value);
 
         template <
             typename ValueType,
             detail::EnableIf<
                 !std::is_lvalue_reference_v<ValueType> &&
                 (detail::IsConvertibleV<ValueType, Array::value_type> || detail::IsConvertibleV<ValueType, RequestValueType::ValueType>)> = true>
-        static std::optional<Color> ExtractColorIf(ValueType&& value) {
-            std::string* string_ptr = std::get_if<std::string>(&value);
-            if (string_ptr != nullptr) {
-                assert(!string_ptr->empty());
-
-                return std::move(*string_ptr);
-            }
-
-            const auto convert = [](auto&& rgb) -> std::vector<std::variant<uint8_t, double>> {
-                assert(rgb.size() >= 3 && rgb.size() <= 4);
-                std::vector<std::variant<uint8_t, double>> rgb_result(rgb.size());
-                std::transform(std::make_move_iterator(rgb.begin()), std::make_move_iterator(rgb.end()), rgb_result.begin(), [](auto&& arg) {
-                    assert(std::holds_alternative<int>(arg) || std::holds_alternative<double>(arg));
-                    auto rgb_item = ExtractRgbaColorItemIf(std::move(arg));
-                    if (!rgb_item.has_value()) {
-                        throw std::invalid_argument("Invalid RGB(a) color item");
-                    }
-                    return rgb_item.value();
-                });
-                return rgb_result;
-            };
-
-            if constexpr (detail::IsConvertibleV<ValueType, Array::value_type>) {
-                InnerArray* rgb_ptr = std::get_if<InnerArray>(std::move(&value));
-                if (rgb_ptr == nullptr) {
-                    return std::nullopt;
-                }
-                return convert(std::move(*rgb_ptr));
-
-            } else if constexpr (detail::IsConvertibleV<ValueType, RequestValueType::ValueType>) {
-                Array* rgb_ptr = std::get_if<Array>(std::move(&value));
-                if (rgb_ptr == nullptr) {
-                    return std::nullopt;
-                }
-                return convert(std::move(*rgb_ptr));
-            }
-
-            return std::nullopt;
-        }
+        static std::optional<Color> ExtractColorIf(ValueType&& value);
     };
 
     using RequestBase = std::unordered_map<std::string, RequestValueType>;
 }
 
-namespace transport_catalogue::io /* Requests field enums */ {
+namespace transport_catalogue::io /* Request fields enums */ {
     enum class RequestType : int8_t { BASE, STAT, RENDER_SETTINGS, UNKNOWN };
 
     enum class RequestCommand : uint8_t { STOP, BUS, MAP, SET_SETTINGS, UNKNOWN };
@@ -227,193 +166,64 @@ namespace transport_catalogue::io /* RawRequest */ {
 
         template <
             typename ReturnType, detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
-        static ReturnType& Get(const ValueType& v) noexcept {
-            assert(std::holds_alternative<ReturnType>(v));
-            return std::get<ReturnType>(v);
-        }
+        static ReturnType& Get(const ValueType& v) noexcept;
 
         template <
             typename ReturnType, detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
-        static ReturnType& Get(ValueType&& v) noexcept {
-            assert(std::holds_alternative<ReturnType>(v));
-            return std::get<ReturnType>(std::move(v));
-        }
+        static ReturnType& Get(ValueType&& v) noexcept;
 
         template <
             typename ReturnType, detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
-        static std::optional<ReturnType> GetIf(const ValueType& v) noexcept {
-            auto* result_ptr = std::get_if<ReturnType>(&v);
-            return result_ptr ? std::optional<ReturnType>(*result_ptr) : std::nullopt;
-        }
+        static std::optional<ReturnType> GetIf(const ValueType& v) noexcept;
 
         template <
             typename ReturnType, detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
-        static std::optional<ReturnType> GetIf(ValueType&& v) noexcept {
-            auto* result_ptr = std::get_if<ReturnType>(std::move(&v));
-            return result_ptr ? std::optional<ReturnType>{std::move(*result_ptr)} : std::nullopt;
-        }
+        static std::optional<ReturnType> GetIf(ValueType&& v) noexcept;
 
         template <
             typename ReturnType, typename KeyType,
             detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
-        ReturnType* MoveIf(KeyType&& key) noexcept {
-            auto ptr = find(std::forward<KeyType>(key));
-            if (ptr == end()) {
-                return nullptr;
-            }
-            auto* result_ptr = std::get_if<ReturnType>(std::move(&ptr->second));
-            return result_ptr ? std::move(result_ptr) : nullptr;
-        }
+        ReturnType* MoveIf(KeyType&& key) noexcept;
 
         template <
             typename ReturnType = ValueType, typename KeyType,
             detail::EnableIf<detail::IsConvertibleV<KeyType, RawRequest::KeyType> && detail::IsSameV<ReturnType, ValueType>> = true>
-        ValueType Extract(KeyType&& key) {
-            auto it = find(std::forward<KeyType>(key));
-
-            if (it == end()) {
-                return NullValue();
-            }
-
-            return std::move(extract(it).mapped());
-        }
+        ValueType Extract(KeyType&& key);
 
         template <
             typename ReturnType, typename KeyType,
             detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
-        std::optional<ReturnType> ExtractIf(KeyType&& key) noexcept {
-            auto ptr = find(std::forward<KeyType>(key));
-
-            if (ptr == end()) {
-                return std::nullopt;
-            }
-
-            assert(std::holds_alternative<ReturnType>(ptr->second));
-
-            auto mapped = std::move(extract(ptr).mapped());
-            auto* result_ptr = std::get_if<ReturnType>(std::move(&mapped));
-            return result_ptr ? std::optional<ReturnType>(std::move(*result_ptr)) : std::nullopt;
-        }
+        std::optional<ReturnType> ExtractIf(KeyType&& key) noexcept;
 
         template <
             typename ReturnType, typename KeyType,
             detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
-        ReturnType Extract(KeyType&& key) noexcept {
-            auto ptr = find(std::forward<KeyType>(key));
-
-            if (ptr == end()) {
-                return {};
-            }
-
-            assert(std::holds_alternative<ReturnType>(ptr->second));
-
-            return std::get<ReturnType>(std::move(extract(ptr).mapped()));
-        }
+        ReturnType Extract(KeyType&& key) noexcept;
 
         template <
             typename ReturnType, typename KeyType,
             detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
-        ReturnType ExtractWithThrow(KeyType&& key) {
-            assert(std::holds_alternative<ReturnType>(at(key)));
-            return std::get<ReturnType>(std::move(extract(key).mapped()));
-        }
+        ReturnType ExtractWithThrow(KeyType&& key);
 
         template <
             typename ReturnType, typename KeyType,
             detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
-        ReturnType* GetIf(KeyType&& key) noexcept {
-            auto ptr = find(std::forward<KeyType>(key));
-            if (ptr == end()) {
-                return nullptr;
-            }
-            auto* result_ptr = std::get_if<ReturnType>(ptr.second);
-            return result_ptr;
-        }
+        ReturnType* GetIf(KeyType&& key) noexcept;
 
         template <typename KeyType>
-        std::optional<double> ExtractNumberValueIf(KeyType&& key) {
-            auto it = find(std::forward<KeyType>(key));
-
-            if (it == end()) {
-                return std::nullopt;
-            }
-
-            ValueType value = std::move(extract(it).mapped());
-
-            const double* double_ptr = std::get_if<double>(&value);
-            if (double_ptr != nullptr) {
-                return *double_ptr;
-            }
-
-            const int* int_ptr = std::get_if<int>(&value);
-            if (int_ptr != nullptr) {
-                return *int_ptr;
-            }
-            return std::nullopt;
-        }
+        std::optional<double> ExtractNumberValueIf(KeyType&& key);
 
         template <typename KeyType>
-        std::optional<Color> ExtractColorValueIf(KeyType&& key) {
-            auto it = find(std::forward<KeyType>(key));
-
-            if (it == end()) {
-                return std::nullopt;
-            }
-
-            ValueType value = std::move(extract(it).mapped());
-            auto color = value.ExtractColorIf();
-            return color;
-        }
+        std::optional<Color> ExtractColorValueIf(KeyType&& key);
 
         template <typename KeyType>
-        std::optional<std::vector<Color>> ExtractColorPaletteIf(KeyType&& key) {
-            std::optional<std::vector<Color>> result = std::nullopt;
-
-            auto array = ExtractIf<Array>(std::forward<KeyType>(key));
-            if (!array.has_value()) {
-                return std::nullopt;
-            }
-
-            std::vector<Color> color_palette;
-            color_palette.reserve(array.value().size());
-            std::for_each(
-                std::make_move_iterator(array.value().begin()), std::make_move_iterator(array.value().end()), [&color_palette](auto&& raw_color) {
-                    std::optional<Color> color = RawRequest::ValueType::ExtractColorIf(std::move(raw_color));
-                    if ((assert(color.has_value()), color.has_value())) {
-                        color_palette.emplace_back(std::move(color.value()));
-                    }
-                });
-
-            return color_palette;
-        }
+        std::optional<std::vector<Color>> ExtractColorPaletteIf(KeyType&& key);
 
         template <typename Filter = ValueType, typename... Args>
-        static ValueType VariantCast(std::variant<Args...>&& value) {
-            return std::visit(
-                [](auto&& arg) -> ValueType {
-                    using T = std::decay_t<decltype(arg)>;
-                    if constexpr (detail::IsConvertibleV<T, Filter>) {
-                        return std::move(arg);
-                    } else {
-                        return NullValue();
-                    }
-                },
-                value);
-        }
+        static ValueType VariantCast(std::variant<Args...>&& value);
 
         template <typename Filter = Array, typename... Args>
-        static std::optional<Array> CastToArray(std::variant<Args...>&& value) {
-            return std::visit(
-                [](auto&& arg) -> std::optional<Array> {
-                    using T = std::decay_t<decltype(arg)>;
-                    if constexpr (detail::IsConvertibleV<T, Filter>) {
-                        return std::move(arg);
-                    } else {
-                        return std::nullopt;
-                    }
-                },
-                value);
-        }
+        static std::optional<Array> CastToArray(std::variant<Args...>&& value);
     };
 }
 
@@ -575,7 +385,7 @@ namespace transport_catalogue::io /* Requests */ {
         std::optional<int> request_id_;
     };
 
-    class RenderSettingsRequest : public Request /*, public IStatRequest*/ {
+    class RenderSettingsRequest : public Request {
     public:
         using Color = RawRequest::Color;
 
@@ -601,20 +411,7 @@ namespace transport_catalogue::io /* Requests */ {
         }
 
     protected:
-        void Build() override {
-            width_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::WIDTH);
-            height_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::HEIGHT);
-            padding_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::PADDING);
-            stop_radius_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::STOP_RADIUS);
-            line_width_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::LINE_WIDTH);
-            bus_label_font_size_ = args_.ExtractIf<int>(RenderSettingsRequestFields::BUS_LABEL_FONT_SIZE);
-            bus_label_offset_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::BUS_LABEL_OFFSET);
-            bus_label_font_size_ = args_.ExtractIf<int>(RenderSettingsRequestFields::STOP_LABEL_FONT_SIZE);
-            stop_label_offset_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::STOP_LABEL_OFFSET);
-            stop_label_offset_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::UNDERLAYER_WIDTH);
-            underlayer_color_ = args_.ExtractColorValueIf(RenderSettingsRequestFields::UNDERLAYER_COLOR);
-            color_palette_ = args_.ExtractColorPaletteIf(RenderSettingsRequestFields::COLOR_PALETTE);
-        }
+        void Build() override;
 
     private:
         std::optional<double> width_;
@@ -781,4 +578,260 @@ namespace transport_catalogue::io /* RequestHandler */ {
         const IStatResponseSender& response_sender_;
         [[maybe_unused]] io::renderer::IRenderer& renderer_;
     };
+}
+
+namespace transport_catalogue::io /* RequestValueType template implementation */ {
+
+    template <typename... Args>
+    std::optional<std::variant<uint8_t, double>> RequestValueType::ExtractRgbaColorItemIf(std::variant<Args...>&& value) {
+        return std::visit(
+            [](auto&& arg) -> std::optional<std::variant<uint8_t, double>> {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (detail::IsConvertibleV<T, std::variant<int, double>>) {
+                    if constexpr (detail::IsSameV<T, int>) {
+                        assert(arg >= 0 && arg <= std::numeric_limits<uint8_t>::max());
+                        return static_cast<uint8_t>(std::move(arg));
+                    } else {
+                        assert(arg >= 0. && arg <= 1.);
+                        return std::move(arg);
+                    }
+                } else {
+                    return std::nullopt;
+                }
+            },
+            value);
+    }
+
+    template <
+        typename ValueType, detail::EnableIf<
+                                !std::is_lvalue_reference_v<ValueType> && (detail::IsConvertibleV<ValueType, RequestValueType::Array::value_type> ||
+                                                                           detail::IsConvertibleV<ValueType, RequestValueType::ValueType>)>>
+    std::optional<RequestValueType::Color> RequestValueType::ExtractColorIf(ValueType&& value) {
+        std::string* string_ptr = std::get_if<std::string>(&value);
+        if (string_ptr != nullptr) {
+            assert(!string_ptr->empty());
+
+            return std::move(*string_ptr);
+        }
+
+        const auto convert = [](auto&& rgb) -> std::vector<std::variant<uint8_t, double>> {
+            assert(rgb.size() >= 3 && rgb.size() <= 4);
+            std::vector<std::variant<uint8_t, double>> rgb_result(rgb.size());
+            std::transform(std::make_move_iterator(rgb.begin()), std::make_move_iterator(rgb.end()), rgb_result.begin(), [](auto&& arg) {
+                assert(std::holds_alternative<int>(arg) || std::holds_alternative<double>(arg));
+                auto rgb_item = ExtractRgbaColorItemIf(std::move(arg));
+                if (!rgb_item.has_value()) {
+                    throw std::invalid_argument("Invalid RGB(a) color item");
+                }
+                return rgb_item.value();
+            });
+            return rgb_result;
+        };
+
+        if constexpr (detail::IsConvertibleV<ValueType, Array::value_type>) {
+            InnerArray* rgb_ptr = std::get_if<InnerArray>(std::move(&value));
+            if (rgb_ptr == nullptr) {
+                return std::nullopt;
+            }
+            return convert(std::move(*rgb_ptr));
+
+        } else if constexpr (detail::IsConvertibleV<ValueType, RequestValueType::ValueType>) {
+            Array* rgb_ptr = std::get_if<Array>(std::move(&value));
+            if (rgb_ptr == nullptr) {
+                return std::nullopt;
+            }
+            return convert(std::move(*rgb_ptr));
+        }
+
+        return std::nullopt;
+    }
+}
+
+namespace transport_catalogue::io /* RawRequest template implementation */ {
+
+    template <
+        typename ReturnType,
+        detail::EnableIf<detail::IsConvertibleV<ReturnType, RawRequest::ValueType> && !detail::IsSameV<ReturnType, RawRequest::ValueType>>>
+    ReturnType& RawRequest::Get(const ValueType& v) noexcept {
+        assert(std::holds_alternative<ReturnType>(v));
+        return std::get<ReturnType>(v);
+    }
+
+    template <
+        typename ReturnType,
+        detail::EnableIf<detail::IsConvertibleV<ReturnType, RawRequest::ValueType> && !detail::IsSameV<ReturnType, RawRequest::ValueType>>>
+    ReturnType& RawRequest::Get(ValueType&& v) noexcept {
+        assert(std::holds_alternative<ReturnType>(v));
+        return std::get<ReturnType>(std::move(v));
+    }
+
+    template <
+        typename ReturnType,
+        detail::EnableIf<detail::IsConvertibleV<ReturnType, RawRequest::ValueType> && !detail::IsSameV<ReturnType, RawRequest::ValueType>>>
+    std::optional<ReturnType> RawRequest::GetIf(const ValueType& v) noexcept {
+        auto* result_ptr = std::get_if<ReturnType>(&v);
+        return result_ptr ? std::optional<ReturnType>(*result_ptr) : std::nullopt;
+    }
+
+    template <
+        typename ReturnType,
+        detail::EnableIf<detail::IsConvertibleV<ReturnType, RawRequest::ValueType> && !detail::IsSameV<ReturnType, RawRequest::ValueType>>>
+    std::optional<ReturnType> RawRequest::GetIf(ValueType&& v) noexcept {
+        auto* result_ptr = std::get_if<ReturnType>(std::move(&v));
+        return result_ptr ? std::optional<ReturnType>{std::move(*result_ptr)} : std::nullopt;
+    }
+
+    template <
+        typename ReturnType, typename KeyType,
+        detail::EnableIf<detail::IsConvertibleV<ReturnType, RawRequest::ValueType> && !detail::IsSameV<ReturnType, RawRequest::ValueType>>>
+    ReturnType* RawRequest::MoveIf(KeyType&& key) noexcept {
+        auto ptr = find(std::forward<KeyType>(key));
+        if (ptr == end()) {
+            return nullptr;
+        }
+        auto* result_ptr = std::get_if<ReturnType>(std::move(&ptr->second));
+        return result_ptr ? std::move(result_ptr) : nullptr;
+    }
+
+    template <
+        typename ReturnType, typename KeyType,
+        detail::EnableIf<detail::IsConvertibleV<KeyType, RawRequest::KeyType> && detail::IsSameV<ReturnType, RawRequest::ValueType>>>
+    RawRequest::ValueType RawRequest::Extract(KeyType&& key) {
+        auto it = find(std::forward<KeyType>(key));
+        if (it == end()) {
+            return NullValue();
+        }
+        return std::move(extract(it).mapped());
+    }
+
+    template <
+        typename ReturnType, typename KeyType,
+        detail::EnableIf<detail::IsConvertibleV<ReturnType, RawRequest::ValueType> && !detail::IsSameV<ReturnType, RawRequest::ValueType>>>
+    std::optional<ReturnType> RawRequest::ExtractIf(KeyType&& key) noexcept {
+        auto ptr = find(std::forward<KeyType>(key));
+
+        if (ptr == end()) {
+            return std::nullopt;
+        }
+
+        assert(std::holds_alternative<ReturnType>(ptr->second));
+
+        auto mapped = std::move(extract(ptr).mapped());
+        auto* result_ptr = std::get_if<ReturnType>(std::move(&mapped));
+        return result_ptr ? std::optional<ReturnType>(std::move(*result_ptr)) : std::nullopt;
+    }
+
+    template <
+        typename ReturnType, typename KeyType,
+        detail::EnableIf<detail::IsConvertibleV<ReturnType, RawRequest::ValueType> && !detail::IsSameV<ReturnType, RawRequest::ValueType>>>
+    ReturnType RawRequest::Extract(KeyType&& key) noexcept {
+        auto ptr = find(std::forward<KeyType>(key));
+        if (ptr == end()) {
+            return {};
+        }
+        assert(std::holds_alternative<ReturnType>(ptr->second));
+
+        return std::get<ReturnType>(std::move(extract(ptr).mapped()));
+    }
+
+    template <
+        typename ReturnType, typename KeyType,
+        detail::EnableIf<detail::IsConvertibleV<ReturnType, RawRequest::ValueType> && !detail::IsSameV<ReturnType, RawRequest::ValueType>>>
+    ReturnType RawRequest::ExtractWithThrow(KeyType&& key) {
+        assert(std::holds_alternative<ReturnType>(at(key)));
+        return std::get<ReturnType>(std::move(extract(key).mapped()));
+    }
+
+    template <
+        typename ReturnType, typename KeyType,
+        detail::EnableIf<detail::IsConvertibleV<ReturnType, RawRequest::ValueType> && !detail::IsSameV<ReturnType, RawRequest::ValueType>>>
+    ReturnType* RawRequest::GetIf(KeyType&& key) noexcept {
+        auto ptr = find(std::forward<KeyType>(key));
+        if (ptr == end()) {
+            return nullptr;
+        }
+        auto* result_ptr = std::get_if<ReturnType>(ptr.second);
+        return result_ptr;
+    }
+
+    template <typename KeyType>
+    std::optional<double> RawRequest::ExtractNumberValueIf(KeyType&& key) {
+        auto it = find(std::forward<KeyType>(key));
+        if (it == end()) {
+            return std::nullopt;
+        }
+        ValueType value = std::move(extract(it).mapped());
+
+        const double* double_ptr = std::get_if<double>(&value);
+        if (double_ptr != nullptr) {
+            return *double_ptr;
+        }
+
+        const int* int_ptr = std::get_if<int>(&value);
+        if (int_ptr != nullptr) {
+            return *int_ptr;
+        }
+        return std::nullopt;
+    }
+
+    template <typename KeyType>
+    std::optional<RawRequest::Color> RawRequest::ExtractColorValueIf(KeyType&& key) {
+        auto it = find(std::forward<KeyType>(key));
+        if (it == end()) {
+            return std::nullopt;
+        }
+        ValueType value = std::move(extract(it).mapped());
+        auto color = value.ExtractColorIf();
+        return color;
+    }
+
+    template <typename KeyType>
+    std::optional<std::vector<RawRequest::Color>> RawRequest::ExtractColorPaletteIf(KeyType&& key) {
+        std::optional<std::vector<Color>> result = std::nullopt;
+
+        auto array = ExtractIf<Array>(std::forward<KeyType>(key));
+        if (!array.has_value()) {
+            return std::nullopt;
+        }
+
+        std::vector<Color> color_palette;
+        color_palette.reserve(array.value().size());
+        std::for_each(
+            std::make_move_iterator(array.value().begin()), std::make_move_iterator(array.value().end()), [&color_palette](auto&& raw_color) {
+                std::optional<Color> color = RawRequest::ValueType::ExtractColorIf(std::move(raw_color));
+                if ((assert(color.has_value()), color.has_value())) {
+                    color_palette.emplace_back(std::move(color.value()));
+                }
+            });
+
+        return color_palette;
+    }
+
+    template <typename Filter, typename... Args>
+    RawRequest::ValueType RawRequest::VariantCast(std::variant<Args...>&& value) {
+        return std::visit(
+            [](auto&& arg) -> ValueType {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (detail::IsConvertibleV<T, Filter>) {
+                    return std::move(arg);
+                } else {
+                    return NullValue();
+                }
+            },
+            value);
+    }
+
+    template <typename Filter, typename... Args>
+    std::optional<RawRequest::Array> RawRequest::CastToArray(std::variant<Args...>&& value) {
+        return std::visit(
+            [](auto&& arg) -> std::optional<Array> {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (detail::IsConvertibleV<T, Filter>) {
+                    return std::move(arg);
+                } else {
+                    return std::nullopt;
+                }
+            },
+            value);
+    }
 }
