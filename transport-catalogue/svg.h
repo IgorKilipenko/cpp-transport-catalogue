@@ -74,6 +74,11 @@ namespace svg /* Colors */ {
 
             Rgb(uint8_t red = 0, uint8_t green = 0, uint8_t blue = 0) : red(red), green(green), blue(blue) {}
 
+            static Rgb FromVariant(std::vector<std::variant<uint8_t, double>>&& value) {
+                assert(value.size() >= 3);
+                return {std::get<uint8_t>(value[0]), std::get<uint8_t>(value[1]), std::get<uint8_t>(value[2])};
+            }
+
             /// Выполняет линейную интерполяцию Rgb цвета от from до to в зависимости от параметра t
             template <typename Rgb, detail::EnableIfConvertible<Rgb, Colors::Rgb> = true>
             Rgb Lerp(Rgb&& to, double t) {
@@ -85,6 +90,11 @@ namespace svg /* Colors */ {
             double opacity = 1.;
 
             Rgba(uint8_t red = 0, uint8_t green = 0, uint8_t blue = 0, double opacity = 1.) : Rgb(red, green, blue), opacity{opacity} {}
+
+            static Rgba FromVariant(std::vector<std::variant<uint8_t, double>>&& value) {
+                assert(value.size() >= 4);
+                return {std::get<uint8_t>(value[0]), std::get<uint8_t>(value[1]), std::get<uint8_t>(value[2]), std::get<double>(value[3])};
+            }
         };
 
         class ColorPrinter {
@@ -304,7 +314,7 @@ namespace svg /* Svg Objects */ {
     class Polyline final : public Object, public PathProps<Polyline> {
     public:
         using Points = std::vector<Point>;
-        
+
         Polyline() = default;
         Polyline(Points points) : points_(points) {}
 
