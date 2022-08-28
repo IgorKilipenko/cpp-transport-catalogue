@@ -81,12 +81,12 @@ namespace transport_catalogue::io /* Requests aliases */ {
         static std::optional<double> ExtractNumericIf(ValueType&& value) {
             const double* double_ptr = std::get_if<double>(&value);
             if (double_ptr != nullptr) {
-                return *double_ptr;
+                return std::move(*double_ptr);
             }
 
             const int* int_ptr = std::get_if<int>(&value);
             if (int_ptr != nullptr) {
-                return *int_ptr;
+                return std::move(*int_ptr);
             }
             return std::nullopt;
         }
@@ -699,17 +699,7 @@ namespace transport_catalogue::io /* RawRequest template implementation */ {
             return std::nullopt;
         }
         ValueType value = std::move(extract(it).mapped());
-
-        const double* double_ptr = std::get_if<double>(&value);
-        if (double_ptr != nullptr) {
-            return *double_ptr;
-        }
-
-        const int* int_ptr = std::get_if<int>(&value);
-        if (int_ptr != nullptr) {
-            return *int_ptr;
-        }
-        return std::nullopt;
+        return value.ExtractNumericIf();
     }
 
     template <typename KeyType>
