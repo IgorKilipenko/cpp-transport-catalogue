@@ -144,7 +144,7 @@ namespace transport_catalogue::io /* JsonReader */ {
 
     class JsonReader : public IRequestNotifier {
     public:
-        class JsonToRequestConvertor {
+        /*class JsonToRequestConvertor {
             const int def_indent_step = 4;
             const int def_indent = 4;
 
@@ -165,11 +165,12 @@ namespace transport_catalogue::io /* JsonReader */ {
 
             template <typename Array = json::Array, detail::EnableIfSame<Array, json::Array> = true>
             void operator()(Array&& array) const;
-        };
+        };*/
 
-    public:
+    public: /* Constructors */
         JsonReader(std::istream& input_stream, bool broadcast_mode = true) noexcept : input_stream_{input_stream}, is_broadcast_(broadcast_mode) {}
 
+    public: /* Notify interface methods */
         void AddObserver(std::shared_ptr<IRequestObserver> observer) override;
 
         void RemoveObserver(std::shared_ptr<IRequestObserver> observer) override;
@@ -184,12 +185,14 @@ namespace transport_catalogue::io /* JsonReader */ {
 
         bool HasObserver() const override;
 
+    public: /* Public methods */
         void NotifyObservers(RequestType type, std::vector<RawRequest>&& requests);
 
         void ReadDocument();
 
-    private:
+    private: /* Inner classes */
         struct Hasher {
+        public:
             size_t operator()(const IRequestObserver* ptr) const {
                 return hasher_(ptr);
             }
@@ -198,93 +201,29 @@ namespace transport_catalogue::io /* JsonReader */ {
             std::hash<const void*> hasher_;
         };
 
-    private:
+    private: /* Inner members */
         std::istream& input_stream_;
         std::unordered_map<const IRequestObserver*, std::weak_ptr<const IRequestObserver>, Hasher> observers_;
         bool is_broadcast_ = true;
+
+    public: /* Constant values */
         constexpr static const std::string_view BASE_REQUESTS_LITERAL = "base_requests"sv;
         constexpr static const std::string_view STAT_REQUESTS_LITERAL = "stat_requests"sv;
         constexpr static const std::string_view RENDER_SETTINGS_REQUESTS_LITERAL = "render_settings"sv;
 
-    public: /* Helpers */
+    public: /* Converter */
         static RawRequest JsonToRequest(json::Dict&& map);
 
         static std::vector<RawRequest> JsonToRequest(json::Array&& array);
 
-        static json::Array ConvertToJson(io::RawRequest::Array&& raw_array) {
-            json::Array array(raw_array.size());
-            std::transform(
-                std::make_move_iterator(raw_array.begin()), std::make_move_iterator(raw_array.end()), array.begin(), [](auto&& val) -> json::Node {
-                    if (std::holds_alternative<io::RawRequest::InnerArray>(val)) {
-                        io::RawRequest::InnerArray inner_array = std::get<io::RawRequest::InnerArray>(val);
-                        json::Array array(inner_array.size());
-                        std::transform(inner_array.begin(), inner_array.end(), array.begin(), [](auto&& val) {
-                            return detail::converters::VariantCast<json::Node>(std::move(val));
-                        });
-                        return array;
-                    }
-                    return detail::converters::VariantCast<json::Node>(std::move(val));
-                });
-            return array;
-        }
+        static json::Array ConvertToJson(io::RawRequest::Array&& raw_array);
 
-        static json::Dict ConvertToJson(io::RawRequest&& request) {
-            json::Dict dict;
-            std::for_each(std::make_move_iterator(request.begin()), std::make_move_iterator(request.end()), [&dict](auto&& req_val) {
-                std::string key = std::move(req_val.first);
-                if (req_val.second.IsArray()) {
-                    io::RawRequest::Array raw_array = std::get<io::RawRequest::Array>(std::move(req_val.second));
-                    json::Array array = ConvertToJson(std::move(raw_array));
-                    dict.emplace(std::move(key), std::move(array));
-                } else {
-                    json::Node val = detail::converters::VariantCast<json::Node>(std::move(req_val.second));
-                    dict.emplace(std::move(key), std::move(val));
-                }
-            });
+        static json::Dict ConvertToJson(io::RawRequest&& request);
 
-            return dict;
-        }
+        static json::Array ConvertToJsonArray(std::vector<io::RawRequest>&& requests);
 
-        static json::Array ConvertToJsonArray(std::vector<io::RawRequest>&& requests) {
-            json::Array array;
-            std::for_each(std::make_move_iterator(requests.begin()), std::make_move_iterator(requests.end()), [&array](auto&& req) {
-                array.push_back(io::JsonReader::ConvertToJson(std::move(req)));
-            });
-            return array;
-        }
+        static io::RawRequest::Array ConvertFromJsonArray(json::Array&& array);
 
-        static io::RawRequest::Array ConvertFromJsonArray(json::Array&& array) {
-            if (array.empty()) {
-                return {};
-            }
-            io::RawRequest::Array result;
-            std::for_each(std::make_move_iterator(array.begin()), std::make_move_iterator(array.end()), [&result](json::Node&& node) {
-                if (node.IsArray()) {
-                    io::RawRequest::Array value = ConvertFromJsonArray(node.ExtractArray());
-                    io::RawRequest::InnerArray subarray(value.size());
-                    std::transform(
-                        std::make_move_iterator(value.begin()), std::make_move_iterator(value.end()), subarray.begin(),
-                        [](io::RawRequest::Array::value_type&& item) {
-                            return detail::converters::VariantCast<io::RawRequest::InnerArray::value_type>(std::move(item));
-                        });
-                    result.emplace_back(std::move(subarray));
-                } else {
-                    RequestArrayValueType value = detail::converters::VariantCast(node.ExtractValue());
-                    result.emplace_back(std::move(value));
-                }
-            });
-            return result;
-        }
-
-        static io::RawRequest::Dict ConvertFromJsonDict(json::Dict&& dict) {
-            io::RawRequest::Dict result;
-            std::for_each(std::make_move_iterator(dict.begin()), std::make_move_iterator(dict.end()), [&result](auto&& node) {
-                std::string key = std::move(node.first);
-                io::RawRequest::Dict::mapped_type value =
-                    detail::converters::VariantCast<io::RawRequest::Dict::mapped_type>(node.second.ExtractValue());
-                result.emplace(std::move(key), std::move(value));
-            });
-            return result;
-        }
+        static io::RawRequest::Dict ConvertFromJsonDict(json::Dict&& dict);
     };
 }
