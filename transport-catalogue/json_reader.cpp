@@ -80,20 +80,23 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
 
         if (base_req_ptr != end && base_req_ptr->second.IsArray()) {
             json::Array array = base_req_ptr->second.ExtractArray();
-            auto req = JsonToRequest(std::move(array));
+            auto req = Converter::JsonToRequest(std::move(array));
             NotifyBaseRequest(std::move(req));
         }
         if (stat_req_ptr != end && stat_req_ptr->second.IsArray()) {
             json::Array array = stat_req_ptr->second.ExtractArray();
-            NotifyStatRequest(JsonToRequest(std::move(array)));
+            NotifyStatRequest(Converter::JsonToRequest(std::move(array)));
         }
         if (render_settings_req_ptr != end && render_settings_req_ptr->second.IsMap()) {
             json::Dict dict = render_settings_req_ptr->second.ExtractMap();
-            NotifyRenderSettingsRequest(JsonToRequest(std::move(dict)));
+            NotifyRenderSettingsRequest(Converter::JsonToRequest(std::move(dict)));
         }
     }
+}
 
-    RawRequest JsonReader::JsonToRequest(json::Dict&& map) {
+namespace transport_catalogue::io /* JsonReader::Converter implementation */ {
+
+    RawRequest JsonReader::Converter::JsonToRequest(json::Dict&& map) {
         RawRequest result;
         std::for_each(std::make_move_iterator(map.begin()), std::make_move_iterator(map.end()), [&result](auto&& map_item) {
             std::string key = std::move(map_item.first);
@@ -113,7 +116,7 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
         return result;
     }
 
-    std::vector<RawRequest> JsonReader::JsonToRequest(json::Array&& array) {
+    std::vector<RawRequest> JsonReader::Converter::JsonToRequest(json::Array&& array) {
         std::vector<RawRequest> requests;
         requests.reserve(array.size());
         std::for_each(std::make_move_iterator(array.begin()), std::make_move_iterator(array.end()), [&requests](json::Node&& node) {
@@ -121,11 +124,8 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
         });
         return requests;
     }
-}
 
-namespace transport_catalogue::io /* JsonReader (Converters) implementation */ {
-
-    json::Array JsonReader::ConvertToJson(io::RawRequest::Array&& raw_array) {
+    json::Array JsonReader::Converter::ConvertToJson(io::RawRequest::Array&& raw_array) {
         json::Array array(raw_array.size());
         std::transform(
             std::make_move_iterator(raw_array.begin()), std::make_move_iterator(raw_array.end()), array.begin(), [](auto&& val) -> json::Node {
@@ -142,7 +142,7 @@ namespace transport_catalogue::io /* JsonReader (Converters) implementation */ {
         return array;
     }
 
-    json::Dict JsonReader::ConvertToJson(io::RawRequest&& request) {
+    json::Dict JsonReader::Converter::ConvertToJson(io::RawRequest&& request) {
         json::Dict dict;
         std::for_each(std::make_move_iterator(request.begin()), std::make_move_iterator(request.end()), [&dict](auto&& req_val) {
             std::string key = std::move(req_val.first);
@@ -159,15 +159,15 @@ namespace transport_catalogue::io /* JsonReader (Converters) implementation */ {
         return dict;
     }
 
-    json::Array JsonReader::ConvertToJsonArray(std::vector<io::RawRequest>&& requests) {
+    json::Array JsonReader::Converter::ConvertToJsonArray(std::vector<io::RawRequest>&& requests) {
         json::Array array;
         std::for_each(std::make_move_iterator(requests.begin()), std::make_move_iterator(requests.end()), [&array](auto&& req) {
-            array.push_back(io::JsonReader::ConvertToJson(std::move(req)));
+            array.push_back(JsonReader::Converter::ConvertToJson(std::move(req)));
         });
         return array;
     }
 
-    io::RawRequest::Array JsonReader::ConvertFromJsonArray(json::Array&& array) {
+    io::RawRequest::Array JsonReader::Converter::ConvertFromJsonArray(json::Array&& array) {
         if (array.empty()) {
             return {};
         }
@@ -190,7 +190,7 @@ namespace transport_catalogue::io /* JsonReader (Converters) implementation */ {
         return result;
     }
 
-    io::RawRequest::Dict JsonReader::ConvertFromJsonDict(json::Dict&& dict) {
+    io::RawRequest::Dict JsonReader::Converter::ConvertFromJsonDict(json::Dict&& dict) {
         io::RawRequest::Dict result;
         std::for_each(std::make_move_iterator(dict.begin()), std::make_move_iterator(dict.end()), [&result](auto&& node) {
             std::string key = std::move(node.first);

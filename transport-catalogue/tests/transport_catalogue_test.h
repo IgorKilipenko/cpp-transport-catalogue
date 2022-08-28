@@ -297,7 +297,7 @@ namespace transport_catalogue::tests {
             raw_requests.reserve(size);
             start = std::chrono::steady_clock::now();
             for (size_t i = 0; i < size; ++i) {
-                raw_requests.emplace_back(io::JsonReader::JsonToRequest(std::move(nodes[i])));
+                raw_requests.emplace_back(io::JsonReader::Converter::JsonToRequest(std::move(nodes[i])));
             }
             duration = std::chrono::steady_clock::now() - start;
             size_t duration_count = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();

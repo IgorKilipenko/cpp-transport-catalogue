@@ -144,28 +144,22 @@ namespace transport_catalogue::io /* JsonReader */ {
 
     class JsonReader : public IRequestNotifier {
     public:
-        /*class JsonToRequestConvertor {
-            const int def_indent_step = 4;
-            const int def_indent = 4;
-
+        class Converter {
         public:
-            void operator()(std::nullptr_t) const;
+            static RawRequest JsonToRequest(json::Dict&& map);
 
-            void operator()(bool value) const;
+            static std::vector<RawRequest> JsonToRequest(json::Array&& array);
 
-            void operator()(int value) const;
+            static json::Array ConvertToJson(io::RawRequest::Array&& raw_array);
 
-            void operator()(double value) const;
+            static json::Dict ConvertToJson(io::RawRequest&& request);
 
-            template <typename String = std::string, detail::EnableIfSame<String, std::string> = true>
-            void operator()(String&& value) const;
+            static json::Array ConvertToJsonArray(std::vector<io::RawRequest>&& requests);
 
-            template <typename Dict = json::Dict, detail::EnableIfSame<Dict, json::Dict> = true>
-            void operator()(Dict&& dict) const;
+            static io::RawRequest::Array ConvertFromJsonArray(json::Array&& array);
 
-            template <typename Array = json::Array, detail::EnableIfSame<Array, json::Array> = true>
-            void operator()(Array&& array) const;
-        };*/
+            static io::RawRequest::Dict ConvertFromJsonDict(json::Dict&& dict);
+        };
 
     public: /* Constructors */
         JsonReader(std::istream& input_stream, bool broadcast_mode = true) noexcept : input_stream_{input_stream}, is_broadcast_(broadcast_mode) {}
@@ -210,20 +204,5 @@ namespace transport_catalogue::io /* JsonReader */ {
         constexpr static const std::string_view BASE_REQUESTS_LITERAL = "base_requests"sv;
         constexpr static const std::string_view STAT_REQUESTS_LITERAL = "stat_requests"sv;
         constexpr static const std::string_view RENDER_SETTINGS_REQUESTS_LITERAL = "render_settings"sv;
-
-    public: /* Converter */
-        static RawRequest JsonToRequest(json::Dict&& map);
-
-        static std::vector<RawRequest> JsonToRequest(json::Array&& array);
-
-        static json::Array ConvertToJson(io::RawRequest::Array&& raw_array);
-
-        static json::Dict ConvertToJson(io::RawRequest&& request);
-
-        static json::Array ConvertToJsonArray(std::vector<io::RawRequest>&& requests);
-
-        static io::RawRequest::Array ConvertFromJsonArray(json::Array&& array);
-
-        static io::RawRequest::Dict ConvertFromJsonDict(json::Dict&& dict);
     };
 }

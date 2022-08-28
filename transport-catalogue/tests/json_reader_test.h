@@ -47,7 +47,7 @@ namespace transport_catalogue::tests {
                 }
                 out_ << "Base requests:" << std::endl;
 
-                json::Array array = io::JsonReader::ConvertToJsonArray(std::move(requests));
+                json::Array array = io::JsonReader::Converter::ConvertToJsonArray(std::move(requests));
                 std::move(array.begin(), array.end(), std::back_inserter(*base_requests_));
             }
 
@@ -56,7 +56,7 @@ namespace transport_catalogue::tests {
             }
             void OnRenderSettingsRequest(io::RawRequest&& request) const override {
                 out_ << "OnRenderSettingsRequest" << std::endl;
-                render_settings_requests_->emplace_back(io::JsonReader::ConvertToJson(std::move(request)));
+                render_settings_requests_->emplace_back(io::JsonReader::Converter::ConvertToJson(std::move(request)));
             }
 
             std::string& GetName() {
