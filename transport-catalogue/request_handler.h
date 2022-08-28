@@ -568,20 +568,8 @@ namespace transport_catalogue::io /* RequestHandler */ {
         void ExecuteRequest(std::vector<StatRequest>&& stat_req) const;
 
         void ExecuteRequest(RenderSettingsRequest&& request) const {
-            maps::RenderSettings settings;
-
-            assert(request.GetHeight().has_value() && request.GetWidth().has_value());
-            settings.map_size = {request.GetHeight().value(), request.GetWidth().value()};
-
-            settings.line_width = request.GetLineWidth().value_or(0.);
-            settings.padding = request.GetPadding().value_or(0.);
-            settings.underlayer_width = request.GetUnderlayerWidth().value_or(0.);
-
-            auto raw_underlayer_color = request.GetUnderlayerColor();
-            if (!raw_underlayer_color.has_value()) {
-                settings.underlayer_color = {};
-            } else {
-                std::optional<maps::Color> color = std::visit(
+            const auto convert_color = [](RawRequest::Color&& raw_color) {
+                return std::visit(
                     [](auto&& arg) -> std::optional<maps::Color> {
                         using T = std::decay_t<decltype(arg)>;
                         if constexpr (detail::IsConvertibleV<T, maps::Color>) {
@@ -595,22 +583,50 @@ namespace transport_catalogue::io /* RequestHandler */ {
                         }
                         return std::nullopt;
                     },
-                    raw_underlayer_color.value());
+                    std::move(raw_color));
+            };
+
+            maps::RenderSettings settings;
+
+            assert(request.GetHeight().has_value() && request.GetWidth().has_value());
+            settings.map_size = {std::move(request.GetHeight()).value(), std::move(request.GetWidth().value())};
+
+            settings.line_width = std::move(request.GetLineWidth().value_or(0.));
+            settings.padding = std::move(request.GetPadding().value_or(0.));
+            settings.underlayer_width = std::move(request.GetUnderlayerWidth().value_or(0.));
+
+            auto raw_underlayer_color = std::move(request.GetUnderlayerColor());
+            if (!raw_underlayer_color.has_value()) {
+                settings.underlayer_color = {};
+            } else {
+                std::optional<maps::Color> color = convert_color(std::move(raw_underlayer_color.value()));
 
                 assert(color.has_value());
                 settings.underlayer_color = std::move(color.value());
             }
 
-            settings.stop_label_font_size = request.GetStopLabelFontSize().value_or(0);
-            auto stop_label_offset = request.GetStopLabelOffset();
+            settings.stop_label_font_size = std::move(request.GetStopLabelFontSize().value_or(0));
+            auto stop_label_offset = std::move(request.GetStopLabelOffset());
             if ((assert(stop_label_offset.has_value()), stop_label_offset.has_value())) {
                 settings.stop_label_offset = {stop_label_offset.value()[0], stop_label_offset.value()[1]};
             }
 
-            settings.bus_label_font_size = request.GetBusLabelFontSize().value_or(0);
-            auto bus_label_offset = request.GetStopLabelOffset();
+            settings.bus_label_font_size = std::move(request.GetBusLabelFontSize().value_or(0));
+            auto bus_label_offset = std::move(request.GetStopLabelOffset());
             if ((assert(bus_label_offset.has_value()), bus_label_offset.has_value())) {
                 settings.bus_label_offset = {bus_label_offset.value()[0], bus_label_offset.value()[1]};
+            }
+
+            settings.stop_marker_radius = std::move(request.GetStopRadius().value_or(0.));
+
+            auto raw_color_palette = std::move(request.GetColorPalette());
+            if (raw_color_palette.has_value()) {
+                std::for_each(
+                    std::make_move_iterator(raw_color_palette->begin()), std::make_move_iterator(raw_color_palette->end()),
+                    [convert_color, &color_palette = settings.color_palette](auto&& raw_color) {
+                        auto color = convert_color(std::move(raw_color));
+                        color_palette.emplace_back((assert(color.has_value()), std::move(color.value())));
+                    });
             }
 
             renderer_.SetRenderSettings(std::move(settings));
