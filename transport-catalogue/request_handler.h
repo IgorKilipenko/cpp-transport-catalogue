@@ -188,34 +188,6 @@ namespace transport_catalogue::io /* RawRequest */ {
         RawRequest(RawRequest&& other) = default;
         RawRequest& operator=(RawRequest&& other) = default;
 
-        /*template <
-            typename ReturnType, detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
-        static ReturnType& Get(const ValueType& v) noexcept;
-
-        template <
-            typename ReturnType, detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
-        static ReturnType& Get(ValueType&& v) noexcept;
-
-        template <
-            typename ReturnType, detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
-        static std::optional<ReturnType> GetIf(const ValueType& v) noexcept;
-
-        template <
-            typename ReturnType, detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
-        static std::optional<ReturnType> GetIf(ValueType&& v) noexcept;
-
-        template <
-            typename ReturnType, typename KeyType,
-            detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
-        ReturnType* MoveIf(KeyType&& key) noexcept;*/
-
-        /*
-        template <
-            typename ReturnType = ValueType, typename KeyType,
-            detail::EnableIf<detail::IsConvertibleV<KeyType, RawRequest::KeyType> && detail::IsSameV<ReturnType, ValueType>> = true>
-        ValueType Extract(KeyType&& key);
-        */
-
         template <
             typename ReturnType, typename KeyType,
             detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
@@ -230,11 +202,6 @@ namespace transport_catalogue::io /* RawRequest */ {
             typename ReturnType, typename KeyType,
             detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
         ReturnType ExtractWithThrow(KeyType&& key);
-
-        /*template <
-            typename ReturnType, typename KeyType,
-            detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
-        ReturnType* GetIf(KeyType&& key) noexcept;*/
 
         template <typename KeyType>
         std::optional<double> ExtractNumberValueIf(KeyType&& key);
@@ -687,65 +654,6 @@ namespace transport_catalogue::io /* RequestValueType template implementation */
 }
 
 namespace transport_catalogue::io /* RawRequest template implementation */ {
-    /*
-        template <
-            typename ReturnType,
-            detail::EnableIf<detail::IsConvertibleV<ReturnType, RawRequest::ValueType> && !detail::IsSameV<ReturnType, RawRequest::ValueType>>>
-        ReturnType& RawRequest::Get(const ValueType& v) noexcept {
-            assert(std::holds_alternative<ReturnType>(v));
-            return std::get<ReturnType>(v);
-        }
-
-        template <
-            typename ReturnType,
-            detail::EnableIf<detail::IsConvertibleV<ReturnType, RawRequest::ValueType> && !detail::IsSameV<ReturnType, RawRequest::ValueType>>>
-        ReturnType& RawRequest::Get(ValueType&& v) noexcept {
-            assert(std::holds_alternative<ReturnType>(v));
-            return std::get<ReturnType>(std::move(v));
-        }
-
-        template <
-            typename ReturnType,
-            detail::EnableIf<detail::IsConvertibleV<ReturnType, RawRequest::ValueType> && !detail::IsSameV<ReturnType, RawRequest::ValueType>>>
-        std::optional<ReturnType> RawRequest::GetIf(const ValueType& v) noexcept {
-            auto* result_ptr = std::get_if<ReturnType>(&v);
-            return result_ptr ? std::optional<ReturnType>(*result_ptr) : std::nullopt;
-        }
-
-        template <
-            typename ReturnType,
-            detail::EnableIf<detail::IsConvertibleV<ReturnType, RawRequest::ValueType> && !detail::IsSameV<ReturnType, RawRequest::ValueType>>>
-        std::optional<ReturnType> RawRequest::GetIf(ValueType&& v) noexcept {
-            auto* result_ptr = std::get_if<ReturnType>(std::move(&v));
-            return result_ptr ? std::optional<ReturnType>{std::move(*result_ptr)} : std::nullopt;
-        }
-
-        template <
-            typename ReturnType, typename KeyType,
-            detail::EnableIf<detail::IsConvertibleV<ReturnType, RawRequest::ValueType> && !detail::IsSameV<ReturnType, RawRequest::ValueType>>>
-        ReturnType* RawRequest::MoveIf(KeyType&& key) noexcept {
-            auto ptr = find(std::forward<KeyType>(key));
-            if (ptr == end()) {
-                return nullptr;
-            }
-            auto* result_ptr = std::get_if<ReturnType>(std::move(&ptr->second));
-            return result_ptr ? std::move(result_ptr) : nullptr;
-        }
-    */
-
-    /*
-    template <
-        typename ReturnType, typename KeyType,
-        detail::EnableIf<detail::IsConvertibleV<KeyType, RawRequest::KeyType> && detail::IsSameV<ReturnType, RawRequest::ValueType>>>
-    RawRequest::ValueType RawRequest::Extract(KeyType&& key) {
-        auto it = find(std::forward<KeyType>(key));
-        if (it == end()) {
-            return NullValue();
-        }
-        return std::move(extract(it).mapped());
-    }
-    */
-
     template <
         typename ReturnType, typename KeyType,
         detail::EnableIf<detail::IsConvertibleV<ReturnType, RawRequest::ValueType> && !detail::IsSameV<ReturnType, RawRequest::ValueType>>>
@@ -783,18 +691,6 @@ namespace transport_catalogue::io /* RawRequest template implementation */ {
         assert(std::holds_alternative<ReturnType>(at(key)));
         return std::get<ReturnType>(std::move(extract(key).mapped()));
     }
-
-    /*template <
-        typename ReturnType, typename KeyType,
-        detail::EnableIf<detail::IsConvertibleV<ReturnType, RawRequest::ValueType> && !detail::IsSameV<ReturnType, RawRequest::ValueType>>>
-    ReturnType* RawRequest::GetIf(KeyType&& key) noexcept {
-        auto ptr = find(std::forward<KeyType>(key));
-        if (ptr == end()) {
-            return nullptr;
-        }
-        auto* result_ptr = std::get_if<ReturnType>(&(ptr.second));
-        return result_ptr;
-    }*/
 
     template <typename KeyType>
     std::optional<double> RawRequest::ExtractNumberValueIf(KeyType&& key) {
