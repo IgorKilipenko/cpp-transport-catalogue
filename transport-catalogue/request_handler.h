@@ -57,9 +57,7 @@ namespace transport_catalogue::io /* Requests aliases */ {
 
         bool IsDictionary() const;
 
-        std::optional<double> ExtractNumericIf() {
-            return ExtractNumericIf(std::move(*this));
-        }
+        std::optional<double> ExtractNumericIf();
 
         std::optional<Color> ExtractColorIf();
 
@@ -78,18 +76,7 @@ namespace transport_catalogue::io /* Requests aliases */ {
             detail::EnableIf<
                 !std::is_lvalue_reference_v<ValueType> &&
                 (detail::IsConvertibleV<ValueType, Array::value_type> || detail::IsConvertibleV<ValueType, RequestValueType::ValueType>)> = true>
-        static std::optional<double> ExtractNumericIf(ValueType&& value) {
-            const double* double_ptr = std::get_if<double>(&value);
-            if (double_ptr != nullptr) {
-                return std::move(*double_ptr);
-            }
-
-            const int* int_ptr = std::get_if<int>(&value);
-            if (int_ptr != nullptr) {
-                return std::move(*int_ptr);
-            }
-            return std::nullopt;
-        }
+        static std::optional<double> ExtractNumericIf(ValueType&& value);
     };
 
     using RequestBase = std::unordered_map<std::string, RequestValueType>;
@@ -207,17 +194,7 @@ namespace transport_catalogue::io /* RawRequest */ {
         std::optional<double> ExtractNumberValueIf(KeyType&& key);
 
         template <typename KeyType>
-        std::optional<Offset> ExtractOffestValueIf(KeyType&& key) {
-            std::optional<Array> array = ExtractIf<Array>(std::forward<KeyType>(key));
-            if (!array.has_value() || (assert(array->size() == 2), array->size() != 2)) {
-                return std::nullopt;
-            }
-
-            auto first_val = ValueType::ExtractNumericIf(std::move(array->front()));
-            auto second_val = ValueType::ExtractNumericIf(std::move(array->back()));
-
-            return Offset{first_val.value(), second_val.value()};
-        }
+        std::optional<Offset> ExtractOffestValueIf(KeyType&& key);
 
         template <typename KeyType>
         std::optional<Color> ExtractColorValueIf(KeyType&& key);
@@ -587,7 +564,7 @@ namespace transport_catalogue::io /* RequestHandler */ {
 }
 
 namespace transport_catalogue::io /* RequestValueType template implementation */ {
-
+    
     template <typename... Args>
     std::optional<std::variant<uint8_t, double>> RequestValueType::ExtractRgbaColorItemIf(std::variant<Args...>&& value) {
         return std::visit(
@@ -649,6 +626,23 @@ namespace transport_catalogue::io /* RequestValueType template implementation */
             return convert(std::move(*rgb_ptr));
         }
 
+        return std::nullopt;
+    }
+
+    template <
+        typename ValueType, detail::EnableIf<
+                                !std::is_lvalue_reference_v<ValueType> && (detail::IsConvertibleV<ValueType, RequestValueType::Array::value_type> ||
+                                                                           detail::IsConvertibleV<ValueType, RequestValueType::ValueType>)>>
+    std::optional<double> RequestValueType::ExtractNumericIf(ValueType&& value) {
+        const double* double_ptr = std::get_if<double>(&value);
+        if (double_ptr != nullptr) {
+            return std::move(*double_ptr);
+        }
+
+        const int* int_ptr = std::get_if<int>(&value);
+        if (int_ptr != nullptr) {
+            return std::move(*int_ptr);
+        }
         return std::nullopt;
     }
 }
@@ -759,5 +753,18 @@ namespace transport_catalogue::io /* RawRequest template implementation */ {
                 }
             },
             value);
+    }
+
+    template <typename KeyType>
+    std::optional<RawRequest::Offset> RawRequest::ExtractOffestValueIf(KeyType&& key) {
+        std::optional<Array> array = ExtractIf<Array>(std::forward<KeyType>(key));
+        if (!array.has_value() || (assert(array->size() == 2), array->size() != 2)) {
+            return std::nullopt;
+        }
+
+        auto first_val = ValueType::ExtractNumericIf(std::move(array->front()));
+        auto second_val = ValueType::ExtractNumericIf(std::move(array->back()));
+
+        return Offset{first_val.value(), second_val.value()};
     }
 }

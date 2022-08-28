@@ -26,6 +26,10 @@ namespace transport_catalogue::io /* RequestValueType implementation */ {
         return std::holds_alternative<std::unordered_map<std::string, RequestDictValueType>>(*this);
     }
 
+    std::optional<double> RequestValueType::ExtractNumericIf() {
+        return ExtractNumericIf(std::move(*this));
+    }
+
     std::optional<RequestValueType::Color> RequestValueType::ExtractColorIf() {
         return RequestValueType::ExtractColorIf(std::move(*this));
     }
