@@ -106,11 +106,11 @@ namespace svg /* Colors */ {
             template <typename String, detail::EnableIfConvertible<String, std::string_view> = true>
             void operator()(String&& color) const;
 
-            template <typename Rgb = Colors::Rgb, detail::EnableIfSame<Rgb, Colors::Rgb> = true>
-            void operator()(Rgb&& color) const;
+            template <typename RgbType = Colors::Rgb, detail::EnableIfSame<RgbType, Colors::Rgb> = true>
+            void operator()(RgbType&& color) const;
 
-            template <typename Rgba = Colors::Rgba, detail::EnableIfSame<Rgba, Colors::Rgba> = true>
-            void operator()(Rgba&& color) const;
+            template <typename RgbaType = Colors::Rgba, detail::EnableIfSame<RgbaType, Colors::Rgba> = true>
+            void operator()(RgbaType&& color) const;
 
             std::ostream& GetStream() const;
 
@@ -118,11 +118,11 @@ namespace svg /* Colors */ {
             std::ostream& out_;
             static constexpr const std::string_view SEPARATOR{","};
 
-            template <typename Rgb = Colors::Rgb, detail::EnableIfSame<Rgb, Colors::Rgb> = true>
-            std::ostream& Print(Rgb&& color) const;
+            template <typename RgbType = Colors::Rgb, detail::EnableIfSame<RgbType, Colors::Rgb> = true>
+            std::ostream& Print(RgbType&& color) const;
 
-            template <typename Rgba = Colors::Rgba, detail::EnableIfSame<Rgba, Colors::Rgba> = true>
-            std::ostream& Print(Rgba&& color) const;
+            template <typename RgbaType = Colors::Rgba, detail::EnableIfSame<RgbaType, Colors::Rgba> = true>
+            std::ostream& Print(RgbaType&& color) const;
         };
 
     private:
@@ -482,29 +482,29 @@ namespace svg /* Colors::ColorPrinter class template implementation */ {
         out_ << std::forward<String>(color);
     }
 
-    template <typename Rgb, detail::EnableIfSame<Rgb, Colors::Rgb>>
-    void Colors::ColorPrinter::operator()(Rgb&& color) const {
+    template <typename RgbType, detail::EnableIfSame<RgbType, Colors::Rgb>>
+    void Colors::ColorPrinter::operator()(RgbType&& color) const {
         using namespace std::string_view_literals;
         out_ << "rgb("sv;
-        Print(std::forward<Rgb>(color)) << ")"sv;
+        Print(std::forward<RgbType>(color)) << ")"sv;
     }
 
-    template <typename Rgba, detail::EnableIfSame<Rgba, Colors::Rgba>>
-    void Colors::ColorPrinter::operator()(Rgba&& color) const {
+    template <typename RgbaType, detail::EnableIfSame<RgbaType, Colors::Rgba>>
+    void Colors::ColorPrinter::operator()(RgbaType&& color) const {
         using namespace std::string_view_literals;
         out_ << "rgba("sv;
-        Print(std::forward<Rgba>(color)) << ")"sv;
+        Print(std::forward<RgbaType>(color)) << ")"sv;
     }
 
-    template <typename Rgb, detail::EnableIfSame<Rgb, Colors::Rgb>>
-    std::ostream& Colors::ColorPrinter::Print(Rgb&& color) const {
+    template <typename RgbType, detail::EnableIfSame<RgbType, svg::Colors::Rgb>>
+    std::ostream& svg::Colors::ColorPrinter::Print(RgbType&& color) const {
         using namespace std::string_view_literals;
         out_ << +color.red << SEPARATOR << +color.green << SEPARATOR << +color.blue;
         return out_;
     }
 
-    template <typename Rgba, detail::EnableIfSame<Rgba, Colors::Rgba>>
-    std::ostream& Colors::ColorPrinter::Print(Rgba&& color) const {
+    template <typename RgbaType, detail::EnableIfSame<RgbaType, svg::Colors::Rgba>>
+    std::ostream& svg::Colors::ColorPrinter::Print(RgbaType&& color) const {
         using namespace std::string_view_literals;
         Print(static_cast<Rgb>(color)) << SEPARATOR << +color.opacity;
         return out_;
