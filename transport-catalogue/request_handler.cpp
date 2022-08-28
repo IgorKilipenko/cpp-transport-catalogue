@@ -484,7 +484,7 @@ namespace transport_catalogue::io /* RenderSettingsRequest implementation */ {
         line_width_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::LINE_WIDTH);
         bus_label_font_size_ = args_.ExtractIf<int>(RenderSettingsRequestFields::BUS_LABEL_FONT_SIZE);
         bus_label_offset_ = args_.ExtractOffestValueIf(RenderSettingsRequestFields::BUS_LABEL_OFFSET);
-        bus_label_font_size_ = args_.ExtractIf<int>(RenderSettingsRequestFields::STOP_LABEL_FONT_SIZE);
+        stop_label_font_size_ = args_.ExtractIf<int>(RenderSettingsRequestFields::STOP_LABEL_FONT_SIZE);
         stop_label_offset_ = args_.ExtractOffestValueIf(RenderSettingsRequestFields::STOP_LABEL_OFFSET);
         underlayer_color_ = args_.ExtractColorValueIf(RenderSettingsRequestFields::UNDERLAYER_COLOR);
         underlayer_width_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::UNDERLAYER_WIDTH);
