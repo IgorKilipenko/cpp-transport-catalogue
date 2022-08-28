@@ -129,27 +129,12 @@ namespace transport_catalogue::io /* RequestEnumConverter */ {
     struct RequestEnumConverter {
         inline static std::string InvalidValue{"Invalid enum value"};
 
-        template <typename EnumType>
-        std::string_view operator()(EnumType enum_value) const {
-            throw std::invalid_argument(InvalidValue);
-        }
-
-        template <typename EnumType>
-        EnumType operator()(std::string_view enum_name) const {
-            throw std::invalid_argument(InvalidValue);
-        }
-
-        template <>
         std::string_view operator()(RequestCommand enum_value) const;
 
-        template <>
-        RequestCommand operator()(std::string_view enum_name) const;
-
-        template <>
         std::string_view operator()(RequestType enum_value) const;
 
-        template <>
-        RequestType operator()(std::string_view enum_name) const;
+        RequestType ToRequestType(std::string_view enum_name) const;
+        RequestCommand ToRequestCommand(std::string_view enum_name) const;
     };
 }
 
@@ -393,6 +378,43 @@ namespace transport_catalogue::io /* Requests */ {
             throw std::runtime_error("Not implemented");
         }
 
+        std::optional<double>& GetWidth() {
+            return width_;
+        }
+        std::optional<double>& GetHeight() {
+            return height_;
+        }
+        std::optional<double>& GetPadding() {
+            return padding_;
+        }
+        std::optional<double>& GetStopRadius() {
+            return stop_radius_;
+        }
+        std::optional<double>& GetLineWidth() {
+            return line_width_;
+        }
+        std::optional<int>& GetBusLabelFontSize() {
+            return bus_label_font_size_;
+        }
+        std::optional<Offset>& GetBusLabelOffset() {
+            return bus_label_offset_;
+        }
+        std::optional<int>& GetStopLabelFontSize() {
+            return stop_label_font_size_;
+        }
+        std::optional<Offset>& GetStopLabelOffset() {
+            return stop_label_offset_;
+        }
+        std::optional<double>& GetUnderlayerWidth() {
+            return underlayer_width_;
+        }
+        std::optional<Color>& GetUnderlayerColor() {
+            return underlayer_color_;
+        }
+        std::optional<std::vector<Color>>& GetColorPalette() {
+            return color_palette_;
+        }
+
     protected:
         void Build() override;
 
@@ -548,6 +570,55 @@ namespace transport_catalogue::io /* RequestHandler */ {
         /// Execute Stat (Get) requests
         void ExecuteRequest(std::vector<StatRequest>&& stat_req) const;
 
+        void ExecuteRequest(RenderSettingsRequest&& request) const {
+            maps::RenderSettings settings;
+
+            assert(request.GetHeight().has_value() && request.GetWidth().has_value());
+            settings.map_size = {request.GetHeight().value(), request.GetWidth().value()};
+
+            settings.line_width = request.GetLineWidth().value_or(0.);
+            settings.padding = request.GetPadding().value_or(0.);
+            settings.underlayer_width = request.GetUnderlayerWidth().value_or(0.);
+
+            auto raw_underlayer_color = request.GetUnderlayerColor();
+            if (!raw_underlayer_color.has_value()) {
+                settings.underlayer_color = {};
+            } else {
+                std::optional<maps::Color> color = std::visit(
+                    [](auto&& arg) -> std::optional<maps::Color> {
+                        using T = std::decay_t<decltype(arg)>;
+                        if constexpr (detail::IsConvertibleV<T, maps::Color>) {
+                            return std::move(arg);
+                        } else if constexpr (detail::IsConvertibleV<T, std::vector<std::variant<uint8_t, double>>>) {
+                            if (arg.size() == 3) {
+                                return svg::Rgb::FromVariant(std::move(arg));
+                            } else if (arg.size() > 3) {
+                                return svg::Rgba::FromVariant(std::move(arg));
+                            }
+                        }
+                        return std::nullopt;
+                    },
+                    raw_underlayer_color.value());
+
+                assert(color.has_value());
+                settings.underlayer_color = std::move(color.value());
+            }
+
+            settings.stop_label_font_size = request.GetStopLabelFontSize().value_or(0);
+            auto stop_label_offset = request.GetStopLabelOffset();
+            if ((assert(stop_label_offset.has_value()), stop_label_offset.has_value())) {
+                settings.stop_label_offset = {stop_label_offset.value()[0], stop_label_offset.value()[1]};
+            }
+
+            settings.bus_label_font_size = request.GetBusLabelFontSize().value_or(0);
+            auto bus_label_offset = request.GetStopLabelOffset();
+            if ((assert(bus_label_offset.has_value()), bus_label_offset.has_value())) {
+                settings.bus_label_offset = {bus_label_offset.value()[0], bus_label_offset.value()[1]};
+            }
+
+            renderer_.SetRenderSettings(std::move(settings));
+        }
+
         /// Send Stat Response
         void SendStatResponse(StatResponse&& response) const;
 
@@ -559,12 +630,12 @@ namespace transport_catalogue::io /* RequestHandler */ {
         const data::ITransportStatDataReader& db_reader_;
         const data::ITransportDataWriter& db_writer_;
         const IStatResponseSender& response_sender_;
-        [[maybe_unused]] io::renderer::IRenderer& renderer_;
+        io::renderer::IRenderer& renderer_;
     };
 }
 
 namespace transport_catalogue::io /* RequestValueType template implementation */ {
-    
+
     template <typename... Args>
     std::optional<std::variant<uint8_t, double>> RequestValueType::ExtractRgbaColorItemIf(std::variant<Args...>&& value) {
         return std::visit(

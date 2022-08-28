@@ -137,8 +137,8 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
     }
 
     void BaseRequest::FillCoordinates() {
-        std::optional<double> latitude = args_.ExtractIf<double>(BaseRequestFields::LATITUDE);
-        std::optional<double> longitude = args_.ExtractIf<double>(BaseRequestFields::LONGITUDE);
+        std::optional<double> latitude = args_.ExtractNumberValueIf(BaseRequestFields::LATITUDE);
+        std::optional<double> longitude = args_.ExtractNumberValueIf(BaseRequestFields::LONGITUDE);
 
         assert((latitude.has_value() && longitude.has_value()) || !(latitude.has_value() && longitude.has_value()));
         coordinates_ = !latitude.has_value() ? std::nullopt : std::optional<Coordinates>({latitude.value(), longitude.value()});
@@ -165,7 +165,7 @@ namespace transport_catalogue::io /* Request implementation */ {
     Request::Request(std::string&& type, std::string&& name, RequestArgsMap&& args)
         : Request(
               (assert(type == converter(RequestCommand::BUS) || type == converter(RequestCommand::STOP) || type == converter(RequestCommand::MAP)),
-               converter.operator()<RequestCommand>(std::move(type))),
+               converter.ToRequestCommand(std::move(type))),
               std::move(name), std::move(args)) {}
 
     Request::Request(RawRequest&& raw_request)
@@ -216,7 +216,7 @@ namespace transport_catalogue::io /* Request implementation */ {
 }
 
 namespace transport_catalogue::io /* RequestEnumConverter implementation */ {
-    template <>
+
     std::string_view RequestEnumConverter::operator()(io::RequestCommand enum_value) const {
         using namespace std::string_view_literals;
 
@@ -234,26 +234,6 @@ namespace transport_catalogue::io /* RequestEnumConverter implementation */ {
         }
     }
 
-    template <>
-    io::RequestCommand RequestEnumConverter::operator()(std::string_view enum_name) const {
-        using namespace std::string_view_literals;
-
-        if (enum_name == "Bus"sv) {
-            return io::RequestCommand::BUS;
-        } else if (enum_name == "Stop"sv) {
-            return io::RequestCommand::STOP;
-        } else if (enum_name == "Map"sv) {
-            return io::RequestCommand::MAP;
-        } else if (enum_name == "SetSettings"sv) {
-            return io::RequestCommand::SET_SETTINGS;
-
-        } else if (enum_name == "Unknown"sv) {
-            return io::RequestCommand::UNKNOWN;
-        }
-        throw std::invalid_argument(InvalidValue);
-    }
-
-    template <>
     std::string_view RequestEnumConverter::operator()(io::RequestType enum_value) const {
         using namespace std::string_view_literals;
 
@@ -271,18 +251,35 @@ namespace transport_catalogue::io /* RequestEnumConverter implementation */ {
         }
     }
 
-    template <>
-    io::RequestType RequestEnumConverter::operator()(std::string_view enum_name) const {
+    RequestType RequestEnumConverter::ToRequestType(std::string_view enum_name) const {
         using namespace std::string_view_literals;
 
         if (enum_name == RequestFields::BASE_REQUESTS) {
-            return io::RequestType::BASE;
+            return RequestType::BASE;
         } else if (enum_name == RequestFields::STAT_REQUESTS) {
-            return io::RequestType::STAT;
+            return RequestType::STAT;
         } else if (enum_name == RequestFields::RENDER_SETTINGS) {
-            return io::RequestType::RENDER_SETTINGS;
+            return RequestType::RENDER_SETTINGS;
         } else if (enum_name == "Unknown"sv) {
-            return io::RequestType::UNKNOWN;
+            return RequestType::UNKNOWN;
+        }
+        throw std::invalid_argument(InvalidValue);
+    }
+
+    RequestCommand RequestEnumConverter::ToRequestCommand(std::string_view enum_name) const {
+        using namespace std::string_view_literals;
+
+        if (enum_name == "Bus"sv) {
+            return io::RequestCommand::BUS;
+        } else if (enum_name == "Stop"sv) {
+            return io::RequestCommand::STOP;
+        } else if (enum_name == "Map"sv) {
+            return io::RequestCommand::MAP;
+        } else if (enum_name == "SetSettings"sv) {
+            return io::RequestCommand::SET_SETTINGS;
+
+        } else if (enum_name == "Unknown"sv) {
+            return io::RequestCommand::UNKNOWN;
         }
         throw std::invalid_argument(InvalidValue);
     }
@@ -327,8 +324,8 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
     }
 
     void RequestHandler::OnRenderSettingsRequest(RawRequest&& request) const {
-        [[maybe_unused]] RenderSettingsRequest reqs(std::move(request));
-        std::cerr << "" << std::endl;
+        RenderSettingsRequest reqs(std::move(request));
+        ExecuteRequest(std::move(reqs));
     }
 
     void RequestHandler::ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const {

@@ -54,7 +54,9 @@ namespace transport_catalogue::geo {
         virtual ~Point() = default;
     };
 
-    struct Offset : Point {};
+    struct Offset : Point {
+        using Point::Point;
+    };
 
     struct Size {
         double height = 0.;
@@ -85,7 +87,7 @@ namespace transport_catalogue::geo {
             return {};
         }
 
-        virtual Point FromLatLngToMapPoint(Coordinates lat_lng) const {
+        virtual Point FromLatLngToMapPoint([[maybe_unused]]Coordinates lat_lng) const {
             return {lat_lng.lat, lat_lng.lng};
         }
 

@@ -38,55 +38,6 @@ namespace transport_catalogue::exceptions {
     };
 }
 
-namespace transport_catalogue::detail::converters {
-
-    template <class... Args>
-    struct VariantCastProxy {
-        std::variant<Args...> value;
-
-        template <class... ToArgs>
-        operator std::variant<ToArgs...>() const {
-            return std::visit(
-                [](auto&& arg) -> std::variant<ToArgs...> {
-                    using T = std::decay_t<decltype(arg)>;
-                    if constexpr (detail::IsConvertibleV<T, std::variant<ToArgs...>>) {
-                        return std::move(arg);
-                    } else {
-                        if constexpr (detail::IsConvertibleV<std::monostate, std::variant<ToArgs...>>) {
-                            return std::monostate();
-                        } else {
-                            return nullptr;
-                        }
-                    }
-                },
-                value);
-        }
-    };
-
-    template <class... Args>
-    auto VariantCast(std::variant<Args...>&& value) -> VariantCastProxy<Args...> {
-        return {std::move(value)};
-    }
-
-    template <typename ReturnType, typename Filter = ReturnType, typename... Args>
-    ReturnType VariantCast(std::variant<Args...>&& value) {
-        return std::visit(
-            [](auto&& arg) -> ReturnType {
-                using T = std::decay_t<decltype(arg)>;
-                if constexpr (detail::IsConvertibleV<T, Filter>) {
-                    return std::move(arg);
-                } else {
-                    if constexpr (detail::IsConvertibleV<std::monostate, ReturnType>) {
-                        return std::monostate();
-                    } else {
-                        return nullptr;
-                    }
-                }
-            },
-            value);
-    }
-}
-
 namespace transport_catalogue::detail::io /* FileReader */ {
     class FileReader {
     public:
@@ -200,14 +151,14 @@ namespace transport_catalogue::io /* JsonReader::Converter */ {
 
         static std::vector<RawRequest> JsonToRequest(json::Array&& array);
 
-        static json::Array ConvertToJson(io::RawRequest::Array&& raw_array);
+        static json::Array ConvertToJson(RawRequest::Array&& raw_array);
 
-        static json::Dict ConvertToJson(io::RawRequest&& request);
+        static json::Dict ConvertToJson(RawRequest&& request);
 
         static json::Array ConvertToJsonArray(std::vector<io::RawRequest>&& requests);
 
-        static io::RawRequest::Array ConvertFromJsonArray(json::Array&& array);
+        static RawRequest::Array ConvertFromJsonArray(json::Array&& array);
 
-        static io::RawRequest::Dict ConvertFromJsonDict(json::Dict&& dict);
+        static RawRequest::Dict ConvertFromJsonDict(json::Dict&& dict);
     };
 }

@@ -28,6 +28,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "detail/type_traits.h"
@@ -50,6 +51,55 @@ namespace transport_catalogue::exceptions {
     public:
         NotImplementedException() : std::logic_error("Function not yet implemented.") {}
     };
+}
+
+namespace transport_catalogue::detail::converters {
+
+    template <class... Args>
+    struct VariantCastProxy {
+        std::variant<Args...> value;
+
+        template <class... ToArgs>
+        operator std::variant<ToArgs...>() const {
+            return std::visit(
+                [](auto&& arg) -> std::variant<ToArgs...> {
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (detail::IsConvertibleV<T, std::variant<ToArgs...>>) {
+                        return std::move(arg);
+                    } else {
+                        if constexpr (detail::IsConvertibleV<std::monostate, std::variant<ToArgs...>>) {
+                            return std::monostate();
+                        } else {
+                            return nullptr;
+                        }
+                    }
+                },
+                value);
+        }
+    };
+
+    template <class... Args>
+    auto VariantCast(std::variant<Args...>&& value) -> VariantCastProxy<Args...> {
+        return {std::move(value)};
+    }
+
+    template <typename ReturnType, typename Filter = ReturnType, typename... Args>
+    ReturnType VariantCast(std::variant<Args...>&& value) {
+        return std::visit(
+            [](auto&& arg) -> ReturnType {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (detail::IsConvertibleV<T, Filter>) {
+                    return std::move(arg);
+                } else {
+                    if constexpr (detail::IsConvertibleV<std::monostate, ReturnType>) {
+                        return std::monostate();
+                    } else {
+                        return nullptr;
+                    }
+                }
+            },
+            value);
+    }
 }
 
 namespace transport_catalogue::data /* Db objects (ORM) */ {
@@ -296,9 +346,9 @@ namespace transport_catalogue::data /* Database */ {
 
         const ITransportDataReader& GetDataReader() const;
 
-        explicit operator ITransportDataWriter() const;
+        /*explicit operator ITransportDataWriter() const;
 
-        explicit operator ITransportDataReader() const;
+        explicit operator ITransportDataReader() const;*/
 
     protected: /* ORM */
         template <typename Stop = data::Stop, detail::EnableIfSame<Stop, data::Stop> = true>
@@ -558,7 +608,7 @@ namespace transport_catalogue::data /* Database implementation */ {
         return db_reader_;
     }
 
-    template <class Owner>
+    /*template <class Owner>
     Database<Owner>::operator ITransportDataWriter() const {
         return db_writer_;
     }
@@ -566,7 +616,7 @@ namespace transport_catalogue::data /* Database implementation */ {
     template <class Owner>
     Database<Owner>::operator ITransportDataReader() const {
         return db_reader_;
-    }
+    }*/
 
     template <class Owner>
     void Database<Owner>::LockDatabase() {
