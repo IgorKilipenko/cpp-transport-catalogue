@@ -19,7 +19,6 @@
 #include <variant>
 #include <vector>
 
-#include "detail/type_traits.h"
 #include "domain.h"
 #include "geo.h"
 #include "map_renderer.h"
@@ -65,18 +64,16 @@ namespace transport_catalogue::io /* Requests aliases */ {
         static std::optional<std::variant<uint8_t, double>> ExtractRgbaColorItemIf(std::variant<Args...>&& value);
 
         template <
-            typename ValueType,
-            detail::EnableIf<
-                !std::is_lvalue_reference_v<ValueType> &&
-                (detail::IsConvertibleV<ValueType, Array::value_type> || detail::IsConvertibleV<ValueType, RequestValueType::ValueType>)> = true>
-        static std::optional<Color> ExtractColorIf(ValueType&& value);
+            typename ValType, detail::EnableIf<
+                                  !std::is_lvalue_reference_v<ValType> && (detail::IsConvertibleV<ValType, Array::value_type> ||
+                                                                           detail::IsConvertibleV<ValType, RequestValueType::ValueType>)> = true>
+        static std::optional<Color> ExtractColorIf(ValType&& value);
 
         template <
-            typename ValueType,
-            detail::EnableIf<
-                !std::is_lvalue_reference_v<ValueType> &&
-                (detail::IsConvertibleV<ValueType, Array::value_type> || detail::IsConvertibleV<ValueType, RequestValueType::ValueType>)> = true>
-        static std::optional<double> ExtractNumericIf(ValueType&& value);
+            typename ValType, detail::EnableIf<
+                                  !std::is_lvalue_reference_v<ValType> && (detail::IsConvertibleV<ValType, Array::value_type> ||
+                                                                           detail::IsConvertibleV<ValType, RequestValueType::ValueType>)> = true>
+        static std::optional<double> ExtractNumericIf(ValType&& value);
     };
 
     using RequestBase = std::unordered_map<std::string, RequestValueType>;
@@ -161,36 +158,36 @@ namespace transport_catalogue::io /* RawRequest */ {
         RawRequest& operator=(RawRequest&& other) = default;
 
         template <
-            typename ReturnType, typename KeyType,
+            typename ReturnType, typename KeyType_,
             detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
-        ReturnType Extract(KeyType&& key) noexcept;
+        ReturnType Extract(KeyType_&& key) noexcept;
 
         template <
-            typename ReturnType, typename KeyType,
+            typename ReturnType, typename KeyType_,
             detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
-        std::optional<ReturnType> ExtractIf(KeyType&& key) noexcept;
+        std::optional<ReturnType> ExtractIf(KeyType_&& key) noexcept;
 
         template <
-            typename ReturnType, typename KeyType,
+            typename ReturnType, typename KeyType_,
             detail::EnableIf<detail::IsConvertibleV<ReturnType, ValueType> && !detail::IsSameV<ReturnType, ValueType>> = true>
-        ReturnType ExtractWithThrow(KeyType&& key);
+        ReturnType ExtractWithThrow(KeyType_&& key);
 
-        template <typename KeyType>
-        std::optional<double> ExtractNumberValueIf(KeyType&& key);
+        template <typename KeyType_>
+        std::optional<double> ExtractNumberValueIf(KeyType_&& key);
 
-        template <typename KeyType>
-        std::optional<Offset> ExtractOffestValueIf(KeyType&& key);
+        template <typename KeyType_>
+        std::optional<Offset> ExtractOffestValueIf(KeyType_&& key);
 
-        template <typename KeyType>
-        std::optional<Color> ExtractColorValueIf(KeyType&& key);
+        template <typename KeyType_>
+        std::optional<Color> ExtractColorValueIf(KeyType_&& key);
 
-        template <typename KeyType>
-        std::optional<std::vector<Color>> ExtractColorPaletteIf(KeyType&& key);
+        template <typename KeyType_>
+        std::optional<std::vector<Color>> ExtractColorPaletteIf(KeyType_&& key);
 
-        template <typename Filter = ValueType, typename... Args>
+        template <typename Filter_ = ValueType, typename... Args>
         static ValueType VariantCast(std::variant<Args...>&& value);
 
-        template <typename Filter = Array, typename... Args>
+        template <typename Filter_ = Array, typename... Args>
         static std::optional<Array> CastToArray(std::variant<Args...>&& value);
     };
 }
@@ -657,10 +654,10 @@ namespace transport_catalogue::io /* RequestValueType template implementation */
     }
 
     template <
-        typename ValueType, detail::EnableIf<
-                                !std::is_lvalue_reference_v<ValueType> && (detail::IsConvertibleV<ValueType, RequestValueType::Array::value_type> ||
-                                                                           detail::IsConvertibleV<ValueType, RequestValueType::ValueType>)>>
-    std::optional<RequestValueType::Color> RequestValueType::ExtractColorIf(ValueType&& value) {
+        typename ValType, detail::EnableIf<
+                              !std::is_lvalue_reference_v<ValType> && (detail::IsConvertibleV<ValType, RequestValueType::Array::value_type> ||
+                                                                       detail::IsConvertibleV<ValType, RequestValueType::ValueType>)>>
+    std::optional<RequestValueType::Color> RequestValueType::ExtractColorIf(ValType&& value) {
         std::string* string_ptr = std::get_if<std::string>(&value);
         if (string_ptr != nullptr) {
             assert(!string_ptr->empty());
@@ -682,14 +679,14 @@ namespace transport_catalogue::io /* RequestValueType template implementation */
             return rgb_result;
         };
 
-        if constexpr (detail::IsConvertibleV<ValueType, Array::value_type>) {
+        if constexpr (detail::IsConvertibleV<ValType, Array::value_type>) {
             InnerArray* rgb_ptr = std::get_if<InnerArray>(std::move(&value));
             if (rgb_ptr == nullptr) {
                 return std::nullopt;
             }
             return convert(std::move(*rgb_ptr));
 
-        } else if constexpr (detail::IsConvertibleV<ValueType, RequestValueType::ValueType>) {
+        } else if constexpr (detail::IsConvertibleV<ValType, RequestValueType::ValueType>) {
             Array* rgb_ptr = std::get_if<Array>(std::move(&value));
             if (rgb_ptr == nullptr) {
                 return std::nullopt;
@@ -701,10 +698,10 @@ namespace transport_catalogue::io /* RequestValueType template implementation */
     }
 
     template <
-        typename ValueType, detail::EnableIf<
-                                !std::is_lvalue_reference_v<ValueType> && (detail::IsConvertibleV<ValueType, RequestValueType::Array::value_type> ||
-                                                                           detail::IsConvertibleV<ValueType, RequestValueType::ValueType>)>>
-    std::optional<double> RequestValueType::ExtractNumericIf(ValueType&& value) {
+        typename ValType, detail::EnableIf<
+                              !std::is_lvalue_reference_v<ValType> && (detail::IsConvertibleV<ValType, RequestValueType::Array::value_type> ||
+                                                                       detail::IsConvertibleV<ValType, RequestValueType::ValueType>)>>
+    std::optional<double> RequestValueType::ExtractNumericIf(ValType&& value) {
         const double* double_ptr = std::get_if<double>(&value);
         if (double_ptr != nullptr) {
             return std::move(*double_ptr);
@@ -716,14 +713,16 @@ namespace transport_catalogue::io /* RequestValueType template implementation */
         }
         return std::nullopt;
     }
+
 }
 
 namespace transport_catalogue::io /* RawRequest template implementation */ {
+
     template <
-        typename ReturnType, typename KeyType,
+        typename ReturnType, typename KeyType_,
         detail::EnableIf<detail::IsConvertibleV<ReturnType, RawRequest::ValueType> && !detail::IsSameV<ReturnType, RawRequest::ValueType>>>
-    ReturnType RawRequest::Extract(KeyType&& key) noexcept {
-        auto it = find(std::forward<KeyType>(key));
+    ReturnType RawRequest::Extract(KeyType_&& key) noexcept {
+        auto it = find(std::forward<KeyType_>(key));
         if (it == end()) {
             return {};
         }
@@ -733,10 +732,10 @@ namespace transport_catalogue::io /* RawRequest template implementation */ {
     }
 
     template <
-        typename ReturnType, typename KeyType,
+        typename ReturnType, typename KeyType_,
         detail::EnableIf<detail::IsConvertibleV<ReturnType, RawRequest::ValueType> && !detail::IsSameV<ReturnType, RawRequest::ValueType>>>
-    std::optional<ReturnType> RawRequest::ExtractIf(KeyType&& key) noexcept {
-        auto ptr = find(std::forward<KeyType>(key));
+    std::optional<ReturnType> RawRequest::ExtractIf(KeyType_&& key) noexcept {
+        auto ptr = find(std::forward<KeyType_>(key));
 
         if (ptr == end()) {
             return std::nullopt;
@@ -750,16 +749,16 @@ namespace transport_catalogue::io /* RawRequest template implementation */ {
     }
 
     template <
-        typename ReturnType, typename KeyType,
+        typename ReturnType, typename KeyType_,
         detail::EnableIf<detail::IsConvertibleV<ReturnType, RawRequest::ValueType> && !detail::IsSameV<ReturnType, RawRequest::ValueType>>>
-    ReturnType RawRequest::ExtractWithThrow(KeyType&& key) {
+    ReturnType RawRequest::ExtractWithThrow(KeyType_&& key) {
         assert(std::holds_alternative<ReturnType>(at(key)));
         return std::get<ReturnType>(std::move(extract(key).mapped()));
     }
 
-    template <typename KeyType>
-    std::optional<double> RawRequest::ExtractNumberValueIf(KeyType&& key) {
-        auto it = find(std::forward<KeyType>(key));
+    template <typename KeyType_>
+    std::optional<double> RawRequest::ExtractNumberValueIf(KeyType_&& key) {
+        auto it = find(std::forward<KeyType_>(key));
         if (it == end()) {
             return std::nullopt;
         }
@@ -767,9 +766,9 @@ namespace transport_catalogue::io /* RawRequest template implementation */ {
         return value.ExtractNumericIf();
     }
 
-    template <typename KeyType>
-    std::optional<RawRequest::Color> RawRequest::ExtractColorValueIf(KeyType&& key) {
-        auto it = find(std::forward<KeyType>(key));
+    template <typename KeyType_>
+    std::optional<RawRequest::Color> RawRequest::ExtractColorValueIf(KeyType_&& key) {
+        auto it = find(std::forward<KeyType_>(key));
         if (it == end()) {
             return std::nullopt;
         }
@@ -778,9 +777,9 @@ namespace transport_catalogue::io /* RawRequest template implementation */ {
         return color;
     }
 
-    template <typename KeyType>
-    std::optional<std::vector<RawRequest::Color>> RawRequest::ExtractColorPaletteIf(KeyType&& key) {
-        auto array = ExtractIf<Array>(std::forward<KeyType>(key));
+    template <typename KeyType_>
+    std::optional<std::vector<RawRequest::Color>> RawRequest::ExtractColorPaletteIf(KeyType_&& key) {
+        auto array = ExtractIf<Array>(std::forward<KeyType_>(key));
         if (!array.has_value()) {
             return std::nullopt;
         }
@@ -798,12 +797,12 @@ namespace transport_catalogue::io /* RawRequest template implementation */ {
         return color_palette;
     }
 
-    template <typename Filter, typename... Args>
+    template <typename Filter_, typename... Args>
     RawRequest::ValueType RawRequest::VariantCast(std::variant<Args...>&& value) {
         return std::visit(
             [](auto&& arg) -> ValueType {
                 using T = std::decay_t<decltype(arg)>;
-                if constexpr (detail::IsConvertibleV<T, Filter>) {
+                if constexpr (detail::IsConvertibleV<T, Filter_>) {
                     return std::move(arg);
                 } else {
                     return NullValue();
@@ -812,12 +811,12 @@ namespace transport_catalogue::io /* RawRequest template implementation */ {
             value);
     }
 
-    template <typename Filter, typename... Args>
+    template <typename Filter_, typename... Args>
     std::optional<RawRequest::Array> RawRequest::CastToArray(std::variant<Args...>&& value) {
         return std::visit(
             [](auto&& arg) -> std::optional<Array> {
                 using T = std::decay_t<decltype(arg)>;
-                if constexpr (detail::IsConvertibleV<T, Filter>) {
+                if constexpr (detail::IsConvertibleV<T, Filter_>) {
                     return std::move(arg);
                 } else {
                     return std::nullopt;
@@ -826,9 +825,9 @@ namespace transport_catalogue::io /* RawRequest template implementation */ {
             value);
     }
 
-    template <typename KeyType>
-    std::optional<RawRequest::Offset> RawRequest::ExtractOffestValueIf(KeyType&& key) {
-        std::optional<Array> array = ExtractIf<Array>(std::forward<KeyType>(key));
+    template <typename KeyType_>
+    std::optional<RawRequest::Offset> RawRequest::ExtractOffestValueIf(KeyType_&& key) {
+        std::optional<Array> array = ExtractIf<Array>(std::forward<KeyType_>(key));
         if (!array.has_value() || (assert(array->size() == 2), array->size() != 2)) {
             return std::nullopt;
         }
