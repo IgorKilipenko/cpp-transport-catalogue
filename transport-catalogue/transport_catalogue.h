@@ -29,6 +29,7 @@ namespace transport_catalogue /* TransportCatalogue */ {
         const data::ITransportDataReader& GetDataReader() const override;
         const data::ITransportStatDataReader& GetStatDataReader() const;
 
+    public: /* ITransportDataWriter interface */
         void AddStop(data::Stop&& stop) const override;
         void AddStop(std::string&& name, Coordinates&& coordinates) const override;
         void AddBus(data::Bus&& bus) const override;
@@ -37,13 +38,15 @@ namespace transport_catalogue /* TransportCatalogue */ {
         void SetMeasuredDistance(const std::string_view from_stop_name, const std::string_view to_stop_name, double distance) const override;
         void SetMeasuredDistance(data::MeasuredRoadDistance&& distance) const override;
 
+    public: /* ITransportDataReader interface */
         data::BusRecord GetBus(const std::string_view name) const override;
         data::StopRecord GetStop(const std::string_view name) const override;
         const data::DatabaseScheme::StopsTable& GetStopsTable() const override;
         const data::BusRecordSet& GetBuses(data::StopRecord stop) const override;
         const data::BusRecordSet& GetBuses(const std::string_view bus_name) const override;
         data::DistanceBetweenStopsRecord GetDistanceBetweenStops(data::StopRecord from, data::StopRecord to) const override;
-
+    
+    public: /* ITransportStatDataReader interface */
         data::BusStat GetBusInfo(data::BusRecord bus) const override;
         std::optional<data::BusStat> GetBusInfo(const std::string_view bus_name) const override;
         data::StopStat GetStopInfo(const data::StopRecord stop) const override;
