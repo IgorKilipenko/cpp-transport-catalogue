@@ -198,7 +198,7 @@ namespace transport_catalogue::io::renderer /* IRenderer */ {
 
     class IRenderer {
     public:
-        using Projection_ = geo::MockProjection;
+        using Projection_ = geo::SphereProjection;
         virtual void UpdateMapProjection(Projection_&& projection) = 0;
         // virtual void DrawTransportTracksLayer(std::vector<data::BusRecord>&& records) = 0;
         virtual void DrawTransportTracksLayer(data::BusRecord bus) = 0;

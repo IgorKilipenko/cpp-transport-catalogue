@@ -423,7 +423,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
             }
         });
 
-        geo::MockProjection projection = geo::MockProjection::CalculateFromParams(
+        geo::SphereProjection projection = geo::SphereProjection::CalculateFromParams(
             std::move(points), {renderer_.GetRenderSettings().map_size}, renderer_.GetRenderSettings().padding);
 
         renderer_.UpdateMapProjection(std::move(projection));

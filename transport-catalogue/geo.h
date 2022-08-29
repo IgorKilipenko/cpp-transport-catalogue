@@ -81,7 +81,7 @@ namespace transport_catalogue::geo {
     class Projection {
     public:
         template <typename ProjectionType>
-        static ProjectionType GetProjection(const std::string& projection_name = "MockProjection");
+        static ProjectionType GetProjection(const std::string& projection_name = "SphereProjection");
 
         virtual Bounds<> GetBounds() const {
             return {};
@@ -112,7 +112,7 @@ namespace transport_catalogue::geo {
 }
 
 namespace transport_catalogue::geo {
-    class MockProjection : public Projection {
+    class SphereProjection : public Projection {
     public:
         struct ScaleFactor {
             std::optional<double> height = 0.;
@@ -120,12 +120,12 @@ namespace transport_catalogue::geo {
         };
 
     public:
-        MockProjection() : MockProjection(Bounds<>{}, 0, 0) {}
-        MockProjection(Bounds<> bounds, double scale, double padding)
-            : Projection("MockProjection"), bounds_{bounds}, scale_{scale}, padding_(padding) {}
+        SphereProjection() : SphereProjection(Bounds<>{}, 0, 0) {}
+        SphereProjection(Bounds<> bounds, double scale, double padding)
+            : Projection("SphereProjection"), bounds_{bounds}, scale_{scale}, padding_(padding) {}
 
-        MockProjection(const MockProjection& other) = default;
-        MockProjection& operator=(const MockProjection& other) {
+        SphereProjection(const SphereProjection& other) = default;
+        SphereProjection& operator=(const SphereProjection& other) {
             if (this == &other) {
                 return *this;
             }
@@ -135,8 +135,8 @@ namespace transport_catalogue::geo {
 
             return *this;
         }
-        MockProjection(MockProjection&& other) = default;
-        MockProjection& operator=(MockProjection&& other) {
+        SphereProjection(SphereProjection&& other) = default;
+        SphereProjection& operator=(SphereProjection&& other) {
             if (this == &other) {
                 return *this;
             }
@@ -148,19 +148,19 @@ namespace transport_catalogue::geo {
             return *this;
         }
 
-        bool operator==(const MockProjection& rhs) const {
+        bool operator==(const SphereProjection& rhs) const {
             return this == &rhs || (rhs.bounds_.max == this->bounds_.max && rhs.bounds_.min == this->bounds_.min && rhs.scale_ == this->scale_);
         }
 
-        bool operator!=(const MockProjection& rhs) const {
+        bool operator!=(const SphereProjection& rhs) const {
             return !(*this == rhs);
         }
 
         template <template <typename, typename...> class Container, typename Coordinates, typename... Types>
-        static MockProjection CalculateFromParams(Container<Coordinates, Types...> points, Size map_size, double padding) {
+        static SphereProjection CalculateFromParams(Container<Coordinates, Types...> points, Size map_size, double padding) {
             Bounds<> bounds = CalculateBounds(points.begin(), points.end());
             double scale = CalculateScale(std::move(map_size), bounds, padding);
-            return MockProjection(std::move(bounds), scale, padding);
+            return SphereProjection(std::move(bounds), scale, padding);
         }
 
         Bounds<> GetBounds() const override {
