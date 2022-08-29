@@ -509,7 +509,7 @@ namespace transport_catalogue::io /* RequestHandler */ {
 
         class SettingsBuilder;
 
-        void RenderMap(/*maps::RenderSettings settings*/) const;
+        svg::Document& RenderMap(/*maps::RenderSettings settings*/) const;
 
         void OnBaseRequest(std::vector<RawRequest>&& requests) const override;
 

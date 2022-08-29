@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "domain.h"
+#include "svg.h"    //! FOR DEBUG ONLY
 
 namespace transport_catalogue::io /* RequestValueType implementation */ {
 
@@ -396,17 +397,22 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         response_sender_.Send(std::move(responses));
     }
 
-    void RequestHandler::RenderMap(/*maps::RenderSettings settings*/) const {
+    svg::Document& RequestHandler::RenderMap(/*maps::RenderSettings settings*/) const {
         const auto& all_stops = db_reader_.GetDataReader().GetStopsTable();
         std::vector<geo::Coordinates> points{all_stops.size()};
         std::transform(all_stops.begin(), all_stops.end(), points.begin(), [](const auto& stop) {
             return stop.coordinates;
         });
-        geo::MockProjection projection = geo::MockProjection::CalculateFromParams(std::move(points), {renderer_.GetRenderSettings().map_size}, renderer_.GetRenderSettings().padding);
+        geo::MockProjection projection = geo::MockProjection::CalculateFromParams(
+            std::move(points), {renderer_.GetRenderSettings().map_size}, renderer_.GetRenderSettings().padding);
 
         renderer_.UpdateMapProjection(projection);
-        const data::BusRecord bus = db_reader_.GetDataReader().GetBus(all_stops.front().name);
-        renderer_.DrawTransportTracksLayer(bus);
+        transport_catalogue::data::BusRecordSet buses = db_reader_.GetDataReader().GetBuses(all_stops.front().name);
+        if (!buses.empty()) {
+            renderer_.DrawTransportTracksLayer(*buses.begin());
+        }
+
+        return renderer_.GetMap();
     }
 }
 

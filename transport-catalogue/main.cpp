@@ -8,6 +8,7 @@
 #include "./tests/json_test.h"
 #include "./tests/svg_test.h"
 #include "./tests/transport_catalogue_test.h"
+#include "./tests/map_renderer_test.h"
 #include "json_reader.h"
 #include "request_handler.h"
 #include "transport_catalogue.h"
@@ -27,7 +28,7 @@ int main() {
     using namespace transport_catalogue::tests;
     using namespace svg::tests;
     using namespace json::tests;
-
+/*
     SvgTester svg_tester;
     svg_tester.TestSvglib();
 
@@ -37,8 +38,12 @@ int main() {
     JsonReaderTester json_reader_tester;
     json_reader_tester.RunTests();
 
-    TransportCatalogueTester tester;
-    tester.TestTransportCatalogue();
+    TransportCatalogueTester catalogue_tester;
+    catalogue_tester.TestTransportCatalogue();
+*/
+
+    MapRendererTester test_render;
+    test_render.RunTests();
 
     return 0;
 }

@@ -233,18 +233,6 @@ namespace transport_catalogue::tests {
                         }
                     }
                 )";
-            /*std::string json_file =
-                R"(
-                    {
-                        "render_settings": {
-                            "color_palette": [
-                                [172, 209, 42],
-                                "chocolate",
-                                [77, 118, 127]
-                            ]
-                        }
-                    }
-                )";*/
 
             std::stringstream stream;
             std::ostringstream out;

@@ -201,6 +201,8 @@ namespace transport_catalogue::io::renderer /* IRenderer */ {
         virtual void DrawTransportTracksLayer(data::BusRecord bus) = 0;
         virtual void DrawTransportStopsLayer(std::vector<data::BusRecord>&& records) = 0;
         virtual void SetRenderSettings(maps::RenderSettings&& settings) = 0;
+        virtual maps::RenderSettings& GetRenderSettings() = 0;
+        virtual svg::Document& GetMap() = 0;    //! FOR DEBUG ONLY
         virtual ~IRenderer() = default;
     };
 }
@@ -261,15 +263,19 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
         class BusRoute : public DbObject<data::Bus>, public Drawable {
         public:
-            BusRoute(Style style, const geo::Projection& projection) : DbObject{data::DbNull<data::Bus>, projection}, Drawable{style} {}
-            BusRoute(data::BusRecord id, Style style, const geo::Projection& projection) : DbObject{id, projection}, Drawable{style} {}
+            BusRoute(Style style, const geo::Projection& projection) : DbObject{data::DbNull<data::Bus>, projection}, Drawable{style} {
+                Build();
+            }
+            BusRoute(data::BusRecord id, Style style, const geo::Projection& projection) : DbObject{id, projection}, Drawable{style} {
+                Build();
+            }
 
             void Update() override {
                 DbObject::Update();
             }
 
             void UpdateLocation() override {
-                std::cerr << "BusRoute -> Update Location" << std::endl;  //! FOR DEBUG ONLY
+                //std::cerr << "BusRoute -> Update Location" << std::endl;  //! FOR DEBUG ONLY
                 std::for_each(locations_.begin(), locations_.end(), [this](Location& location) {
                     location.GetMapPoint() = {projection_.FromLatLngToMapPoint(location.GetGlobalCoordinates())};
                 });
@@ -286,7 +292,6 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
         private:
             Polyline locations_;
-
             void Build() {
                 assert(locations_.empty());
 
@@ -317,7 +322,16 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
         void SetRenderSettings(RenderSettings&& settings) override {
             settings_ = std::move(settings);
-            UpdateLayers();
+            //! UpdateLayers();
+        }
+
+        RenderSettings& GetRenderSettings() override {
+            return settings_;
+        }
+
+        svg::Document& GetMap() override {
+            static svg::Document doc;
+            return doc;
         }
 
     private:
