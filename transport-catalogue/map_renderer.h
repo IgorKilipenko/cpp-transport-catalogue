@@ -224,6 +224,14 @@ namespace transport_catalogue::maps {
             });
         }
 
+        void Add(Drawable& obj) {
+
+        }
+
+        std::vector<Drawable>& GetObjects() {
+            return objects_;
+        } 
+
     private:
         std::vector<Drawable> objects_;
         svg::Document svg_document_;
@@ -249,8 +257,9 @@ namespace transport_catalogue::io::renderer /* IRenderer */ {
         using Projection_ = geo::SphereProjection;
         virtual void UpdateMapProjection(Projection_&& projection) = 0;
         // virtual void DrawTransportTracksLayer(std::vector<data::BusRecord>&& records) = 0;
-        virtual void DrawTransportTracksLayer(data::BusRecord bus) = 0;
-        virtual void DrawTransportTracksLayer(std::vector<data::BusRecord>&& records) = 0;
+        virtual void DrawTransportTracksLayer(const data::BusRecord&& bus_record) = 0;
+        virtual void DrawTransportTracksLayer(std::vector<data::BusRecord>&& records) = 0;  //! NOT USED YET
+        virtual void DrawTransportTracksLableLayer(data::BusRecord bus_record) = 0;
         virtual void DrawTransportStopsLayer(std::vector<data::StopRecord>&& records) = 0;
         virtual void SetRenderSettings(maps::RenderSettings&& settings) = 0;
         virtual maps::RenderSettings& GetRenderSettings() = 0;
@@ -272,7 +281,7 @@ namespace transport_catalogue::maps /* MapRenderer */ {
         class DbObject {
         public:
             virtual void Update() {
-                if (db_id_ == data::DbNull<ObjectType>) {
+                if (db_record_ == data::DbNull<ObjectType>) {
                     return;
                 }
                 throw std::runtime_error("Not implemented");
@@ -285,15 +294,15 @@ namespace transport_catalogue::maps /* MapRenderer */ {
             }
 
             const data::DbRecord<ObjectType>& GetDbRecord() const {
-                return db_id_;
+                return db_record_;
             }
 
         protected:
-            DbObject(data::DbRecord<ObjectType> object_id, const Projection_& projection) : db_id_{object_id}, projection_{projection} {}
+            DbObject(data::DbRecord<ObjectType> db_record, const Projection_& projection) : db_record_{db_record}, projection_{projection} {}
 
         protected:
             std::string name_;
-            data::DbRecord<ObjectType> db_id_;
+            data::DbRecord<ObjectType> db_record_;
             const Projection_& projection_;
         };
 
@@ -327,8 +336,8 @@ namespace transport_catalogue::maps /* MapRenderer */ {
                 : DbObject{data::DbNull<data::Bus>, projection}, Drawable{settings} {
                 Build();
             }
-            BusRoute(data::BusRecord id, const RenderSettings& settings, const Projection_& projection)
-                : DbObject{id, projection}, Drawable{settings} {
+            BusRoute(data::BusRecord bus_record, const RenderSettings& settings, const Projection_& projection)
+                : DbObject{bus_record, projection}, Drawable{settings} {
                 Build();
             }
 
@@ -357,7 +366,7 @@ namespace transport_catalogue::maps /* MapRenderer */ {
             }
 
             const data::Route& GetRoute() const {
-                return db_id_->route;
+                return db_record_->route;
             }
 
         private:
@@ -369,7 +378,7 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
                 color_ = default_color_pallete_iterator_.GetCurrentColorOrNone();
 
-                const data::Route& route = db_id_->route;
+                const data::Route& route = db_record_->route;
                 locations_.reserve(route.size());
                 std::for_each(route.begin(), route.end(), [this](const data::StopRecord& stop) {
                     locations_.emplace_back(projection_.FromLatLngToMapPoint(stop->coordinates), stop->coordinates);
@@ -389,12 +398,16 @@ namespace transport_catalogue::maps /* MapRenderer */ {
             UpdateLayers();
         }
 
-        void DrawTransportTracksLayer(data::BusRecord bus) override {
+        void DrawTransportTracksLayer(const data::BusRecord&& bus_record) override {
             assert(!settings_.color_palette.empty());
-            BusRoute drawable_bus{bus, settings_, projection_};
+            BusRoute drawable_bus{bus_record, settings_, projection_};
             drawable_bus.Darw(transport_layer_.GetSvgDocument(), color_palette_iterator_);
             // color_index_ = color_index_ < settings_.color_palette.size() - 1ul ? color_index_ + 1ul : 0ul;
             color_palette_iterator_.NextColor();
+        }
+
+        void DrawTransportTracksLableLayer(data::BusRecord bus_record) override {
+
         }
 
         void DrawTransportTracksLayer(std::vector<data::BusRecord>&& /*records*/) override {
