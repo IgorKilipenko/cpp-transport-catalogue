@@ -14,6 +14,7 @@
 #include <map>
 #include <optional>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -26,6 +27,7 @@
 
 namespace transport_catalogue::maps /* Aliases */ {
     using Color = svg::Color;
+    using ColorPalette = std::vector<Color>;
     using Offset = geo::Offset;
     using Size = geo::Size;
     using GlobalCoordinates = geo::Coordinates;
@@ -114,18 +116,47 @@ namespace transport_catalogue::maps /* Locations */ {
 
 namespace transport_catalogue::maps {
 
+    class ColorPaletteIterator {
+    public:
+        ColorPaletteIterator(ColorPalette palette) : palette_(std::move(palette)), curr_it_{palette.begin()} {}
+
+        ColorPalette::const_iterator NextColor() {
+            if (curr_it_ != palette_.end() && ++curr_it_ != palette_.end()) {
+                return curr_it_;
+            } else {
+                curr_it_ = palette_.begin();
+                return curr_it_;
+            }
+        }
+
+        const ColorPalette& GetColorPalette() const {
+            return palette_;
+        }
+
+        const ColorPalette::value_type& GetCurrentColor() const {
+            assert(!IsEmpty());
+            return *curr_it_;
+        }
+        const ColorPalette::value_type& GetCurrentColorOrNone() const {
+            static const ColorPalette::value_type none_color = svg::Colors::NoneColor;
+            return IsEmpty() ? none_color : GetCurrentColor();
+        }
+
+        bool IsEmpty() const {
+            return palette_.empty();
+        }
+
+        void SetColorPalette(ColorPalette new_palette) {
+            palette_ = std::move(new_palette);
+            curr_it_ = palette_.begin();
+        }
+
+    private:
+        ColorPalette palette_;
+        ColorPalette::iterator curr_it_;
+    };
+
     struct RenderSettings {
-        /*
-        "width": 9289.364936976961,
-        "height": 9228.70241453055,
-        "padding": 512.5688364782626,
-        "stop_radius": 24676.062211914188,
-        "line_width": 79550.25988723598,
-        "stop_label_font_size": 79393,
-        "stop_label_offset": [-2837.3688837120862, 55117.27307444796],
-        "underlayer_color": [82, 175, 153, 0.11467454568298674],
-        "underlayer_width": 98705.69087384189,
-        */
         Size map_size;
 
         double padding = 0.0;
@@ -142,7 +173,7 @@ namespace transport_catalogue::maps {
         Color underlayer_color;
         double underlayer_width = 0.0;
 
-        std::vector<Color> color_palette;
+        ColorPalette color_palette;
     };
 
     class Drawable {
@@ -206,7 +237,8 @@ namespace transport_catalogue::io::renderer /* IRenderer */ {
         virtual void DrawTransportStopsLayer(std::vector<data::StopRecord>&& records) = 0;
         virtual void SetRenderSettings(maps::RenderSettings&& settings) = 0;
         virtual maps::RenderSettings& GetRenderSettings() = 0;
-        virtual svg::Document& GetMap() = 0;  //! FOR DEBUG ONLY
+        virtual svg::Document& GetMap() = 0;                //! FOR DEBUG ONLY
+        virtual svg::Document& GetTransportLayerMap() = 0;  //! FOR DEBUG ONLY
         virtual ~IRenderer() = default;
     };
 }
@@ -214,6 +246,9 @@ namespace transport_catalogue::io::renderer /* IRenderer */ {
 namespace transport_catalogue::maps /* MapRenderer */ {
     class MapRenderer : public io::renderer::IRenderer {
         using Projection_ = IRenderer::Projection_;
+
+    public:
+        MapRenderer() : color_palette_iterator_{settings_.color_palette} {}
 
     public:
         template <typename ObjectType>
@@ -299,14 +334,14 @@ namespace transport_catalogue::maps /* MapRenderer */ {
                               .SetStrokeLineCap(svg::StrokeLineCap::ROUND)
                               .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND));
             }
-            void Darw(svg::ObjectContainer& layer, size_t color_index) const {
+            void Darw(svg::ObjectContainer& layer, const ColorPaletteIterator& color_iterator) const {
                 // layer.Add(svg::Polyline(static_cast<std::vector<svg::Point>>(locations_)));
                 layer.Add(svg::Polyline(locations_)
                               .SetFillColor(svg::NoneColor)
                               .SetStrokeWidth(settings_.line_width)
                               .SetStrokeLineCap(svg::StrokeLineCap::ROUND)
                               .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND)
-                              .SetStrokeColor(settings_.color_palette[color_index]));
+                              .SetStrokeColor(color_iterator.GetCurrentColorOrNone()));
             }
 
             const data::Route& GetRoute() const {
@@ -341,16 +376,22 @@ namespace transport_catalogue::maps /* MapRenderer */ {
         void DrawTransportTracksLayer(data::BusRecord bus) override {
             assert(!settings_.color_palette.empty());
             BusRoute drawable_bus{bus, settings_, projection_};
-            drawable_bus.Darw(transport_layer_.GetSvgDocument(), color_index_);
-            color_index_ = color_index_ < settings_.color_palette.size() - 1ul ? color_index_ + 1ul : 0ul;
+            drawable_bus.Darw(transport_layer_.GetSvgDocument(), color_palette_iterator_);
+            // color_index_ = color_index_ < settings_.color_palette.size() - 1ul ? color_index_ + 1ul : 0ul;
+            color_palette_iterator_.NextColor();
         }
 
-        void DrawTransportTracksLayer(std::vector<data::BusRecord>&& /*records*/) override {}
+        void DrawTransportTracksLayer(std::vector<data::BusRecord>&& /*records*/) override {
+            throw std::runtime_error("Not implemented");  //! Not implemented
+        }
 
-        void DrawTransportStopsLayer(std::vector<data::StopRecord>&& /*records*/) override {}
+        void DrawTransportStopsLayer(std::vector<data::StopRecord>&& /*records*/) override {
+            throw std::runtime_error("Not implemented");  //! Not implemented
+        }
 
         void SetRenderSettings(RenderSettings&& settings) override {
             settings_ = std::move(settings);
+            color_palette_iterator_.SetColorPalette(settings_.color_palette);
             //! UpdateLayers();
         }
 
@@ -359,7 +400,12 @@ namespace transport_catalogue::maps /* MapRenderer */ {
         }
 
         svg::Document& GetMap() override {
-            UpdateLayers();
+            //! UpdateLayers();
+            return GetTransportLayerMap();
+        }
+
+        svg::Document& GetTransportLayerMap() override {
+            transport_layer_.Draw();
             return transport_layer_.GetSvgDocument();
         }
 
@@ -367,6 +413,7 @@ namespace transport_catalogue::maps /* MapRenderer */ {
         MapLayer transport_layer_;
         Projection_ projection_;
         RenderSettings settings_;
-        size_t color_index_ = 0;
+        // size_t color_index_ = 0;
+        ColorPaletteIterator color_palette_iterator_;
     };
 }
