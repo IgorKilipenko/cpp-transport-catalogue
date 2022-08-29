@@ -81,13 +81,13 @@ namespace transport_catalogue::geo {
     class Projection {
     public:
         template <typename ProjectionType>
-        static ProjectionType GetProjection(const std::string& projection_name = "WGS84");
+        static ProjectionType GetProjection(const std::string& projection_name = "MockProjection");
 
         virtual Bounds<> GetBounds() const {
             return {};
         }
 
-        virtual Point FromLatLngToMapPoint([[maybe_unused]]Coordinates lat_lng) const {
+        virtual Point FromLatLngToMapPoint([[maybe_unused]] Coordinates lat_lng) const {
             return {lat_lng.lat, lat_lng.lng};
         }
 
@@ -109,34 +109,11 @@ namespace transport_catalogue::geo {
     private:
         std::string code_;
     };
-
-    class WGS84 : public Projection {
-    public:
-        WGS84() : Projection("WGS84") {}
-
-        Bounds<> GetBounds() const override {
-            Coordinates min{90.0, 180.0};
-            Coordinates max{-90.0, -180.0};
-            return {std::move(min), std::move(max)};
-        }
-
-        double GetEarsRadius() const override {
-            return radius_;
-        }
-
-        Point FromLatLngToMapPoint(Coordinates lat_lng) const override {
-            throw std::runtime_error("Not implemented");
-        }
-
-    private:
-        const double radius_ = 6378137.;
-    };
 }
 
 namespace transport_catalogue::geo {
     class MockProjection : public Projection {
     public:
-        const double radius_ = EARTH_RADIUS;
         struct ScaleFactor {
             std::optional<double> height = 0.;
             std::optional<double> width = 0.;
@@ -146,6 +123,38 @@ namespace transport_catalogue::geo {
         MockProjection() : MockProjection(Bounds<>{}, 0, 0) {}
         MockProjection(Bounds<> bounds, double scale, double padding)
             : Projection("MockProjection"), bounds_{bounds}, scale_{scale}, padding_(padding) {}
+
+        MockProjection(const MockProjection& other) = default;
+        MockProjection& operator=(const MockProjection& other) {
+            if (this == &other) {
+                return *this;
+            }
+            this->bounds_ = other.bounds_;
+            this->scale_ = other.scale_;
+            this->padding_ = other.padding_;
+
+            return *this;
+        }
+        MockProjection(MockProjection&& other) = default;
+        MockProjection& operator=(MockProjection&& other) {
+            if (this == &other) {
+                return *this;
+            }
+
+            this->bounds_ = std::move(other.bounds_);
+            this->scale_ = std::move(other.scale_);
+            this->padding_ = std::move(other.padding_);
+
+            return *this;
+        }
+
+        bool operator==(const MockProjection& rhs) const {
+            return this == &rhs || (rhs.bounds_.max == this->bounds_.max && rhs.bounds_.min == this->bounds_.min && rhs.scale_ == this->scale_);
+        }
+
+        bool operator!=(const MockProjection& rhs) const {
+            return !(*this == rhs);
+        }
 
         template <template <typename, typename...> class Container, typename Coordinates, typename... Types>
         static MockProjection CalculateFromParams(Container<Coordinates, Types...> points, Size map_size, double padding) {
@@ -170,6 +179,7 @@ namespace transport_catalogue::geo {
         Bounds<> bounds_;
         double scale_ = 0.;
         double padding_ = 0.;
+        inline static const double radius_ = EARTH_RADIUS;
 
         static bool IsZero(double value) {
             return std::abs(value) < THRESHOLD;
@@ -221,14 +231,4 @@ namespace transport_catalogue::geo {
             return {{min_lng, max_lng}, {min_lat, max_lat}};
         }
     };
-}
-
-namespace transport_catalogue::geo /* Projection implementation */ {
-    template <typename ProjectionType>
-    ProjectionType Projection::GetProjection(const std::string& projection_name) {
-        if (projection_name == "WGS84") {
-            return WGS84();
-        }
-        throw std::logic_error("Unknown projection. Not implemented");
-    }
 }
