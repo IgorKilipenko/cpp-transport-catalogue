@@ -17,12 +17,11 @@
 #include <unordered_map>
 #include <vector>
 
+#include "detail/type_traits.h"
 #include "domain.h"
 #include "geo.h"
 #include "svg.h"
 #include "transport_catalogue.h"
-
-
 
 namespace transport_catalogue::maps /* Aliases */ {
     using Color = svg::Color;
@@ -196,19 +195,22 @@ namespace transport_catalogue::io::renderer /* IRenderer */ {
 
     class IRenderer {
     public:
-        virtual void UpdateMapProjection(geo::Projection projection) = 0;
+        using Projection_ = geo::MockProjection;
+        virtual void UpdateMapProjection(Projection_&& projection) = 0;
         // virtual void DrawTransportTracksLayer(std::vector<data::BusRecord>&& records) = 0;
         virtual void DrawTransportTracksLayer(data::BusRecord bus) = 0;
         virtual void DrawTransportStopsLayer(std::vector<data::BusRecord>&& records) = 0;
         virtual void SetRenderSettings(maps::RenderSettings&& settings) = 0;
         virtual maps::RenderSettings& GetRenderSettings() = 0;
-        virtual svg::Document& GetMap() = 0;    //! FOR DEBUG ONLY
+        virtual svg::Document& GetMap() = 0;  //! FOR DEBUG ONLY
         virtual ~IRenderer() = default;
     };
 }
 
 namespace transport_catalogue::maps /* MapRenderer */ {
     class MapRenderer : public io::renderer::IRenderer {
+        using Projection_ = IRenderer::Projection_;
+
     public:
         template <typename ObjectType>
         class DbObject {
@@ -231,18 +233,18 @@ namespace transport_catalogue::maps /* MapRenderer */ {
             }
 
         protected:
-            DbObject(data::DbRecord<ObjectType> object_id, const geo::Projection& projection) : db_id_{object_id}, projection_{projection} {}
+            DbObject(data::DbRecord<ObjectType> object_id, const Projection_& projection) : db_id_{object_id}, projection_{projection} {}
 
         protected:
             std::string name_;
             data::DbRecord<ObjectType> db_id_;
-            const geo::Projection& projection_;
+            const Projection_& projection_;
         };
 
         class BusStop : public DbObject<data::Stop>, public Drawable {
         public:
-            BusStop(Style style, const geo::Projection& projection) : DbObject{data::DbNull<data::Stop>, projection}, Drawable{style} {}
-            BusStop(data::StopRecord id, Style style, const geo::Projection& projection) : DbObject{id, projection}, Drawable{style} {}
+            BusStop(Style style, const Projection_& projection) : DbObject{data::DbNull<data::Stop>, projection}, Drawable{style} {}
+            BusStop(data::StopRecord id, Style style, const Projection_& projection) : DbObject{id, projection}, Drawable{style} {}
 
             void Update() override {
                 DbObject::Update();
@@ -263,10 +265,10 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
         class BusRoute : public DbObject<data::Bus>, public Drawable {
         public:
-            BusRoute(Style style, const geo::Projection& projection) : DbObject{data::DbNull<data::Bus>, projection}, Drawable{style} {
+            BusRoute(Style style, const Projection_& projection) : DbObject{data::DbNull<data::Bus>, projection}, Drawable{style} {
                 Build();
             }
-            BusRoute(data::BusRecord id, Style style, const geo::Projection& projection) : DbObject{id, projection}, Drawable{style} {
+            BusRoute(data::BusRecord id, Style style, const Projection_& projection) : DbObject{id, projection}, Drawable{style} {
                 Build();
             }
 
@@ -275,7 +277,7 @@ namespace transport_catalogue::maps /* MapRenderer */ {
             }
 
             void UpdateLocation() override {
-                //std::cerr << "BusRoute -> Update Location" << std::endl;  //! FOR DEBUG ONLY
+                // std::cerr << "BusRoute -> Update Location" << std::endl;  //! FOR DEBUG ONLY
                 std::for_each(locations_.begin(), locations_.end(), [this](Location& location) {
                     location.GetMapPoint() = {projection_.FromLatLngToMapPoint(location.GetGlobalCoordinates())};
                 });
@@ -303,18 +305,20 @@ namespace transport_catalogue::maps /* MapRenderer */ {
             }
         };
 
-        void UpdateLayers() {}
+        void UpdateLayers() {
+            transport_layer_.Draw();
+        }
 
-        void UpdateMapProjection(geo::Projection projection) override {
-            if (projection == *projection_) {
+        void UpdateMapProjection(Projection_&& projection) override {
+            if (projection == projection_) {
                 return;
             }
-            projection_ = std::move(&projection);
+            projection_ = std::move(projection);
             UpdateLayers();
         }
 
         void DrawTransportTracksLayer(data::BusRecord bus) override {
-            BusRoute drawable_bus{bus, {}, *projection_};
+            BusRoute drawable_bus{bus, {}, projection_};
             drawable_bus.Darw(transport_layer_.GetSvgDocument());
         }
 
@@ -330,13 +334,13 @@ namespace transport_catalogue::maps /* MapRenderer */ {
         }
 
         svg::Document& GetMap() override {
-            static svg::Document doc;
-            return doc;
+            UpdateLayers();
+            return transport_layer_.GetSvgDocument();
         }
 
     private:
         MapLayer transport_layer_;
-        geo::Projection* projection_;
+        Projection_ projection_;
         RenderSettings settings_;
     };
 }
