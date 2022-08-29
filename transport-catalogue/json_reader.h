@@ -133,7 +133,7 @@ namespace transport_catalogue::io /* JsonReader */ {
 
     private: /* Inner members */
         std::istream& input_stream_;
-        std::unordered_map<const IRequestObserver*, std::weak_ptr<const IRequestObserver>, Hasher> observers_;
+        std::unordered_map<const IRequestObserver*, std::weak_ptr<IRequestObserver>, Hasher> observers_;
         bool is_broadcast_ = true;
 
     public: /* Constant values */

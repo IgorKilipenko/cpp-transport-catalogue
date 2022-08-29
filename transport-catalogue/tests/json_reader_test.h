@@ -40,7 +40,7 @@ namespace transport_catalogue::tests {
             MockRequestObserver(MockRequestObserver&& other) = default;
             MockRequestObserver& operator=(MockRequestObserver&& other) = delete;
 
-            void OnBaseRequest(std::vector<io::RawRequest>&& requests) const override {
+            void OnBaseRequest(std::vector<io::RawRequest>&& requests) override {
                 out_ << "Has " << requests.size() << " requests" << std::endl;
                 if (requests.empty()) {
                     return;
@@ -51,10 +51,10 @@ namespace transport_catalogue::tests {
                 std::move(array.begin(), array.end(), std::back_inserter(*base_requests_));
             }
 
-            void OnStatRequest(std::vector<io::RawRequest>&& /*requests*/) const override {
+            void OnStatRequest(std::vector<io::RawRequest>&& /*requests*/) override {
                 out_ << "OnStatRequest" << std::endl;
             }
-            void OnRenderSettingsRequest(io::RawRequest&& request) const override {
+            void OnRenderSettingsRequest(io::RawRequest&& request) override {
                 out_ << "OnRenderSettingsRequest" << std::endl;
                 render_settings_requests_->emplace_back(io::JsonReader::Converter::ConvertToJson(std::move(request)));
             }
@@ -289,18 +289,18 @@ namespace transport_catalogue::tests {
                 assert(std::get<std::string>(result) == expected);
             }
 
-            {/*
-                using Request = std::variant<std::nullptr_t, int, std::string, bool>;
-                using NodeValueType = std::vector<std::variant<std::string, int>>;
-                using Node = std::variant<std::nullptr_t, NodeValueType, std::vector<NodeValueType>>;
-                Request request = "success";
+            { /*
+                 using Request = std::variant<std::nullptr_t, int, std::string, bool>;
+                 using NodeValueType = std::vector<std::variant<std::string, int>>;
+                 using Node = std::variant<std::nullptr_t, NodeValueType, std::vector<NodeValueType>>;
+                 Request request = "success";
 
-                [[maybe_unused]]Union<Node, Request> union_result = detail::converters::VariantCast(std::move(request));
-                
-                assert(std::holds_alternative<std::string>(union_result));
-                assert(std::get<std::string>(std::get<Request>(union_result)) == "success");
+                 [[maybe_unused]]Union<Node, Request> union_result = detail::converters::VariantCast(std::move(request));
 
-                */
+                 assert(std::holds_alternative<std::string>(union_result));
+                 assert(std::get<std::string>(std::get<Request>(union_result)) == "success");
+
+                 */
             }
         }
 

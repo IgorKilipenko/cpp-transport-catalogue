@@ -462,9 +462,9 @@ namespace transport_catalogue::io /* Response */ {
 namespace transport_catalogue::io /* Interfaces */ {
     class IRequestObserver {
     public:
-        virtual void OnBaseRequest(std::vector<RawRequest>&& requests) const = 0;
-        virtual void OnStatRequest(std::vector<RawRequest>&& requests) const = 0;
-        virtual void OnRenderSettingsRequest(RawRequest&& requests) const = 0;
+        virtual void OnBaseRequest(std::vector<RawRequest>&& requests) = 0;
+        virtual void OnStatRequest(std::vector<RawRequest>&& requests) = 0;
+        virtual void OnRenderSettingsRequest(RawRequest&& requests) = 0;
 
     protected:
         virtual ~IRequestObserver() = default;
@@ -511,11 +511,11 @@ namespace transport_catalogue::io /* RequestHandler */ {
 
         svg::Document& RenderMap(/*maps::RenderSettings settings*/) const;
 
-        void OnBaseRequest(std::vector<RawRequest>&& requests) const override;
+        void OnBaseRequest(std::vector<RawRequest>&& requests) override;
 
-        void OnStatRequest(std::vector<RawRequest>&& requests) const override;
+        void OnStatRequest(std::vector<RawRequest>&& requests) override;
 
-        void OnRenderSettingsRequest(RawRequest&& requests) const override;
+        void OnRenderSettingsRequest(RawRequest&& requests) override;
 
         /// Execute Basic (Insert) request
         void ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const;
@@ -768,7 +768,7 @@ namespace transport_catalogue::io /* RawRequest template implementation */ {
 namespace transport_catalogue::io /* RequestHandler::SettingsBuilder template implementation */ {
 
     template <typename RawColor_, detail::EnableIf<!std::is_lvalue_reference_v<RawColor_>>>
-    std::optional<maps::Color> RequestHandler::SettingsBuilder::ConvertColor(RawColor_ && raw_color) {
+    std::optional<maps::Color> RequestHandler::SettingsBuilder::ConvertColor(RawColor_&& raw_color) {
         return std::visit(
             [](auto&& arg) -> std::optional<maps::Color> {
                 using T = std::decay_t<decltype(arg)>;

@@ -15,7 +15,7 @@
 #include <vector>
 
 #include "domain.h"
-#include "svg.h"    //! FOR DEBUG ONLY
+#include "svg.h"  //! FOR DEBUG ONLY
 
 namespace transport_catalogue::io /* RequestValueType implementation */ {
 
@@ -295,7 +295,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         return db_reader_.GetDataReader().GetBuses(stop_name);
     }*/
 
-    void RequestHandler::OnBaseRequest(std::vector<RawRequest>&& requests) const {
+    void RequestHandler::OnBaseRequest(std::vector<RawRequest>&& requests) {
         std::vector<BaseRequest> reqs;
         reqs.reserve(requests.size());
 
@@ -312,7 +312,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         ExecuteRequest(std::move(reqs));
     }
 
-    void RequestHandler::OnStatRequest(std::vector<RawRequest>&& requests) const {
+    void RequestHandler::OnStatRequest(std::vector<RawRequest>&& requests) {
         std::vector<StatRequest> reqs;
         reqs.reserve(requests.size());
 
@@ -324,7 +324,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         ExecuteRequest(std::move(reqs));
     }
 
-    void RequestHandler::OnRenderSettingsRequest(RawRequest&& request) const {
+    void RequestHandler::OnRenderSettingsRequest(RawRequest&& request) {
         RenderSettingsRequest reqs(std::move(request));
         ExecuteRequest(std::move(reqs));
     }
@@ -406,11 +406,11 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         geo::MockProjection projection = geo::MockProjection::CalculateFromParams(
             std::move(points), {renderer_.GetRenderSettings().map_size}, renderer_.GetRenderSettings().padding);
 
-        renderer_.UpdateMapProjection(projection);
+        /*renderer_.UpdateMapProjection(projection);
         transport_catalogue::data::BusRecordSet buses = db_reader_.GetDataReader().GetBuses(all_stops.front().name);
         if (!buses.empty()) {
             renderer_.DrawTransportTracksLayer(*buses.begin());
-        }
+        }*/
 
         return renderer_.GetMap();
     }
