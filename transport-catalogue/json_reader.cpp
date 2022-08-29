@@ -239,7 +239,7 @@ namespace transport_catalogue::io /* JsonResponseSender implementation */ {
                 map[StatFields::BUSES] = json::Array(std::make_move_iterator(stat->buses.begin()), std::make_move_iterator(stat->buses.end()));
             }
         } else if (response.IsMapResponse()) {
-            std::cerr << "IsMapResponse" << std::endl;  //!!
+            //!std::cerr << "IsMapResponse" << std::endl;  //!!
             return {};
         } else {
             throw exceptions::ReadingException("Invalid response (Is not stat response). Response does not contain stat info");

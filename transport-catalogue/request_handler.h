@@ -503,7 +503,7 @@ namespace transport_catalogue::io /* RequestHandler */ {
 
         ~RequestHandler() {
 #if (TRACE && REQUEST_TRACE && TRACE_CTR)
-            std::cerr << "Stop request handler" << std::endl;
+            //std::cerr << "Stop request handler" << std::endl;
 #endif
         };
 
