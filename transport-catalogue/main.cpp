@@ -6,9 +6,9 @@
 
 #include "./tests/json_reader_test.h"
 #include "./tests/json_test.h"
+#include "./tests/map_renderer_test.h"
 #include "./tests/svg_test.h"
 #include "./tests/transport_catalogue_test.h"
-#include "./tests/map_renderer_test.h"
 #include "json_reader.h"
 #include "request_handler.h"
 #include "transport_catalogue.h"
@@ -41,7 +41,6 @@ int main() {
     TransportCatalogueTester catalogue_tester;
     catalogue_tester.TestTransportCatalogue();
 */
-
     MapRendererTester test_render;
     test_render.RunTests();
 

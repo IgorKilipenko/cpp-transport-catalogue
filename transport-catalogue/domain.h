@@ -292,6 +292,7 @@ namespace transport_catalogue::data /* Interfaces */ {
 
         virtual const BusRecordSet& GetBuses(StopRecord stop) const = 0;
         virtual const BusRecordSet& GetBuses(const std::string_view bus_name) const = 0;
+        virtual const DatabaseScheme::BusRoutesTable& GetBusRoutesTable() const = 0;
 
         virtual DistanceBetweenStopsRecord GetDistanceBetweenStops(StopRecord from, StopRecord to) const = 0;
 
@@ -459,6 +460,10 @@ namespace transport_catalogue::data /* Database inner classes (Read/Write interf
 
         const DatabaseScheme::StopsTable& GetStopsTable() const override {
             return db_.GetStopsTable();
+        }
+
+        const DatabaseScheme::BusRoutesTable& GetBusRoutesTable() const override {
+            return db_.GetBusRoutesTable();
         }
 
         const BusRecordSet& GetBuses(StopRecord stop) const override;

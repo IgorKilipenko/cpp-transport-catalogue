@@ -16,34 +16,6 @@
 namespace transport_catalogue::tests {
     class MapRendererTester {
     private:
-        inline static const std::string TestFile_1 =
-            R"(
-            {
-                "width": 1200.0,
-                "height": 1200.0,
-
-                "padding": 50.0,
-
-                "line_width": 14.0,
-                "stop_radius": 5.0,
-
-                "bus_label_font_size": 20,
-                "bus_label_offset": [7.0, 15.0],
-
-                "stop_label_font_size": 20,
-                "stop_label_offset": [7.0, -3.0],
-
-                "underlayer_color": [255, 255, 255, 0.85],
-                "underlayer_width": 3.0,
-
-                "color_palette": [
-                    "green",
-                    [255, 160, 0],
-                    "red"
-                ],
-            } 
-        )";
-
         inline static const std::string TestFile_1_Expected =
             R"~(<?xml version="1.0" encoding="UTF-8" ?>
             <svg xmlns="http://www.w3.org/2000/svg" version="1.1">
@@ -51,7 +23,7 @@ namespace transport_catalogue::tests {
               <polyline points="550,190.051 279.22,50 333.61,269.08 550,190.051" fill="none" stroke="rgb(255,160,0)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>)~";
 
-        inline static const std::string TestFile_2 = "test_1.json";
+        inline static const std::string TestFile_1 = "test_1.json";
 
     public:
         void TestRender() const {

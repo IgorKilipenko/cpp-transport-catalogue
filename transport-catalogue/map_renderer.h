@@ -199,7 +199,8 @@ namespace transport_catalogue::io::renderer /* IRenderer */ {
         virtual void UpdateMapProjection(Projection_&& projection) = 0;
         // virtual void DrawTransportTracksLayer(std::vector<data::BusRecord>&& records) = 0;
         virtual void DrawTransportTracksLayer(data::BusRecord bus) = 0;
-        virtual void DrawTransportStopsLayer(std::vector<data::BusRecord>&& records) = 0;
+        virtual void DrawTransportTracksLayer(std::vector<data::BusRecord>&& records) = 0;
+        virtual void DrawTransportStopsLayer(std::vector<data::StopRecord>&& records) = 0;
         virtual void SetRenderSettings(maps::RenderSettings&& settings) = 0;
         virtual maps::RenderSettings& GetRenderSettings() = 0;
         virtual svg::Document& GetMap() = 0;  //! FOR DEBUG ONLY
@@ -322,7 +323,11 @@ namespace transport_catalogue::maps /* MapRenderer */ {
             drawable_bus.Darw(transport_layer_.GetSvgDocument());
         }
 
-        void DrawTransportStopsLayer(std::vector<data::BusRecord>&& records) override {}
+        void DrawTransportTracksLayer(std::vector<data::BusRecord>&& records) override {
+            
+        }
+
+        void DrawTransportStopsLayer(std::vector<data::StopRecord>&& records) override {}
 
         void SetRenderSettings(RenderSettings&& settings) override {
             settings_ = std::move(settings);

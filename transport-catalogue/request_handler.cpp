@@ -407,10 +407,19 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
             std::move(points), {renderer_.GetRenderSettings().map_size}, renderer_.GetRenderSettings().padding);
 
         renderer_.UpdateMapProjection(std::move(projection));
-        transport_catalogue::data::BusRecordSet buses = db_reader_.GetDataReader().GetBuses(all_stops.front().name);
-        if (!buses.empty()) {
-            renderer_.DrawTransportTracksLayer(*buses.begin());
-        }
+
+        // transport_catalogue::data::BusRecordSet buses = db_reader_.GetDataReader().GetBuses(all_stops.front().name);
+        const data::DatabaseScheme::BusRoutesTable & buses_table = db_reader_.GetDataReader().GetBusRoutesTable();
+        data::BusRecordSet sorted_busses;
+        std::for_each(buses_table.begin(), buses_table.end(), [&sorted_busses](const auto& bus) {
+            sorted_busses.emplace(&bus);
+        });
+        
+        std::for_each(sorted_busses.begin(), sorted_busses.end(), [this](const auto& bus) {
+            if (!bus->route.empty()) {
+                renderer_.DrawTransportTracksLayer(bus);
+            }
+        });
 
         return renderer_.GetMap();
     }
