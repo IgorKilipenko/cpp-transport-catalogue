@@ -257,9 +257,9 @@ namespace transport_catalogue::io::renderer /* IRenderer */ {
         using Projection_ = geo::SphereProjection;
         virtual void UpdateMapProjection(Projection_&& projection) = 0;
         // virtual void DrawTransportTracksLayer(std::vector<data::BusRecord>&& records) = 0;
-        virtual void DrawTransportTracksLayer(const data::BusRecord&& bus_record) = 0;
+        virtual void AddRouteToLayer(const data::BusRecord&& bus_record) = 0;
         virtual void DrawTransportTracksLayer(std::vector<data::BusRecord>&& records) = 0;  //! NOT USED YET
-        virtual void DrawTransportTracksLableLayer(data::BusRecord bus_record) = 0;
+        virtual void AddRouteNameToLayer(data::BusRecord bus_record) = 0;
         virtual void DrawTransportStopsLayer(std::vector<data::StopRecord>&& records) = 0;
         virtual void SetRenderSettings(maps::RenderSettings&& settings) = 0;
         virtual maps::RenderSettings& GetRenderSettings() = 0;
@@ -398,7 +398,7 @@ namespace transport_catalogue::maps /* MapRenderer */ {
             UpdateLayers();
         }
 
-        void DrawTransportTracksLayer(const data::BusRecord&& bus_record) override {
+        void AddRouteToLayer(const data::BusRecord&& bus_record) override {
             assert(!settings_.color_palette.empty());
             BusRoute drawable_bus{bus_record, settings_, projection_};
             drawable_bus.Darw(transport_layer_.GetSvgDocument(), color_palette_iterator_);
@@ -406,7 +406,7 @@ namespace transport_catalogue::maps /* MapRenderer */ {
             color_palette_iterator_.NextColor();
         }
 
-        void DrawTransportTracksLableLayer(data::BusRecord bus_record) override {
+        void AddRouteNameToLayer(data::BusRecord bus_record) override {
 
         }
 

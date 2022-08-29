@@ -419,8 +419,8 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         renderer_.UpdateMapProjection(std::move(projection));
 
         std::for_each(sorted_busses.begin(), sorted_busses.end(), [&renderer=this->renderer_](const auto& bus) {
-            renderer.DrawTransportTracksLayer(data::BusRecordSet::value_type{bus});
-            renderer.DrawTransportTracksLableLayer(data::BusRecordSet::value_type{bus});
+            renderer.AddRouteToLayer(data::BusRecordSet::value_type{bus});
+            renderer.AddRouteNameToLayer(data::BusRecordSet::value_type{bus});
         });
 
         return renderer_.GetMap();
