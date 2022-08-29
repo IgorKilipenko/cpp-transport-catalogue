@@ -100,6 +100,17 @@ namespace transport_catalogue::detail::converters {
             },
             value);
     }
+
+    template <typename ExecutionPolicy, EnableForExecutionPolicy<ExecutionPolicy> = true>
+    static void MakeUnique(ExecutionPolicy&& policy, std::vector<std::string_view>& values) {
+        std::sort(policy, values.begin(), values.end());
+        auto last = std::unique(policy, values.begin(), values.end());
+        values.erase(last, values.end());
+    }
+
+    [[maybe_unused]]static void MakeUnique(std::vector<std::string_view>& values) {
+        MakeUnique(std::execution::seq, values);
+    }
 }
 
 namespace transport_catalogue::data /* Db objects (ORM) */ {
@@ -119,7 +130,12 @@ namespace transport_catalogue::data /* Db objects (ORM) */ {
         bool operator!=(const Stop& rhs) const noexcept;
     };
 
-    using StopRecord = const Stop*;
+    template <typename T>
+    using DbRecord = const T*;
+    template <typename T>
+    constexpr const T* DbNull = nullptr;
+
+    using StopRecord = DbRecord<Stop>;
     using StopRecordSet = std::deque<StopRecord>;
 
     class Route : public std::vector<StopRecord> {
@@ -153,11 +169,7 @@ namespace transport_catalogue::data /* Db objects (ORM) */ {
         std::set<std::string>::key_compare string_compare_;
     };
 
-    template <typename T>
-    using DbRecord = const T*;
-    template <typename T>
-    constexpr const T* DbNull = nullptr;
-    using BusRecord = const Bus*;
+    using BusRecord = DbRecord<Bus>;
     using BusRecordSet = std::set<BusRecord, ByNameCompare>;
 
     struct DistanceBetweenStopsRecord {
