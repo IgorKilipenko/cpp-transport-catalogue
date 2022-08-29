@@ -118,7 +118,10 @@ namespace transport_catalogue::maps {
 
     class ColorPaletteСyclicIterator {
     public:
-        ColorPaletteСyclicIterator(ColorPalette&& palette) : palette_(std::move(palette)), curr_it_{palette.begin()} {}
+        inline static const ColorPalette::value_type NoneColor = svg::Colors::NoneColor;
+
+        ColorPaletteСyclicIterator() : ColorPaletteСyclicIterator(ColorPalette()) {}
+        ColorPaletteСyclicIterator(ColorPalette&& palette) : palette_(std::move(palette)), curr_it_{palette_.begin()} {}
 
         ColorPalette::const_iterator NextColor() {
             if (curr_it_ != palette_.end() && ++curr_it_ != palette_.end()) {
@@ -149,11 +152,11 @@ namespace transport_catalogue::maps {
         }
 
         const ColorPalette::value_type& GetCurrentColorOrNone() const noexcept {
-            return IsEmpty() ? none_color_ : GetCurrentColor();
+            return IsEmpty() ? NoneColor : GetCurrentColor();
         }
 
         const ColorPalette::value_type& GetPrevColorOrNone() const noexcept {
-            return IsEmpty() ? none_color_ : GetPrevColor();
+            return IsEmpty() ? NoneColor : GetPrevColor();
         }
 
         bool IsEmpty() const {
@@ -168,7 +171,6 @@ namespace transport_catalogue::maps {
     private:
         ColorPalette palette_;
         ColorPalette::iterator curr_it_;
-        inline static const ColorPalette::value_type none_color_ = svg::Colors::NoneColor;
     };
 
     struct RenderSettings {
@@ -341,16 +343,7 @@ namespace transport_catalogue::maps /* MapRenderer */ {
                 });
             }
 
-            void Darw(svg::ObjectContainer& layer) const override {
-                // layer.Add(svg::Polyline(static_cast<std::vector<svg::Point>>(locations_)));
-                layer.Add(svg::Polyline(locations_)
-                              .SetFillColor(svg::NoneColor)
-                              .SetStrokeWidth(settings_.line_width)
-                              .SetStrokeLineCap(svg::StrokeLineCap::ROUND)
-                              .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND));
-            }
             void Darw(svg::ObjectContainer& layer, const ColorPaletteСyclicIterator& color_iterator) const {
-                // layer.Add(svg::Polyline(static_cast<std::vector<svg::Point>>(locations_)));
                 layer.Add(svg::Polyline(locations_)
                               .SetFillColor(svg::NoneColor)
                               .SetStrokeWidth(settings_.line_width)
@@ -359,14 +352,22 @@ namespace transport_catalogue::maps /* MapRenderer */ {
                               .SetStrokeColor(color_iterator.GetCurrentColorOrNone()));
             }
 
+            void Darw(svg::ObjectContainer& layer) const override {
+                Darw(layer, default_color_pallete_iterator_);
+            }
+
             const data::Route& GetRoute() const {
                 return db_id_->route;
             }
 
         private:
             Polyline locations_;
+            Color color_;
+            inline static const ColorPaletteСyclicIterator default_color_pallete_iterator_{{ColorPaletteСyclicIterator::NoneColor}};
             void Build() {
                 assert(locations_.empty());
+
+                color_ = default_color_pallete_iterator_.GetCurrentColorOrNone();
 
                 const data::Route& route = db_id_->route;
                 locations_.reserve(route.size());
