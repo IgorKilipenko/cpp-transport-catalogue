@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstddef>
 #include <iterator>
 #include <map>
 #include <optional>
@@ -40,21 +41,6 @@ namespace transport_catalogue::maps /* Aliases */ {
         Offset offset;
         uint32_t font_size;
         std::optional<Color> underlayer_color;
-    };
-
-    class Drawable {
-    public:
-        virtual void Darw(svg::ObjectContainer& layer) const = 0;
-        virtual ~Drawable() = default;
-
-    protected:
-        Drawable(Style style) : style_(style) {}
-        Drawable(TextStyle style) : text_style_(style) {}
-        Drawable(Style style, TextStyle text_style) : style_(style), text_style_(text_style) {}
-
-    protected:
-        std::optional<Style> style_;
-        std::optional<TextStyle> text_style_;
     };
 }
 
@@ -158,6 +144,23 @@ namespace transport_catalogue::maps {
 
         std::vector<Color> color_palette;
     };
+
+    class Drawable {
+    public:
+        virtual void Darw(svg::ObjectContainer& layer) const = 0;
+        virtual ~Drawable() = default;
+
+    protected:
+        Drawable(const RenderSettings& settings) : settings_(settings) {}
+        /*Drawable(Style style) : style_(style) {}
+        Drawable(TextStyle style) : text_style_(style) {}
+        Drawable(Style style, TextStyle text_style) : style_(style), text_style_(text_style) {}*/
+
+    protected:
+        // std::optional<Style> style_;
+        // std::optional<TextStyle> text_style_;
+        const RenderSettings& settings_;
+    };
 }
 
 namespace transport_catalogue::maps {
@@ -244,8 +247,10 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
         class BusStop : public DbObject<data::Stop>, public Drawable {
         public:
-            BusStop(Style style, const Projection_& projection) : DbObject{data::DbNull<data::Stop>, projection}, Drawable{style} {}
-            BusStop(data::StopRecord id, Style style, const Projection_& projection) : DbObject{id, projection}, Drawable{style} {}
+            BusStop(const RenderSettings& settings, const Projection_& projection)
+                : DbObject{data::DbNull<data::Stop>, projection}, Drawable{settings} {}
+            BusStop(data::StopRecord id, const RenderSettings& settings, const Projection_& projection)
+                : DbObject{id, projection}, Drawable{settings} {}
 
             void Update() override {
                 DbObject::Update();
@@ -266,10 +271,12 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
         class BusRoute : public DbObject<data::Bus>, public Drawable {
         public:
-            BusRoute(Style style, const Projection_& projection) : DbObject{data::DbNull<data::Bus>, projection}, Drawable{style} {
+            BusRoute(const RenderSettings& settings, const Projection_& projection)
+                : DbObject{data::DbNull<data::Bus>, projection}, Drawable{settings} {
                 Build();
             }
-            BusRoute(data::BusRecord id, Style style, const Projection_& projection) : DbObject{id, projection}, Drawable{style} {
+            BusRoute(data::BusRecord id, const RenderSettings& settings, const Projection_& projection)
+                : DbObject{id, projection}, Drawable{settings} {
                 Build();
             }
 
@@ -286,7 +293,20 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
             void Darw(svg::ObjectContainer& layer) const override {
                 // layer.Add(svg::Polyline(static_cast<std::vector<svg::Point>>(locations_)));
-                layer.Add(svg::Polyline(locations_));
+                layer.Add(svg::Polyline(locations_)
+                              .SetFillColor(svg::NoneColor)
+                              .SetStrokeWidth(settings_.line_width)
+                              .SetStrokeLineCap(svg::StrokeLineCap::ROUND)
+                              .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND));
+            }
+            void Darw(svg::ObjectContainer& layer, size_t color_index) const {
+                // layer.Add(svg::Polyline(static_cast<std::vector<svg::Point>>(locations_)));
+                layer.Add(svg::Polyline(locations_)
+                              .SetFillColor(svg::NoneColor)
+                              .SetStrokeWidth(settings_.line_width)
+                              .SetStrokeLineCap(svg::StrokeLineCap::ROUND)
+                              .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND)
+                              .SetStrokeColor(settings_.color_palette[color_index]));
             }
 
             const data::Route& GetRoute() const {
@@ -319,13 +339,13 @@ namespace transport_catalogue::maps /* MapRenderer */ {
         }
 
         void DrawTransportTracksLayer(data::BusRecord bus) override {
-            BusRoute drawable_bus{bus, {}, projection_};
-            drawable_bus.Darw(transport_layer_.GetSvgDocument());
+            assert(!settings_.color_palette.empty());
+            BusRoute drawable_bus{bus, settings_, projection_};
+            drawable_bus.Darw(transport_layer_.GetSvgDocument(), color_index_);
+            color_index_ = color_index_ < settings_.color_palette.size() - 1 ? ++color_index_ : 0ul;
         }
 
-        void DrawTransportTracksLayer(std::vector<data::BusRecord>&& records) override {
-            
-        }
+        void DrawTransportTracksLayer(std::vector<data::BusRecord>&& records) override {}
 
         void DrawTransportStopsLayer(std::vector<data::StopRecord>&& records) override {}
 
@@ -347,5 +367,6 @@ namespace transport_catalogue::maps /* MapRenderer */ {
         MapLayer transport_layer_;
         Projection_ projection_;
         RenderSettings settings_;
+        size_t color_index_ = 0;
     };
 }
