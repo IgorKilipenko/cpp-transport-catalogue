@@ -28,7 +28,7 @@ int main() {
     using namespace transport_catalogue::tests;
     using namespace svg::tests;
     using namespace json::tests;
-/*
+
     SvgTester svg_tester;
     svg_tester.TestSvglib();
 
@@ -40,7 +40,7 @@ int main() {
 
     TransportCatalogueTester catalogue_tester;
     catalogue_tester.TestTransportCatalogue();
-*/
+
     MapRendererTester test_render;
     test_render.RunTests();
 

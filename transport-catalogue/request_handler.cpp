@@ -312,16 +312,16 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         ExecuteRequest(std::move(reqs));
     }
 
-    void RequestHandler::OnStatRequest(std::vector<RawRequest>&& /*requests*/) {
-        /*std::vector<StatRequest> reqs;    //! COMMENTED FOR SOLVE TRAINING
-        reqs.reserve(requests.size());      //! Need uncomment!!!
+    void RequestHandler::OnStatRequest(std::vector<RawRequest>&& requests) {
+        std::vector<StatRequest> reqs;
+        reqs.reserve(requests.size());
 
         std::for_each(std::make_move_iterator(requests.begin()), std::make_move_iterator(requests.end()), [&reqs](RawRequest&& raw_req) {
             StatRequest stat_req(std::move(raw_req));
             reqs.emplace_back(std::move(stat_req));
         });
 
-        ExecuteRequest(std::move(reqs));*/
+        ExecuteRequest(std::move(reqs));
     }
 
     void RequestHandler::OnRenderSettingsRequest(RawRequest&& request) {
