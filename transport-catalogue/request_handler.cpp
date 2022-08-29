@@ -408,7 +408,6 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
 
         renderer_.UpdateMapProjection(std::move(projection));
 
-        // transport_catalogue::data::BusRecordSet buses = db_reader_.GetDataReader().GetBuses(all_stops.front().name);
         const data::DatabaseScheme::BusRoutesTable & buses_table = db_reader_.GetDataReader().GetBusRoutesTable();
         data::BusRecordSet sorted_busses;
         std::for_each(buses_table.begin(), buses_table.end(), [&sorted_busses](const auto& bus) {
