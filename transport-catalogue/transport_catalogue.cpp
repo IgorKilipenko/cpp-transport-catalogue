@@ -112,7 +112,7 @@ namespace transport_catalogue /* TransportCatalogue::StatReader implementation *
         double pseudo_length = 0;
         const data::Route& route = bus->route;
 
-        for (auto i = 0; i < route.size() - 1; ++i) {
+        for (size_t i = 0; i < route.size() - 1ul; ++i) {
             data::StopRecord from_stop = db_reader_.GetStop(route[i]->name);
             data::StopRecord to_stop = db_reader_.GetStop(route[i + 1]->name);
             assert(from_stop && from_stop);

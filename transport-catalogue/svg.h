@@ -410,6 +410,10 @@ namespace svg /* Svg Objects */ {
         /// Выводит в ostream svg-представление документа
         void Render(std::ostream& out) const;
 
+        size_t GetObjectsCount() const {
+            return objects_.size();
+        }
+
     private:
         ObjectCollection objects_;
         static constexpr const std::string_view HEADER_LINE = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>"sv;

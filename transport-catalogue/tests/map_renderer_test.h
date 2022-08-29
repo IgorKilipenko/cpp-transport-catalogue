@@ -23,6 +23,7 @@ namespace transport_catalogue::tests {
               <polyline points="550,190.051 279.22,50 333.61,269.08 550,190.051" fill="none" stroke="rgb(255,160,0)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>)~";
 
+        //!inline static const std::string TestFile_1 = "with_render_settings(test23).json";
         inline static const std::string TestFile_1 = "test_1.json";
 
     public:
@@ -31,7 +32,7 @@ namespace transport_catalogue::tests {
             using namespace transport_catalogue::io;
 
             std::filesystem::path test_dir = std::filesystem::current_path() / "transport-catalogue/tests/data/svg_render";
-            std::string json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / ("test_1"s + ".json"s));
+            std::string json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / TestFile_1);
 
             std::stringstream istream;
             std::stringstream ostream;

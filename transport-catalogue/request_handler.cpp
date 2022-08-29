@@ -312,16 +312,16 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         ExecuteRequest(std::move(reqs));
     }
 
-    void RequestHandler::OnStatRequest(std::vector<RawRequest>&& requests) {
-        std::vector<StatRequest> reqs;
-        reqs.reserve(requests.size());
+    void RequestHandler::OnStatRequest(std::vector<RawRequest>&& /*requests*/) {
+        /*std::vector<StatRequest> reqs;    //! COMMENTED FOR SOLVE TRAINING
+        reqs.reserve(requests.size());      //! Need uncomment!!!
 
         std::for_each(std::make_move_iterator(requests.begin()), std::make_move_iterator(requests.end()), [&reqs](RawRequest&& raw_req) {
             StatRequest stat_req(std::move(raw_req));
             reqs.emplace_back(std::move(stat_req));
         });
 
-        ExecuteRequest(std::move(reqs));
+        ExecuteRequest(std::move(reqs));*/
     }
 
     void RequestHandler::OnRenderSettingsRequest(RawRequest&& request) {
@@ -398,7 +398,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
     }
 
     svg::Document& RequestHandler::RenderMap(/*maps::RenderSettings settings*/) const {
-        const auto& all_stops = db_reader_.GetDataReader().GetStopsTable();
+        /*const auto& all_stops = db_reader_.GetDataReader().GetStopsTable();
         std::vector<geo::Coordinates> points{all_stops.size()};
         std::transform(all_stops.begin(), all_stops.end(), points.begin(), [](const auto& stop) {
             return stop.coordinates;
@@ -406,18 +406,30 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         geo::MockProjection projection = geo::MockProjection::CalculateFromParams(
             std::move(points), {renderer_.GetRenderSettings().map_size}, renderer_.GetRenderSettings().padding);
 
+        renderer_.UpdateMapProjection(std::move(projection));*/
+
+        const data::DatabaseScheme::BusRoutesTable& buses_table = db_reader_.GetDataReader().GetBusRoutesTable();
+        data::BusRecordSet sorted_busses;
+        //data::StopRecordSet stops_on_routes;
+        std::vector<geo::Coordinates> points;
+        points.reserve(db_reader_.GetDataReader().GetStopsTable().size());
+        std::for_each(buses_table.begin(), buses_table.end(), [&sorted_busses, /*&stops_on_routes,*/ &points](const auto& bus) {
+            if (!bus.route.empty()) {
+                sorted_busses.emplace(&bus);
+                //stops_on_routes.insert(stops_on_routes.begin(), bus.route.begin(), bus.route.end());
+                std::for_each(bus.route.begin(), bus.route.end(), [&points](const auto& stop) {
+                    points.emplace_back(stop->coordinates);
+                });
+            }
+        });
+
+        geo::MockProjection projection = geo::MockProjection::CalculateFromParams(
+            std::move(points), {renderer_.GetRenderSettings().map_size}, renderer_.GetRenderSettings().padding);
+
         renderer_.UpdateMapProjection(std::move(projection));
 
-        const data::DatabaseScheme::BusRoutesTable & buses_table = db_reader_.GetDataReader().GetBusRoutesTable();
-        data::BusRecordSet sorted_busses;
-        std::for_each(buses_table.begin(), buses_table.end(), [&sorted_busses](const auto& bus) {
-            sorted_busses.emplace(&bus);
-        });
-        
         std::for_each(sorted_busses.begin(), sorted_busses.end(), [this](const auto& bus) {
-            if (!bus->route.empty()) {
-                renderer_.DrawTransportTracksLayer(bus);
-            }
+            renderer_.DrawTransportTracksLayer(bus);
         });
 
         return renderer_.GetMap();

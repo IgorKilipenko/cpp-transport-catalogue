@@ -261,7 +261,7 @@ namespace transport_catalogue::maps /* MapRenderer */ {
                 location_.GetMapPoint() = {projection_.FromLatLngToMapPoint(location_.GetGlobalCoordinates())};
             }
 
-            void Darw(svg::ObjectContainer& layer) const override {
+            void Darw(svg::ObjectContainer& /*layer*/) const override {
                 // layer.Add(Polyline{})
             }
 
@@ -342,12 +342,12 @@ namespace transport_catalogue::maps /* MapRenderer */ {
             assert(!settings_.color_palette.empty());
             BusRoute drawable_bus{bus, settings_, projection_};
             drawable_bus.Darw(transport_layer_.GetSvgDocument(), color_index_);
-            color_index_ = color_index_ < settings_.color_palette.size() - 1 ? ++color_index_ : 0ul;
+            color_index_ = color_index_ < settings_.color_palette.size() - 1ul ? color_index_ + 1ul : 0ul;
         }
 
-        void DrawTransportTracksLayer(std::vector<data::BusRecord>&& records) override {}
+        void DrawTransportTracksLayer(std::vector<data::BusRecord>&& /*records*/) override {}
 
-        void DrawTransportStopsLayer(std::vector<data::StopRecord>&& records) override {}
+        void DrawTransportStopsLayer(std::vector<data::StopRecord>&& /*records*/) override {}
 
         void SetRenderSettings(RenderSettings&& settings) override {
             settings_ = std::move(settings);
