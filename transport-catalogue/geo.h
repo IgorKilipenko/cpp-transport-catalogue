@@ -228,7 +228,7 @@ namespace transport_catalogue::geo {
             const double min_lat = bottom_it->lat;
             const double max_lat = top_it->lat;
 
-            return {{min_lng, max_lng}, {min_lat, max_lat}};
+            return {{min_lat, min_lng}, {max_lat, max_lng}};
         }
     };
 }
