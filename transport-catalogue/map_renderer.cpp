@@ -25,35 +25,29 @@ namespace transport_catalogue::maps /* MapRenderer implementation */ {
     }
 
     void MapRenderer::AddRouteToLayer(const data::BusRecord&& bus_record) {
-        /*
         assert(!settings_.color_palette.empty());
         BusRoute drawable_bus{bus_record, settings_, projection_};
-        drawable_bus.SetColor(Color(color_palette_iterator_.GetCurrentColor()));
-        drawable_bus.Darw(routes_layer_.GetSvgDocument());
-        color_palette_iterator_.NextColor();
-        */
-        assert(!settings_.color_palette.empty());
-        BusRoute drawable_bus{bus_record, settings_, projection_};
-        drawable_bus.SetColor(Color(color_palette_iterator_.GetCurrentColor()));
+        drawable_bus.SetColor(Color(route_color_palette_iterator_.GetCurrentColor()));
 
         route_names_layer_.Add(drawable_bus.BuildLable());
         routes_layer_.Add(std::move(drawable_bus));
-        color_palette_iterator_.NextColor();
+        route_color_palette_iterator_.NextColor();
     }
 
-    void MapRenderer::AddRouteNameToLayer(data::BusRecord bus_record) {}
+    void MapRenderer::AddStopToLayer(const data::StopRecord&& stop_record) {
+        assert(!settings_.color_palette.empty());
+        StopMarker drawable_stop{stop_record, settings_, projection_};
+        drawable_stop.SetColor(Color(busses_color_palette_iterator_.GetCurrentColor()));
 
-    void MapRenderer::DrawTransportTracksLayer(std::vector<data::BusRecord>&& /*records*/) {
-        throw std::runtime_error("Not implemented");  //! Not implemented
-    }
-
-    void MapRenderer::DrawTransportStopsLayer(std::vector<data::StopRecord>&& /*records*/) {
-        throw std::runtime_error("Not implemented");  //! Not implemented
+        // stop_marker_names_layer_.Add(drawable_stop.BuildLable());
+        stop_markers_layer_.Add(std::move(drawable_stop));
+        busses_color_palette_iterator_.NextColor();
     }
 
     void MapRenderer::SetRenderSettings(RenderSettings&& settings) {
         settings_ = std::move(settings);
-        color_palette_iterator_.SetColorPalette(ColorPalette(settings_.color_palette));
+        route_color_palette_iterator_.SetColorPalette(ColorPalette(settings_.color_palette));
+        busses_color_palette_iterator_.SetColorPalette(ColorPalette(settings_.color_palette));
         //! UpdateLayers();
     }
 
@@ -74,6 +68,11 @@ namespace transport_catalogue::maps /* MapRenderer implementation */ {
     svg::Document& MapRenderer::GetRouteNamesLayer() {
         route_names_layer_.Draw();
         return route_names_layer_.GetSvgDocument();
+    }
+
+    svg::Document& MapRenderer::GetStopMarkersLayer() {
+        stop_markers_layer_.Draw();
+        return stop_markers_layer_.GetSvgDocument();
     }
 }
 
@@ -105,5 +104,33 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute implementation */ {
 
     MapRenderer::BusRoute::BusRouteLable MapRenderer::BusRoute::BuildLable() const {
         return BusRouteLable(*this);
+    }
+}
+
+namespace transport_catalogue::maps /* MapRenderer::StopMarker implementation */ {
+    void MapRenderer::StopMarker::Update()  {
+        IDbObject::Update();
+        UpdateLocation();
+    }
+
+    void MapRenderer::StopMarker::UpdateLocation()  {
+        location_.GetMapPoint() = {projection_.FromLatLngToMapPoint(location_.GetGlobalCoordinates())};
+    }
+
+    void MapRenderer::StopMarker::Darw(svg::ObjectContainer& layer) const  {
+        static const std::string color{"white"};
+        layer.Add(svg::Circle().SetCenter(location_.GetMapPoint()).SetFillColor(color).SetRadius(settings_.stop_marker_radius));
+    }
+
+    void MapRenderer::StopMarker::SetColor(const Color&& color) {
+        color_ = std::move(color);
+    }
+
+    MapRenderer::StopMarker::StopMarkerLable MapRenderer::StopMarker::BuildLable() const {
+        throw std::runtime_error("Not implemented");
+    }
+
+    std::shared_ptr<IDrawable> MapRenderer::StopMarker::Clone() const  {
+        return std::make_shared<MapRenderer::StopMarker>(*this);
     }
 }

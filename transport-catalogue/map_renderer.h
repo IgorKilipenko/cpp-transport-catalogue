@@ -246,16 +246,15 @@ namespace transport_catalogue::io::renderer /* IRenderer */ {
         using Projection_ = geo::SphereProjection;
         virtual void UpdateMapProjection(Projection_&& projection) = 0;
         virtual void AddRouteToLayer(const data::BusRecord&& bus_record) = 0;
-        virtual void DrawTransportTracksLayer(std::vector<data::BusRecord>&& records) = 0;  //! NOT USED YET
-        virtual void AddRouteNameToLayer(data::BusRecord bus_record) = 0;
-        virtual void DrawTransportStopsLayer(std::vector<data::StopRecord>&& records) = 0;
+        virtual void AddStopToLayer(const data::StopRecord&& stop_record) = 0;
         virtual void SetRenderSettings(maps::RenderSettings&& settings) = 0;
 
         virtual maps::RenderSettings& GetRenderSettings() = 0;
 
-        virtual svg::Document& GetMap() = 0;              //! FOR DEBUG ONLY
-        virtual svg::Document& GetRouteLayer() = 0;       //! FOR DEBUG ONLY
-        virtual svg::Document& GetRouteNamesLayer() = 0;  //! FOR DEBUG ONLY
+        virtual svg::Document& GetMap() = 0;               //! FOR DEBUG ONLY
+        virtual svg::Document& GetRouteLayer() = 0;        //! FOR DEBUG ONLY
+        virtual svg::Document& GetRouteNamesLayer() = 0;   //! FOR DEBUG ONLY
+        virtual svg::Document& GetStopMarkersLayer() = 0;  //! FOR DEBUG ONLY
         virtual ~IRenderer() = default;
     };
 }
@@ -265,13 +264,15 @@ namespace transport_catalogue::maps /* MapRenderer */ {
         using Projection_ = IRenderer::Projection_;
 
     public:
-        MapRenderer() : color_palette_iterator_{ColorPalette(settings_.color_palette)} {}
+        MapRenderer()
+            : route_color_palette_iterator_{ColorPalette(settings_.color_palette)},
+              busses_color_palette_iterator_{ColorPalette(settings_.color_palette)} {}
 
     public:
         template <typename ObjectType>
         class IDbObject;
 
-        class BusStop;
+        class StopMarker;
 
         class BusRoute;
 
@@ -282,11 +283,7 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
         void AddRouteToLayer(const data::BusRecord&& bus_record) override;
 
-        void AddRouteNameToLayer(data::BusRecord bus_record) override;
-
-        void DrawTransportTracksLayer(std::vector<data::BusRecord>&& /*records*/) override;
-
-        void DrawTransportStopsLayer(std::vector<data::StopRecord>&& /*records*/) override;
+        void AddStopToLayer(const data::StopRecord&& stop_record) override;
 
         void SetRenderSettings(RenderSettings&& settings) override;
 
@@ -298,13 +295,18 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
         svg::Document& GetRouteNamesLayer() override;
 
+        svg::Document& GetStopMarkersLayer() override;
+
     private:
         MapLayer map_layer_;
         MapLayer routes_layer_;
         MapLayer route_names_layer_;
+        MapLayer stop_markers_layer_;
+        MapLayer stop_marker_names_layer_;
         Projection_ projection_;
         RenderSettings settings_;
-        ColorPaletteСyclicIterator color_palette_iterator_;
+        ColorPaletteСyclicIterator route_color_palette_iterator_;
+        ColorPaletteСyclicIterator busses_color_palette_iterator_;
     };
 }
 
@@ -483,29 +485,127 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
     };
 }
 
-namespace transport_catalogue::maps /* MapRenderer::BusStop */ {
+namespace transport_catalogue::maps /* MapRenderer::StopMarker */ {
 
-    class MapRenderer::BusStop : public IDbObject<data::Stop>, public IDrawable {
+    class MapRenderer::StopMarker : public IDbObject<data::Stop>, public IDrawable {
     public:
-        BusStop(const RenderSettings& settings, const Projection_& projection)
-            : IDbObject{data::DbNull<data::Stop>, projection}, IDrawable{settings} {}
-        BusStop(data::StopRecord id, const RenderSettings& settings, const Projection_& projection)
-            : IDbObject{id, projection}, IDrawable{settings} {}
+        class StopMarkerLable;
 
-        void Update() override {
-            IDbObject::Update();
+    public:
+        StopMarker(data::StopRecord bus_record, const RenderSettings& settings, const Projection_& projection)
+            : IDbObject{bus_record, projection}, IDrawable{settings} {
+            Build();
         }
 
-        void UpdateLocation() override {
-            std::cerr << "BusRoute -> Update Location" << std::endl;  //! FOR DEBUG ONLY
-            location_.GetMapPoint() = {projection_.FromLatLngToMapPoint(location_.GetGlobalCoordinates())};
+        void Update() override;
+
+        void UpdateLocation() override;
+
+        void Darw(svg::ObjectContainer& layer) const override;
+
+        void SetColor(const Color&& color);
+
+        StopMarkerLable BuildLable() const;
+
+        virtual std::shared_ptr<IDrawable> Clone() const override final;
+
+        const Location& GetLocation() const {
+            return location_;
         }
 
-        void Darw(svg::ObjectContainer& /*layer*/) const override {
-            //! layer.Add(Polyline{})
+        const std::string& GetName() const {
+            return db_record_->name;
         }
 
     private:
         Location location_;
+        Color color_ = ColorPaletteСyclicIterator::NoneColor;
+        std::shared_ptr<int> ref_ = std::make_shared<int>();
+
+        void Build() {
+            location_ = Location(projection_.FromLatLngToMapPoint(db_record_->coordinates), db_record_->coordinates);
+        }
+    };
+}
+
+namespace transport_catalogue::maps /* MapRenderer::StopMarker::StopMarkerLable */ {
+
+    class MapRenderer::StopMarker::StopMarkerLable : public IDbObject<data::Stop>, public IDrawable {
+    private:
+        struct NameLable {
+            std::string text;
+            Location location;
+
+            NameLable(std::string text, Location location) : text(text), location(location) {}
+        };
+
+    public:
+        StopMarkerLable(const StopMarker& bus_marker)
+            : IDbObject{bus_marker.db_record_, bus_marker.projection_},
+              IDrawable{bus_marker.settings_},
+              bus_marker_{bus_marker},
+              parent_ref_handle_{bus_marker.ref_},
+              color_{bus_marker.color_} {
+            Build();
+        }
+
+        void Darw(svg::ObjectContainer& layer) const override {
+            assert(HasValidParent());
+            if (name_lables_.empty()) {
+                return;
+            }
+            static const std::string font_weight("bold");
+            static const std::string font_family("Verdana");
+            std::for_each(name_lables_.begin(), name_lables_.end(), [this, &layer](const NameLable& lable) {
+                svg::Text base;
+                base.SetData(lable.text)
+                    .SetPosition(lable.location.GetMapPoint())
+                    .SetOffset(MapPoint(settings_.bus_label_offset))
+                    .SetFontSize(settings_.bus_label_font_size)
+                    .SetFontFamily(font_family)
+                    .SetFontWeight(font_weight);
+                svg::Text name = base.SetFillColor(color_);
+
+                svg::Text underlay = base.SetFillColor(settings_.underlayer_color)
+                                         .SetStrokeColor(settings_.underlayer_color)
+                                         .SetStrokeWidth(settings_.underlayer_width)
+                                         .SetStrokeLineCap(svg::StrokeLineCap::ROUND)
+                                         .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND);
+
+                layer.Add(std::move(underlay));
+                layer.Add(std::move(name));
+            });
+        }
+
+        void Update() override {
+            assert(HasValidParent());
+            IDbObject::Update();
+            UpdateLocation();
+        }
+
+        void UpdateLocation() override {
+            Build();
+        }
+
+        bool HasValidParent() const {
+            return !parent_ref_handle_.expired();
+        }
+
+        virtual std::shared_ptr<IDrawable> Clone() const override final {
+            return std::make_shared<MapRenderer::StopMarker::StopMarkerLable>(*this);
+        }
+
+    private:
+        const StopMarker& bus_marker_;
+        std::weak_ptr<int> parent_ref_handle_;
+        Color color_;
+        std::vector<NameLable> name_lables_;
+
+        void Build() {
+            assert(HasValidParent());
+            assert(db_record_ == bus_marker_.db_record_);
+
+            name_lables_.emplace_back(db_record_->name, bus_marker_.location_);
+        }
     };
 }
