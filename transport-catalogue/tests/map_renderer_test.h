@@ -309,7 +309,7 @@ namespace transport_catalogue::tests {
             TestRenderRouteNames2();
             TestRenderRouteNamesFull();
         }
-        
+
         void TestRenderStopMarkers1() const {
             std::filesystem::path test_dir = DATA_PATH / "stop_markers";
 
@@ -345,9 +345,9 @@ namespace transport_catalogue::tests {
 
             std::string expected_result = transport_catalogue::detail::io::FileReader::Read(test_dir / "test_full__output.svg");
 
-            //CheckResults(std::move(expected_result), std::move(map_result));
+            // CheckResults(std::move(expected_result), std::move(map_result));
 
-            { // Check equal buy lines
+            {  // Check equal buy lines
                 std::vector<std::string_view> expected_lines = SplitIntoWords(expected_result, '\n');
                 std::vector<std::string_view> result_lines = SplitIntoWords(map_result, '\n');
                 bool test_failed = false;
@@ -355,7 +355,7 @@ namespace transport_catalogue::tests {
                 size_t line_index = 0;
                 for (auto res_it = std::make_move_iterator(result_lines.begin()), expected_it = std::make_move_iterator(expected_lines.begin());
                      size-- > 0; ++res_it, ++expected_it) {
-                       ++line_index;
+                    ++line_index;
                     if (*res_it != *expected_it) {
                         std::cerr << "Test failed: [line #" << line_index << "]" << std::endl;
                         std::cerr << "Result line: ";
@@ -376,6 +376,25 @@ namespace transport_catalogue::tests {
             TestRenderStopMarkersFull();
         }
 
+        void TestRenderStopMarkerLables() const {
+            std::filesystem::path test_dir = DATA_PATH / "stop_markers";
+
+            std::string json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / "test_1.json");
+
+            auto layers = ReadDocument(json_file);
+
+            assert(!layers.empty() && layers.size() > 3);
+
+            std::stringstream out_map_stream;
+            layers[3].Render(out_map_stream);
+
+            std::string map_result = out_map_stream.str();
+
+            std::string expected_result = transport_catalogue::detail::io::FileReader::Read(test_dir / "test_1_lable__output.svg");
+
+            CheckResults(std::move(expected_result), std::move(map_result));
+        }
+
         void RunTests() const {
             const std::string prefix = "[MapRenderer] ";
 
@@ -387,6 +406,9 @@ namespace transport_catalogue::tests {
 
             TestRenderStopMarkers();
             std::cerr << prefix << "TestRenderStopMarkers : Done." << std::endl;
+
+            TestRenderStopMarkerLables();
+            std::cerr << prefix << "TestRenderStopMarkerLables : Done." << std::endl;
 
             std::cerr << std::endl << "All MapRenderer Tests : Done." << std::endl << std::endl;
         }

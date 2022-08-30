@@ -438,7 +438,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
             renderer.AddStopToLayer(data::StopRecord{stop});
         });
 
-        return std::vector<svg::Document*>{&renderer_.GetRouteLayer(), &renderer_.GetRouteNamesLayer(), &renderer_.GetStopMarkersLayer()};
+        return std::vector<svg::Document*>{&renderer_.GetRouteLayer(), &renderer_.GetRouteNamesLayer(), &renderer_.GetStopMarkersLayer(), &renderer_.GetStopMarkerNamesLayer()};
     }
 }
 

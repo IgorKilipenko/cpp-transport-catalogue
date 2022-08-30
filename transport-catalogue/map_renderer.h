@@ -255,6 +255,7 @@ namespace transport_catalogue::io::renderer /* IRenderer */ {
         virtual svg::Document& GetRouteLayer() = 0;        //! FOR DEBUG ONLY
         virtual svg::Document& GetRouteNamesLayer() = 0;   //! FOR DEBUG ONLY
         virtual svg::Document& GetStopMarkersLayer() = 0;  //! FOR DEBUG ONLY
+        virtual svg::Document& GetStopMarkerNamesLayer() = 0;  //! FOR DEBUG ONLY
         virtual ~IRenderer() = default;
     };
 }
@@ -296,6 +297,8 @@ namespace transport_catalogue::maps /* MapRenderer */ {
         svg::Document& GetRouteNamesLayer() override;
 
         svg::Document& GetStopMarkersLayer() override;
+
+        svg::Document& GetStopMarkerNamesLayer() override;
 
     private:
         MapLayer map_layer_;
@@ -554,7 +557,7 @@ namespace transport_catalogue::maps /* MapRenderer::StopMarker::StopMarkerLable 
             if (name_lables_.empty()) {
                 return;
             }
-            static const std::string font_weight("bold");
+            /*static const std::string font_weight("bold");
             static const std::string font_family("Verdana");
             std::for_each(name_lables_.begin(), name_lables_.end(), [this, &layer](const NameLable& lable) {
                 svg::Text base;
@@ -565,6 +568,28 @@ namespace transport_catalogue::maps /* MapRenderer::StopMarker::StopMarkerLable 
                     .SetFontFamily(font_family)
                     .SetFontWeight(font_weight);
                 svg::Text name = base.SetFillColor(color_);
+
+                svg::Text underlay = base.SetFillColor(settings_.underlayer_color)
+                                         .SetStrokeColor(settings_.underlayer_color)
+                                         .SetStrokeWidth(settings_.underlayer_width)
+                                         .SetStrokeLineCap(svg::StrokeLineCap::ROUND)
+                                         .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND);
+
+                layer.Add(std::move(underlay));
+                layer.Add(std::move(name));
+            });*/
+
+            static const std::string default_color("black");
+            static const std::string default_font_family("Verdana");
+            std::for_each(name_lables_.begin(), name_lables_.end(), [this, &layer](const NameLable& lable) {
+                svg::Text base;
+                base.SetData(lable.text)
+                    .SetPosition(lable.location.GetMapPoint())
+                    .SetOffset(MapPoint(settings_.stop_label_offset))
+                    .SetFontSize(settings_.stop_label_font_size)
+                    .SetFontFamily(default_font_family);
+
+                svg::Text name = base.SetFillColor(default_color);
 
                 svg::Text underlay = base.SetFillColor(settings_.underlayer_color)
                                          .SetStrokeColor(settings_.underlayer_color)

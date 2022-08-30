@@ -39,7 +39,7 @@ namespace transport_catalogue::maps /* MapRenderer implementation */ {
         StopMarker drawable_stop{stop_record, settings_, projection_};
         drawable_stop.SetColor(Color(busses_color_palette_iterator_.GetCurrentColor()));
 
-        // stop_marker_names_layer_.Add(drawable_stop.BuildLable());
+        stop_marker_names_layer_.Add(drawable_stop.BuildLable());
         stop_markers_layer_.Add(std::move(drawable_stop));
         busses_color_palette_iterator_.NextColor();
     }
@@ -72,7 +72,12 @@ namespace transport_catalogue::maps /* MapRenderer implementation */ {
 
     svg::Document& MapRenderer::GetStopMarkersLayer() {
         stop_markers_layer_.Draw();
-        return stop_markers_layer_.GetSvgDocument();
+        return MapRenderer::stop_markers_layer_.GetSvgDocument();
+    }
+
+    svg::Document& MapRenderer::GetStopMarkerNamesLayer() {
+        stop_marker_names_layer_.Draw();
+        return stop_marker_names_layer_.GetSvgDocument();
     }
 }
 
@@ -108,16 +113,16 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute implementation */ {
 }
 
 namespace transport_catalogue::maps /* MapRenderer::StopMarker implementation */ {
-    void MapRenderer::StopMarker::Update()  {
+    void MapRenderer::StopMarker::Update() {
         IDbObject::Update();
         UpdateLocation();
     }
 
-    void MapRenderer::StopMarker::UpdateLocation()  {
+    void MapRenderer::StopMarker::UpdateLocation() {
         location_.GetMapPoint() = {projection_.FromLatLngToMapPoint(location_.GetGlobalCoordinates())};
     }
 
-    void MapRenderer::StopMarker::Darw(svg::ObjectContainer& layer) const  {
+    void MapRenderer::StopMarker::Darw(svg::ObjectContainer& layer) const {
         static const std::string color{"white"};
         layer.Add(svg::Circle().SetCenter(location_.GetMapPoint()).SetFillColor(color).SetRadius(settings_.stop_marker_radius));
     }
@@ -127,10 +132,10 @@ namespace transport_catalogue::maps /* MapRenderer::StopMarker implementation */
     }
 
     MapRenderer::StopMarker::StopMarkerLable MapRenderer::StopMarker::BuildLable() const {
-        throw std::runtime_error("Not implemented");
+        return StopMarkerLable(*this);
     }
 
-    std::shared_ptr<IDrawable> MapRenderer::StopMarker::Clone() const  {
+    std::shared_ptr<IDrawable> MapRenderer::StopMarker::Clone() const {
         return std::make_shared<MapRenderer::StopMarker>(*this);
     }
 }
