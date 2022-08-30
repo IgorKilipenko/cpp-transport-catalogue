@@ -283,6 +283,8 @@ namespace svg /* Svg Objects */ {
     public:
         void Render(const RenderContext& context) const;
 
+        virtual std::unique_ptr<Object> Clone() const = 0;
+
         virtual ~Object() = default;
 
     private:
@@ -298,6 +300,10 @@ namespace svg /* Svg Objects */ {
         Circle& SetCenter(Point center);
 
         Circle& SetRadius(double radius);
+
+        virtual std::unique_ptr<Object> Clone() const override final {
+            return std::make_unique<Circle>(*this);
+        }
 
     private:
         void RenderObject(const RenderContext& context) const override;
@@ -318,6 +324,10 @@ namespace svg /* Svg Objects */ {
 
         Polyline() = default;
         Polyline(Points points) : points_(points) {}
+
+        virtual std::unique_ptr<Object> Clone() const override final {
+            return std::make_unique<Polyline>(*this);
+        }
 
         /// Добавляет очередную вершину к ломаной линии
         template <typename Point = svg::Point, detail::EnableIfConvertible<Point, svg::Point> = true>
@@ -345,6 +355,10 @@ namespace svg /* Svg Objects */ {
             std::string font_family;
             std::string font_weight;
         };
+
+        virtual std::unique_ptr<Object> Clone() const override final {
+            return std::make_unique<Text>(*this);
+        }
 
         /// Задаёт координаты опорной точки (атрибуты x и y)
         template <typename Point = svg::Point, detail::EnableIfConvertible<Point, svg::Point> = true>
@@ -404,6 +418,39 @@ namespace svg /* Svg Objects */ {
         using ObjectPtr = std::unique_ptr<Object>;
         using ObjectCollection = std::vector<ObjectPtr>;
         constexpr static const std::string_view NEW_LINE{"\n"};
+
+        Document() = default;
+
+        Document(const Document& other) {
+            if (this == &other) {
+                return;
+            }
+            assert(objects_.empty());
+
+            CloneObjects(other.objects_);
+        }
+
+        Document& operator=(const Document& rhs) {
+            if (this == &rhs) {
+                return *this;
+            }
+            CloneObjects(rhs.objects_);
+            return *this;
+        }
+
+        Document(Document&& other) = default;
+        Document& operator=(Document&& rhs) = default;
+        virtual ~Document() = default;
+
+        void CloneObjects(const ObjectCollection& other_objects) {
+            if (&objects_ == &other_objects) {
+                return;
+            }
+            objects_.reserve(other_objects.size());
+            std::for_each(other_objects.begin(), other_objects.end(), [&objects = this->objects_](const auto& other_obj) {
+                objects.emplace_back(other_obj->Clone());
+            });
+        }
 
         /// Добавляет в svg-документ объект-наследник svg::Object
         void AddPtr(ObjectPtr&& obj) override;
