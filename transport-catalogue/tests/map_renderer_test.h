@@ -29,6 +29,7 @@ namespace transport_catalogue::tests {
 
         inline static const std::string TestFile_2 = "with_render_settings(test23).json";
         inline static const std::string TestFile_1 = "test_1.json";
+        inline static const std::filesystem::path DATA_PATH = std::filesystem::current_path() / "transport-catalogue/tests/data/svg_render";
 
     public:
         std::vector<svg::Document> ReadDocument(std::string json_file) const {
@@ -308,6 +309,25 @@ namespace transport_catalogue::tests {
             TestRenderRouteNames2();
             TestRenderRouteNamesFull();
         }
+        
+        void TestRenderStopMarkers() const {
+            std::filesystem::path test_dir = DATA_PATH / "stop_markers";
+
+            std::string json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / "test_1.json");
+
+            auto layers = ReadDocument(json_file);
+
+            assert(!layers.empty() && layers.size() > 2);
+
+            std::stringstream out_map_stream;
+            layers[2].Render(out_map_stream);
+
+            std::string map_result = out_map_stream.str();
+
+            std::string expected_result = transport_catalogue::detail::io::FileReader::Read(test_dir / "test_1__output.svg");
+
+            CheckResults(std::move(expected_result), std::move(map_result));
+        }
 
         void RunTests() const {
             const std::string prefix = "[MapRenderer] ";
@@ -317,6 +337,9 @@ namespace transport_catalogue::tests {
 
             TestRenderRouteNames();
             std::cerr << prefix << "TestRenderRouteNames : Done." << std::endl;
+
+            TestRenderStopMarkers();
+            std::cerr << prefix << "TestRenderStopMarkers : Done." << std::endl;
 
             std::cerr << std::endl << "All MapRenderer Tests : Done." << std::endl << std::endl;
         }

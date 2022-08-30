@@ -426,10 +426,19 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         renderer_.UpdateMapProjection(std::move(projection));
 
         std::for_each(sorted_busses.begin(), sorted_busses.end(), [&renderer = this->renderer_](const auto& bus) {
-            renderer.AddRouteToLayer(data::BusRecordSet::value_type{bus});
+            renderer.AddRouteToLayer(data::BusRecord{bus});
         });
 
-        return std::vector<svg::Document*>{&renderer_.GetRouteLayer(), &renderer_.GetRouteNamesLayer()};
+        std::set<std::string>::key_compare name_comparer;
+        std::sort(stops_on_routes.begin(), stops_on_routes.end(), [&name_comparer](const auto& lhs, const auto& rhs) {
+            return name_comparer(lhs->name, rhs->name);
+        });
+
+        std::for_each(stops_on_routes.begin(), stops_on_routes.end(), [&renderer = this->renderer_](const auto& stop) {
+            renderer.AddStopToLayer(data::StopRecord{stop});
+        });
+
+        return std::vector<svg::Document*>{&renderer_.GetRouteLayer(), &renderer_.GetRouteNamesLayer(), &renderer_.GetStopMarkersLayer()};
     }
 }
 
