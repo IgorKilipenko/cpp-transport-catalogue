@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <iterator>
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <stdexcept>
@@ -224,13 +225,11 @@ namespace transport_catalogue::maps {
             });
         }
 
-        void Add(Drawable& obj) {
-
-        }
+        void Add(Drawable& obj) {}
 
         std::vector<Drawable>& GetObjects() {
             return objects_;
-        } 
+        }
 
     private:
         std::vector<Drawable> objects_;
@@ -332,10 +331,96 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
         class BusRoute : public DbObject<data::Bus>, public Drawable {
         public:
-            BusRoute(const RenderSettings& settings, const Projection_& projection)
+            class BusRouteLable : public DbObject<data::Bus>, public Drawable {
+            private:
+                struct NameLable {
+                    std::string text;
+                    Location location;
+
+                    NameLable(std::string text, Location location) : text(text), location(location) {}
+                };
+
+            public:
+                /*BusRouteLable(data::BusRecord bus_record, const RenderSettings& settings, const Projection_& projection)
+                    : DbObject{bus_record, projection}, Drawable{settings} {}*/
+                BusRouteLable(const BusRoute& drawable_bus)
+                    : DbObject{drawable_bus.db_record_, drawable_bus.projection_},
+                      Drawable{drawable_bus.settings_},
+                      drawable_bus_{drawable_bus},
+                      parent_ref_handle_{drawable_bus.ref_} {}
+
+                void Darw(svg::ObjectContainer& layer) const override {
+                    assert(HasValidParent());
+                    if (name_lables_.empty()) {
+                        return;
+                    }
+                    static const std::string font_weight("bold");
+                    static const std::string font_family("Verdana");
+                    // std::vector<svg::Text> names{name_lables_.size()};
+                    std::for_each(name_lables_.begin(), name_lables_.end(), [this, &layer /*, &names*/](const NameLable& lable) {
+                        svg::Text base;
+                        base.SetData(lable.text)
+                            .SetOffset(lable.location.GetMapPoint())
+                            .SetFontSize(settings_.bus_label_font_size)
+                            .SetFontFamily(font_family)
+                            .SetFontWeight(font_weight);
+                        svg::Text name = base.SetFillColor(drawable_bus_.color_);
+
+                        svg::Text underlay = base.SetFillColor(settings_.underlayer_color)
+                                                 .SetStrokeColor(settings_.underlayer_color)
+                                                 .SetStrokeWidth(settings_.underlayer_width)
+                                                 .SetStrokeLineCap(svg::StrokeLineCap::ROUND)
+                                                 .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND);
+
+                        layer.Add(std::move(underlay));
+                        layer.Add(std::move(name));
+                    });
+                }
+
+                void Update() override {
+                    assert(HasValidParent());
+                    DbObject::Update();
+                    UpdateLocation();
+                }
+
+                void UpdateLocation() override {
+                    Build();
+                }
+
+                bool HasValidParent() const {
+                    return !parent_ref_handle_.expired();
+                }
+
+            private:
+                [[maybe_unused]] const BusRoute& drawable_bus_;
+                std::weak_ptr<int> parent_ref_handle_;
+                std::vector<NameLable> name_lables_;
+
+                void Build() {
+                    assert(HasValidParent());
+                    assert(db_record_ == drawable_bus_.db_record_);
+
+                    const auto& route = db_record_->route;
+
+                    assert(route.size() == drawable_bus_.locations_.size());
+
+                    if (route.empty()) {
+                        return;
+                    }
+                    name_lables_.emplace_back(route.front()->name, drawable_bus_.locations_.front());
+
+                    if (route.size() > 1 && !db_record_->is_roundtrip) {
+                        auto center = static_cast<size_t>(route.size() / 2ul) + 1ul;
+                        name_lables_.emplace_back(route[center]->name, drawable_bus_.locations_[center]);
+                    }
+                }
+            };
+
+        public:
+            /*BusRoute(const RenderSettings& settings, const Projection_& projection)
                 : DbObject{data::DbNull<data::Bus>, projection}, Drawable{settings} {
                 Build();
-            }
+            }*/
             BusRoute(data::BusRecord bus_record, const RenderSettings& settings, const Projection_& projection)
                 : DbObject{bus_record, projection}, Drawable{settings} {
                 Build();
@@ -343,6 +428,7 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
             void Update() override {
                 DbObject::Update();
+                UpdateLocation();
             }
 
             void UpdateLocation() override {
@@ -352,31 +438,33 @@ namespace transport_catalogue::maps /* MapRenderer */ {
                 });
             }
 
-            void Darw(svg::ObjectContainer& layer, const ColorPaletteСyclicIterator& color_iterator) const {
+            void Darw(svg::ObjectContainer& layer) const override {
                 layer.Add(svg::Polyline(locations_)
                               .SetFillColor(svg::NoneColor)
                               .SetStrokeWidth(settings_.line_width)
                               .SetStrokeLineCap(svg::StrokeLineCap::ROUND)
                               .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND)
-                              .SetStrokeColor(color_iterator.GetCurrentColorOrNone()));
-            }
-
-            void Darw(svg::ObjectContainer& layer) const override {
-                Darw(layer, default_color_pallete_iterator_);
+                              .SetStrokeColor(color_));
             }
 
             const data::Route& GetRoute() const {
                 return db_record_->route;
             }
 
+            void SetColor(const Color&& color) {
+                color_ = std::move(color);
+            }
+
+            const BusRoute* BuildLable() const {
+                return this;
+            }
+
         private:
             Polyline locations_;
-            Color color_;
-            inline static const ColorPaletteСyclicIterator default_color_pallete_iterator_{{ColorPaletteСyclicIterator::NoneColor}};
+            Color color_ = ColorPaletteСyclicIterator::NoneColor;
+            std::shared_ptr<int> ref_ = std::make_shared<int>();
             void Build() {
                 assert(locations_.empty());
-
-                color_ = default_color_pallete_iterator_.GetCurrentColorOrNone();
 
                 const data::Route& route = db_record_->route;
                 locations_.reserve(route.size());
@@ -387,7 +475,7 @@ namespace transport_catalogue::maps /* MapRenderer */ {
         };
 
         void UpdateLayers() {
-            transport_layer_.Draw();
+            routes_layer_.Draw();
         }
 
         void UpdateMapProjection(Projection_&& projection) override {
@@ -401,14 +489,12 @@ namespace transport_catalogue::maps /* MapRenderer */ {
         void AddRouteToLayer(const data::BusRecord&& bus_record) override {
             assert(!settings_.color_palette.empty());
             BusRoute drawable_bus{bus_record, settings_, projection_};
-            drawable_bus.Darw(transport_layer_.GetSvgDocument(), color_palette_iterator_);
-            // color_index_ = color_index_ < settings_.color_palette.size() - 1ul ? color_index_ + 1ul : 0ul;
+            drawable_bus.SetColor(Color(color_palette_iterator_.GetCurrentColor()));
+            drawable_bus.Darw(routes_layer_.GetSvgDocument());
             color_palette_iterator_.NextColor();
         }
 
-        void AddRouteNameToLayer(data::BusRecord bus_record) override {
-
-        }
+        void AddRouteNameToLayer(data::BusRecord bus_record) override {}
 
         void DrawTransportTracksLayer(std::vector<data::BusRecord>&& /*records*/) override {
             throw std::runtime_error("Not implemented");  //! Not implemented
@@ -434,12 +520,13 @@ namespace transport_catalogue::maps /* MapRenderer */ {
         }
 
         svg::Document& GetTransportLayerMap() override {
-            transport_layer_.Draw();
-            return transport_layer_.GetSvgDocument();
+            routes_layer_.Draw();
+            return routes_layer_.GetSvgDocument();
         }
 
     private:
-        MapLayer transport_layer_;
+        MapLayer routes_layer_;
+        MapLayer route_names_layer_;
         Projection_ projection_;
         RenderSettings settings_;
         // size_t color_index_ = 0;
