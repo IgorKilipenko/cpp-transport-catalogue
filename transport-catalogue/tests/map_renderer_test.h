@@ -369,6 +369,8 @@ namespace transport_catalogue::tests {
                 assert(!test_failed);
                 assert(expected_lines.size() == result_lines.size());
             }
+
+            CheckResults(std::move(expected_result), std::move(map_result));
         }
 
         void TestRenderStopMarkers() const {
@@ -376,7 +378,7 @@ namespace transport_catalogue::tests {
             TestRenderStopMarkersFull();
         }
 
-        void TestRenderStopMarkerLables() const {
+        void TestRenderStopMarkerLables1() const {
             std::filesystem::path test_dir = DATA_PATH / "stop_markers";
 
             std::string json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / "test_1.json");
@@ -393,6 +395,53 @@ namespace transport_catalogue::tests {
             std::string expected_result = transport_catalogue::detail::io::FileReader::Read(test_dir / "test_1_lable__output.svg");
 
             CheckResults(std::move(expected_result), std::move(map_result));
+        }
+
+        void TestRenderStopMarkerLablesFull() const {
+            std::filesystem::path test_dir = DATA_PATH / "stop_markers";
+
+            std::string json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / "test_full.json");
+
+            auto layers = ReadDocument(json_file);
+
+            assert(!layers.empty() && layers.size() > 3);
+
+            std::stringstream out_map_stream;
+            layers[3].Render(out_map_stream);
+
+            std::string map_result = out_map_stream.str();
+
+            std::string expected_result = transport_catalogue::detail::io::FileReader::Read(test_dir / "test_full_lable__output.svg");
+
+            {  // Check equal buy lines
+                std::vector<std::string_view> expected_lines = SplitIntoWords(expected_result, '\n');
+                std::vector<std::string_view> result_lines = SplitIntoWords(map_result, '\n');
+                bool test_failed = false;
+                size_t size = std::min(expected_lines.size(), result_lines.size());
+                size_t line_index = 0;
+                for (auto res_it = std::make_move_iterator(result_lines.begin()), expected_it = std::make_move_iterator(expected_lines.begin());
+                     size-- > 0; ++res_it, ++expected_it) {
+                    ++line_index;
+                    if (*res_it != *expected_it) {
+                        std::cerr << "Test failed: [line #" << line_index << "]" << std::endl;
+                        std::cerr << "Result line: ";
+                        std::cerr << std::move(*res_it) << std::endl;
+                        std::cerr << "Expected line: ";
+                        std::cerr << std::move(*expected_it) << std::endl << std::endl;
+                        test_failed = true;
+                    }
+                }
+
+                assert(!test_failed);
+                assert(expected_lines.size() == result_lines.size());
+            }
+
+            CheckResults(std::move(expected_result), std::move(map_result));
+        }
+
+        void TestRenderStopMarkerLables() const {
+            TestRenderStopMarkerLables1();
+            TestRenderStopMarkerLablesFull();
         }
 
         void RunTests() const {
