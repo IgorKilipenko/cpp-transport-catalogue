@@ -17,6 +17,7 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
@@ -212,27 +213,32 @@ namespace transport_catalogue::maps {
     };
 }
 
-namespace transport_catalogue::maps {
+namespace transport_catalogue::maps /* MapLayer */ {
     class MapLayer {
     public:
+        using ObjectCollection = std::vector<std::shared_ptr<Drawable>>;
         svg::Document& GetSvgDocument() {
             return svg_document_;
         }
 
         void Draw() {
-            std::for_each(objects_.begin(), objects_.end(), [this](Drawable& obj) {
-                obj.Darw(svg_document_);
+            std::for_each(objects_.begin(), objects_.end(), [this](auto& obj) {
+                obj->Darw(svg_document_);
             });
         }
 
-        void Add(Drawable& obj) {}
+        template <
+            typename DrawableType>
+        void Add(DrawableType&& obj) {
+            objects_.emplace_back(std::make_shared<std::decay_t<DrawableType>>(std::forward<DrawableType>(obj)));
+        }
 
-        std::vector<Drawable>& GetObjects() {
+        ObjectCollection& GetObjects() {
             return objects_;
         }
 
     private:
-        std::vector<Drawable> objects_;
+        std::vector<std::shared_ptr<Drawable>> objects_;
         svg::Document svg_document_;
     };
 
@@ -263,7 +269,7 @@ namespace transport_catalogue::io::renderer /* IRenderer */ {
         virtual void SetRenderSettings(maps::RenderSettings&& settings) = 0;
         virtual maps::RenderSettings& GetRenderSettings() = 0;
         virtual svg::Document& GetMap() = 0;                //! FOR DEBUG ONLY
-        virtual svg::Document& GetTransportLayerMap() = 0;  //! FOR DEBUG ONLY
+        virtual svg::Document& GetRouteLayer() = 0;  //! FOR DEBUG ONLY
         virtual ~IRenderer() = default;
     };
 }
@@ -302,9 +308,10 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
         svg::Document& GetMap() override;
 
-        svg::Document& GetTransportLayerMap() override;
+        svg::Document& GetRouteLayer() override;
 
     private:
+        MapLayer map_layer_;
         MapLayer routes_layer_;
         MapLayer route_names_layer_;
         Projection_ projection_;
@@ -365,33 +372,15 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute */ {
             UpdateLocation();
         }
 
-        void UpdateLocation() override {
-            // std::cerr << "BusRoute -> Update Location" << std::endl;  //! FOR DEBUG ONLY
-            std::for_each(locations_.begin(), locations_.end(), [this](Location& location) {
-                location.GetMapPoint() = {projection_.FromLatLngToMapPoint(location.GetGlobalCoordinates())};
-            });
-        }
+        void UpdateLocation() override;
 
-        void Darw(svg::ObjectContainer& layer) const override {
-            layer.Add(svg::Polyline(locations_)
-                          .SetFillColor(svg::NoneColor)
-                          .SetStrokeWidth(settings_.line_width)
-                          .SetStrokeLineCap(svg::StrokeLineCap::ROUND)
-                          .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND)
-                          .SetStrokeColor(color_));
-        }
+        void Darw(svg::ObjectContainer& layer) const override;
 
-        const data::Route& GetRoute() const {
-            return db_record_->route;
-        }
+        const data::Route& GetRoute() const;
 
-        void SetColor(const Color&& color) {
-            color_ = std::move(color);
-        }
+        void SetColor(const Color&& color);
 
-        const BusRoute* BuildLable() const {
-            return this;
-        }
+        BusRouteLable BuildLable() const;
 
     private:
         Polyline locations_;

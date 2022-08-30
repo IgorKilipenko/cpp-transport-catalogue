@@ -423,7 +423,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
             renderer.AddRouteNameToLayer(data::BusRecordSet::value_type{bus});
         });
 
-        return renderer_.GetMap();
+        return renderer_.GetRouteLayer();
     }
 }
 
