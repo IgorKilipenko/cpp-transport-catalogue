@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdint>
 #include <iostream>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <optional>
@@ -450,6 +451,12 @@ namespace svg /* Svg Objects */ {
             std::for_each(other_objects.begin(), other_objects.end(), [&objects = this->objects_](const auto& other_obj) {
                 objects.emplace_back(other_obj->Clone());
             });
+        }
+
+        void MoveObjectsFrom(Document&& document) {
+            objects_.reserve(objects_.size() + document.objects_.size());
+            auto objects = std::move(document.objects_);
+            std::move(objects.begin(), objects.end(), std::back_inserter(objects_));
         }
 
         /// Добавляет в svg-документ объект-наследник svg::Object
