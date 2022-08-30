@@ -5,6 +5,53 @@
 
 namespace transport_catalogue::tests {
 
+    inline size_t TrimStart(std::string_view &str, const char ch = ' ') {
+        size_t idx = str.find_first_not_of(ch);
+        if (idx != std::string::npos) {
+            str.remove_prefix(idx);
+            return idx;
+        }
+        return 0;
+    }
+
+    inline size_t TrimEnd(std::string_view &str, const char ch = ' ') {
+        size_t idx = str.find_last_not_of(ch);
+        if (idx != str.npos) {
+            str.remove_suffix(str.size() - idx - 1);
+            return idx;
+        }
+        return 0;
+    }
+
+    inline void Trim(std::string_view &str, const char ch = ' ') {
+        TrimStart(str, ch);
+        TrimEnd(str, ch);
+    }
+
+    inline std::vector<std::string_view> SplitIntoWords(const std::string_view str, const char ch = ' ', size_t max_count = 0) {
+        if (str.empty()) {
+            return {};
+        }
+        std::string_view str_cpy = str;
+        std::vector<std::string_view> result;
+        Trim(str_cpy);
+
+        do {
+            int64_t pos = str_cpy.find(ch, 0);
+            std::string_view substr = (pos == static_cast<int64_t>(str_cpy.npos)) ? str_cpy.substr(0) : str_cpy.substr(0, pos);
+            Trim(substr);
+            result.push_back(std::move(substr));
+            str_cpy.remove_prefix(std::min(str_cpy.find_first_not_of(ch, pos), str_cpy.size()));
+            if (max_count && result.size() == max_count - 1) {
+                Trim(str_cpy);
+                result.push_back(std::move(str_cpy));
+                break;
+            }
+        } while (!str_cpy.empty());
+
+        return result;
+    }
+
     template <typename Result, detail::EnableIf<detail::IsConvertibleV<Result, json::Document> || detail::IsBaseOfV<json::Node, Result>> = true>
     void CheckResults(Result &&expected_result, Result &&result) {
         // if (result != expected_result) {
