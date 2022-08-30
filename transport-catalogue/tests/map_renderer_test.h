@@ -2,10 +2,13 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <iostream>
+#include <iterator>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "../detail/type_traits.h"
 #include "../json_reader.h"
@@ -14,6 +17,7 @@
 #include "helpers.h"
 
 namespace transport_catalogue::tests {
+
     class MapRendererTester {
     private:
         inline static const std::string TestFile_1_Expected =
@@ -27,7 +31,7 @@ namespace transport_catalogue::tests {
         inline static const std::string TestFile_1 = "test_1.json";
 
     public:
-        void TestRenderRoutes(std::string json_file, std::string expected_result) const {
+        std::vector<svg::Document> ReadDocument(std::string json_file) const {
             using namespace transport_catalogue;
             using namespace transport_catalogue::io;
 
@@ -46,14 +50,27 @@ namespace transport_catalogue::tests {
             json_reader.AddObserver(request_handler_ptr);
 
             json_reader.ReadDocument();
-            svg::Document& map = request_handler_ptr->RenderMap();
+            std::vector<svg::Document*> layer_ptrs = request_handler_ptr->RenderMap();
+            std::vector<svg::Document> result;
+            result.reserve(layer_ptrs.size());
+            std::transform(layer_ptrs.begin(), layer_ptrs.end(), std::back_inserter(result), [](const auto* doc_ptr) {
+                return *doc_ptr;
+            });
+
+            return result;
+        }
+
+        void TestRenderRoutes(std::string json_file, std::string expected_result) const {
+            auto layers = ReadDocument(json_file);
+
+            assert(!layers.empty());
 
             std::stringstream out_map_stream;
-            map.Render(out_map_stream);
+            layers.front().Render(out_map_stream);
 
             std::string map_result = out_map_stream.str();
 
-            //std::cout << out_map_stream.str() << std::endl;
+            // std::cout << out_map_stream.str() << std::endl;
             CheckResults(std::move(expected_result), std::move(map_result));
         }
 
@@ -182,11 +199,145 @@ namespace transport_catalogue::tests {
             TestRenderRoutes2();
         }
 
+        void TestRenderRouteNames1() const {
+            using namespace transport_catalogue;
+            using namespace transport_catalogue::io;
+
+            std::filesystem::path test_dir = std::filesystem::current_path() / "transport-catalogue/tests/data/svg_render";
+            std::string json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / TestFile_1);
+
+            auto layers = ReadDocument(json_file);
+
+            assert(!layers.empty() && layers.size() > 1);
+
+            std::stringstream out_map_stream;
+            layers[1].Render(out_map_stream);
+
+            std::string map_result = out_map_stream.str();
+
+            std::string expected_result =
+                R"(<?xml version="1.0" encoding="UTF-8" ?>)"
+                "\n"
+                R"(<svg xmlns="http://www.w3.org/2000/svg" version="1.1">)"
+                "\n"
+                R"~(  <text fill="rgba(255,255,255,0.85)" stroke="rgba(255,255,255,0.85)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" x="99.2283" y="329.5" dx="7" dy="15" font-size="20" font-family="Verdana" font-weight="bold">114</text>)~"
+                "\n"
+                R"~(  <text fill="green" x="99.2283" y="329.5" dx="7" dy="15" font-size="20" font-family="Verdana" font-weight="bold">114</text>)~"
+                "\n"
+                R"~(  <text fill="rgba(255,255,255,0.85)" stroke="rgba(255,255,255,0.85)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" x="50" y="232.18" dx="7" dy="15" font-size="20" font-family="Verdana" font-weight="bold">114</text>)~"
+                "\n"
+                R"~(  <text fill="green" x="50" y="232.18" dx="7" dy="15" font-size="20" font-family="Verdana" font-weight="bold">114</text>)~"
+                "\n"
+                R"~(  <text fill="rgba(255,255,255,0.85)" stroke="rgba(255,255,255,0.85)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" x="550" y="190.051" dx="7" dy="15" font-size="20" font-family="Verdana" font-weight="bold">14</text>)~"
+                "\n"
+                R"~(  <text fill="rgb(255,160,0)" x="550" y="190.051" dx="7" dy="15" font-size="20" font-family="Verdana" font-weight="bold">14</text>)~"
+                "\n"
+                R"(</svg>)";
+
+            // std::cout << out_map_stream.str() << std::endl;
+            CheckResults(std::move(expected_result), std::move(map_result));
+        }
+
+        void TestRenderRouteNames2() const {
+            using namespace transport_catalogue;
+            using namespace transport_catalogue::io;
+
+            std::filesystem::path test_dir = std::filesystem::current_path() / "transport-catalogue/tests/data/svg_render";
+            std::string json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / "test_route_names_2.json");
+
+            auto layers = ReadDocument(json_file);
+
+            assert(!layers.empty() && layers.size() > 1);
+
+            std::stringstream out_map_stream;
+            layers[1].Render(out_map_stream);
+
+            std::string map_result = out_map_stream.str();
+
+            std::string expected_result = transport_catalogue::detail::io::FileReader::Read(test_dir / "test_route_names_2__output.svg");
+
+            CheckResults(std::move(expected_result), std::move(map_result));
+
+            /*{
+                std::vector<std::string_view> expected_lines = SplitIntoWords(expected_result, '\n');
+                std::vector<std::string_view> result_lines = SplitIntoWords(map_result, '\n');
+                bool test_failed = false;
+                size_t size = std::min(expected_lines.size(), result_lines.size());
+                for (auto res_it = std::make_move_iterator(result_lines.begin()), expected_it = std::make_move_iterator(expected_lines.begin());
+                     size-- > 0; ++res_it, ++expected_it) {
+                    if (*res_it != *expected_it) {
+                        std::cerr << "Test failed: " << std::endl;
+                        std::cerr << "Result line: " << std::endl;
+                        std::cerr << std::move(*res_it) << std::endl;
+                        std::cerr << "Expected line: " << std::endl;
+                        std::cerr << std::move(*expected_it) << std::endl;
+                        test_failed = true;
+                    }
+                }
+
+                assert(!test_failed);
+                assert(expected_lines.size() == result_lines.size());
+            }*/
+        }
+
+        void TestRenderRouteNamesFull() const {
+            using namespace transport_catalogue;
+            using namespace transport_catalogue::io;
+
+            std::filesystem::path test_dir = std::filesystem::current_path() / "transport-catalogue/tests/data/svg_render";
+            std::string json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / "test_route_names_full.json");
+
+            auto layers = ReadDocument(json_file);
+
+            assert(!layers.empty() && layers.size() > 1);
+
+            std::stringstream out_map_stream;
+            layers[1].Render(out_map_stream);
+
+            std::string map_result = out_map_stream.str();
+
+            std::string expected_result = transport_catalogue::detail::io::FileReader::Read(test_dir / "test_route_names_full__output.svg");
+
+            //! CheckResults(std::move(expected_result), std::move(map_result));
+
+            {
+                std::vector<std::string_view> expected_lines = SplitIntoWords(expected_result, '\n');
+                std::vector<std::string_view> result_lines = SplitIntoWords(map_result, '\n');
+                bool test_failed = false;
+                size_t size = std::min(expected_lines.size(), result_lines.size());
+                size_t line_index = 0;
+                for (auto res_it = std::make_move_iterator(result_lines.begin()), expected_it = std::make_move_iterator(expected_lines.begin());
+                     size-- > 0; ++res_it, ++expected_it) {
+                       ++line_index;
+                    if (*res_it != *expected_it) {
+                        std::cerr << "Test failed: [line #]" << line_index << std::endl;
+                        std::cerr << "Result line: ";
+                        std::cerr << std::move(*res_it) << std::endl;
+                        std::cerr << "Expected line: ";
+                        std::cerr << std::move(*expected_it) << std::endl << std::endl;
+                        test_failed = true;
+                    }
+                }
+
+                assert(!test_failed);
+                assert(expected_lines.size() == result_lines.size());
+            }
+        }
+
+        void TestRenderRouteNames() const {
+            TestRenderRouteNames1();
+            TestRenderRouteNames2();
+            TestRenderRouteNamesFull();
+        }
+
         void RunTests() const {
             const std::string prefix = "[MapRenderer] ";
 
             TestRenderRoutes();
             std::cerr << prefix << "TestRenderRoutes : Done." << std::endl;
+
+            TestRenderRouteNames();
+            std::cerr << prefix << "TestRenderRouteNames : Done." << std::endl;
 
             std::cerr << std::endl << "All MapRenderer Tests : Done." << std::endl << std::endl;
         }

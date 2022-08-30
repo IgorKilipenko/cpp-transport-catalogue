@@ -10,6 +10,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <iostream>
 #include <iterator>
 #include <map>
 #include <memory>
@@ -426,7 +427,10 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
             : IDbObject{drawable_bus.db_record_, drawable_bus.projection_},
               IDrawable{drawable_bus.settings_},
               drawable_bus_{drawable_bus},
-              parent_ref_handle_{drawable_bus.ref_} {}
+              parent_ref_handle_{drawable_bus.ref_},
+              color_{drawable_bus.color_} {
+            Build();
+        }
 
         void Darw(svg::ObjectContainer& layer) const override {
             assert(HasValidParent());
@@ -439,11 +443,12 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
             std::for_each(name_lables_.begin(), name_lables_.end(), [this, &layer /*, &names*/](const NameLable& lable) {
                 svg::Text base;
                 base.SetData(lable.text)
-                    .SetOffset(lable.location.GetMapPoint())
+                    .SetPosition(lable.location.GetMapPoint())
+                    .SetOffset(MapPoint(settings_.bus_label_offset))
                     .SetFontSize(settings_.bus_label_font_size)
                     .SetFontFamily(font_family)
                     .SetFontWeight(font_weight);
-                svg::Text name = base.SetFillColor(drawable_bus_.color_);
+                svg::Text name = base.SetFillColor(color_);
 
                 svg::Text underlay = base.SetFillColor(settings_.underlayer_color)
                                          .SetStrokeColor(settings_.underlayer_color)
@@ -477,24 +482,42 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
     private:
         [[maybe_unused]] const BusRoute& drawable_bus_;
         std::weak_ptr<int> parent_ref_handle_;
+        Color color_;
         std::vector<NameLable> name_lables_;
 
         void Build() {
             assert(HasValidParent());
             assert(db_record_ == drawable_bus_.db_record_);
 
-            const auto& route = db_record_->route;
+            // const auto& route = db_record_->route;
+            const auto& locations = drawable_bus_.locations_;
 
-            assert(route.size() == drawable_bus_.locations_.size());
+            // assert(route.size() == drawable_bus_.locations_.size());
 
-            if (route.empty()) {
+            if (locations.empty()) {
                 return;
             }
-            name_lables_.emplace_back(route.front()->name, drawable_bus_.locations_.front());
 
-            if (route.size() > 1 && !db_record_->is_roundtrip) {
-                auto center = static_cast<size_t>(route.size() / 2ul) + 1ul;
-                name_lables_.emplace_back(route[center]->name, drawable_bus_.locations_[center]);
+            const std::string& name = db_record_->name;
+            name_lables_.emplace_back(name, locations.front());
+
+            // if (/*db_record_->is_roundtrip &&*/ locations.size() > 1 && db_record_->route.front()->name != db_record_->route.back()->name){
+            //     [[maybe_unused]]const auto& start = db_record_->route.front();
+            //     [[maybe_unused]]const auto& stop = db_record_->route.back();
+            //     std::cerr << "";
+            // }
+
+            // if (locations.size() > 1 && (!db_record_->is_roundtrip || &db_record_->route.front()->name != &db_record_->route.back()->name)) {
+            //     //! assert(locations.size() % 2ul);
+            //     auto center = static_cast<size_t>(locations.size() / 2ul);
+            //     name_lables_.emplace_back(name, locations[center]);
+            // }
+            if (locations.size() > 1 && !db_record_->is_roundtrip) {
+                //! assert(locations.size() % 2ul);
+                auto center = static_cast<size_t>(locations.size() / 2ul);
+                if (db_record_->route[center]->name != db_record_->route.front()->name) {
+                    name_lables_.emplace_back(name, locations[center]);
+                }
             }
         }
     };

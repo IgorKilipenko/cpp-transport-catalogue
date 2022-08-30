@@ -397,7 +397,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         response_sender_.Send(std::move(responses));
     }
 
-    svg::Document& RequestHandler::RenderMap(/*maps::RenderSettings settings*/) const {
+    std::vector<svg::Document*> RequestHandler::RenderMap(/*maps::RenderSettings settings*/) const {
         const data::DatabaseScheme::BusRoutesTable& buses_table = db_reader_.GetDataReader().GetBusRoutesTable();
         data::BusRecordSet sorted_busses;
         //data::StopRecordSet stops_on_routes;
@@ -420,10 +420,10 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
 
         std::for_each(sorted_busses.begin(), sorted_busses.end(), [&renderer=this->renderer_](const auto& bus) {
             renderer.AddRouteToLayer(data::BusRecordSet::value_type{bus});
-            renderer.AddRouteNameToLayer(data::BusRecordSet::value_type{bus});
+            //! renderer.AddRouteNameToLayer(data::BusRecordSet::value_type{bus});
         });
 
-        return renderer_.GetRouteLayer();
+        return std::vector<svg::Document*>{&renderer_.GetRouteLayer(), &renderer_.GetRouteNamesLayer()};
     }
 }
 
@@ -456,7 +456,7 @@ namespace transport_catalogue::io /* RequestHandler::SettingsBuilder implementat
         }
 
         settings.bus_label_font_size = std::move(request.GetBusLabelFontSize().value_or(0));
-        auto bus_label_offset = std::move(request.GetStopLabelOffset());
+        auto bus_label_offset = std::move(request.GetBusLabelOffset());
         if ((assert(bus_label_offset.has_value()), bus_label_offset.has_value())) {
             settings.bus_label_offset = {bus_label_offset.value()[0], bus_label_offset.value()[1]};
         }
