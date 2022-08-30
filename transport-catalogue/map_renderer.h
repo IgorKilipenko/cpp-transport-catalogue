@@ -195,14 +195,14 @@ namespace transport_catalogue::maps {
         ColorPalette color_palette;
     };
 
-    class Drawable {
+    class IDrawable {
     public:
         virtual void Darw(svg::ObjectContainer& layer) const = 0;
-        virtual std::shared_ptr<Drawable> Clone() const = 0;
-        virtual ~Drawable() = default;
+        virtual std::shared_ptr<IDrawable> Clone() const = 0;
+        virtual ~IDrawable() = default;
 
     protected:
-        Drawable(const RenderSettings& settings) : settings_(settings) {}
+        IDrawable(const RenderSettings& settings) : settings_(settings) {}
         /*Drawable(Style style) : style_(style) {}
         Drawable(TextStyle style) : text_style_(style) {}
         Drawable(Style style, TextStyle text_style) : style_(style), text_style_(text_style) {}*/
@@ -217,7 +217,7 @@ namespace transport_catalogue::maps {
 namespace transport_catalogue::maps /* MapLayer */ {
     class MapLayer {
     public:
-        using ObjectCollection = std::vector<std::shared_ptr<Drawable>>;
+        using ObjectCollection = std::vector<std::shared_ptr<IDrawable>>;
         svg::Document& GetSvgDocument() {
             return svg_document_;
         }
@@ -239,7 +239,7 @@ namespace transport_catalogue::maps /* MapLayer */ {
         }
 
     private:
-        std::vector<std::shared_ptr<Drawable>> objects_;
+        std::vector<std::shared_ptr<IDrawable>> objects_;
         svg::Document svg_document_;
     };
 
@@ -287,7 +287,7 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
     public:
         template <typename ObjectType>
-        class DbObject;
+        class IDbObject;
 
         class BusStop;
 
@@ -329,7 +329,7 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
 namespace transport_catalogue::maps /* MapRenderer::DbObject */ {
     template <typename ObjectType>
-    class MapRenderer::DbObject {
+    class MapRenderer::IDbObject {
     public:
         virtual void Update() {
             if (db_record_ == data::DbNull<ObjectType>) {
@@ -349,7 +349,7 @@ namespace transport_catalogue::maps /* MapRenderer::DbObject */ {
         }
 
     protected:
-        DbObject(data::DbRecord<ObjectType> db_record, const Projection_& projection) : db_record_{db_record}, projection_{projection} {}
+        IDbObject(data::DbRecord<ObjectType> db_record, const Projection_& projection) : db_record_{db_record}, projection_{projection} {}
 
     protected:
         std::string name_;
@@ -359,7 +359,7 @@ namespace transport_catalogue::maps /* MapRenderer::DbObject */ {
 }
 
 namespace transport_catalogue::maps /* MapRenderer::BusRoute */ {
-    class MapRenderer::BusRoute : public DbObject<data::Bus>, public Drawable {
+    class MapRenderer::BusRoute : public IDbObject<data::Bus>, public IDrawable {
     public:
         class BusRouteLable;
 
@@ -369,12 +369,12 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute */ {
             Build();
         }*/
         BusRoute(data::BusRecord bus_record, const RenderSettings& settings, const Projection_& projection)
-            : DbObject{bus_record, projection}, Drawable{settings} {
+            : IDbObject{bus_record, projection}, IDrawable{settings} {
             Build();
         }
 
         void Update() override {
-            DbObject::Update();
+            IDbObject::Update();
             UpdateLocation();
         }
 
@@ -388,7 +388,7 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute */ {
 
         BusRouteLable BuildLable() const;
 
-        std::shared_ptr<Drawable> Clone() const override {
+        std::shared_ptr<IDrawable> Clone() const override {
             return std::make_shared<MapRenderer::BusRoute>(*this);
         }
 
@@ -410,7 +410,7 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute */ {
 
 namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
 
-    class MapRenderer::BusRoute::BusRouteLable : public DbObject<data::Bus>, public Drawable {
+    class MapRenderer::BusRoute::BusRouteLable : public IDbObject<data::Bus>, public IDrawable {
     private:
         struct NameLable {
             std::string text;
@@ -423,8 +423,8 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
         /*BusRouteLable(data::BusRecord bus_record, const RenderSettings& settings, const Projection_& projection)
             : DbObject{bus_record, projection}, Drawable{settings} {}*/
         BusRouteLable(const BusRoute& drawable_bus)
-            : DbObject{drawable_bus.db_record_, drawable_bus.projection_},
-              Drawable{drawable_bus.settings_},
+            : IDbObject{drawable_bus.db_record_, drawable_bus.projection_},
+              IDrawable{drawable_bus.settings_},
               drawable_bus_{drawable_bus},
               parent_ref_handle_{drawable_bus.ref_} {}
 
@@ -458,7 +458,7 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
 
         void Update() override {
             assert(HasValidParent());
-            DbObject::Update();
+            IDbObject::Update();
             UpdateLocation();
         }
 
@@ -470,7 +470,7 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
             return !parent_ref_handle_.expired();
         }
 
-        std::shared_ptr<Drawable> Clone() const override {
+        std::shared_ptr<IDrawable> Clone() const override {
             return std::make_shared<MapRenderer::BusRoute::BusRouteLable>(*this);
         }
 
@@ -502,13 +502,13 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
 
 namespace transport_catalogue::maps /* MapRenderer::BusStop */ {
 
-    class MapRenderer::BusStop : public DbObject<data::Stop>, public Drawable {
+    class MapRenderer::BusStop : public IDbObject<data::Stop>, public IDrawable {
     public:
-        BusStop(const RenderSettings& settings, const Projection_& projection) : DbObject{data::DbNull<data::Stop>, projection}, Drawable{settings} {}
-        BusStop(data::StopRecord id, const RenderSettings& settings, const Projection_& projection) : DbObject{id, projection}, Drawable{settings} {}
+        BusStop(const RenderSettings& settings, const Projection_& projection) : IDbObject{data::DbNull<data::Stop>, projection}, IDrawable{settings} {}
+        BusStop(data::StopRecord id, const RenderSettings& settings, const Projection_& projection) : IDbObject{id, projection}, IDrawable{settings} {}
 
         void Update() override {
-            DbObject::Update();
+            IDbObject::Update();
         }
 
         void UpdateLocation() override {

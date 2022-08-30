@@ -77,7 +77,7 @@ namespace transport_catalogue::maps /* MapRenderer implementation */ {
         auto& route_names = route_names_layer_.GetObjects();
         assert(routes.size() == route_names.size());
 
-        std::vector<Drawable*> objects;
+        std::vector<IDrawable*> objects;
         // objects.resize(routes.size() + route_names.size());
         /*for (auto route_it = routes.begin(), name_it = route_names.begin(); route_it != routes.end(); ++route_it, ++name_it) {
             objects.emplace_back((*route_it).)
