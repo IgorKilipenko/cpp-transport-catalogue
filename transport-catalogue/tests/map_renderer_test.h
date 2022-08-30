@@ -257,27 +257,6 @@ namespace transport_catalogue::tests {
             std::string expected_result = transport_catalogue::detail::io::FileReader::Read(test_dir / "test_route_names_2__output.svg");
 
             CheckResults(std::move(expected_result), std::move(map_result));
-
-            /*{
-                std::vector<std::string_view> expected_lines = SplitIntoWords(expected_result, '\n');
-                std::vector<std::string_view> result_lines = SplitIntoWords(map_result, '\n');
-                bool test_failed = false;
-                size_t size = std::min(expected_lines.size(), result_lines.size());
-                for (auto res_it = std::make_move_iterator(result_lines.begin()), expected_it = std::make_move_iterator(expected_lines.begin());
-                     size-- > 0; ++res_it, ++expected_it) {
-                    if (*res_it != *expected_it) {
-                        std::cerr << "Test failed: " << std::endl;
-                        std::cerr << "Result line: " << std::endl;
-                        std::cerr << std::move(*res_it) << std::endl;
-                        std::cerr << "Expected line: " << std::endl;
-                        std::cerr << std::move(*expected_it) << std::endl;
-                        test_failed = true;
-                    }
-                }
-
-                assert(!test_failed);
-                assert(expected_lines.size() == result_lines.size());
-            }*/
         }
 
         void TestRenderRouteNamesFull() const {
@@ -298,9 +277,9 @@ namespace transport_catalogue::tests {
 
             std::string expected_result = transport_catalogue::detail::io::FileReader::Read(test_dir / "test_route_names_full__output.svg");
 
-            //! CheckResults(std::move(expected_result), std::move(map_result));
+            CheckResults(std::move(expected_result), std::move(map_result));
 
-            {
+            /*{ // Check equal buy lines
                 std::vector<std::string_view> expected_lines = SplitIntoWords(expected_result, '\n');
                 std::vector<std::string_view> result_lines = SplitIntoWords(map_result, '\n');
                 bool test_failed = false;
@@ -321,7 +300,7 @@ namespace transport_catalogue::tests {
 
                 assert(!test_failed);
                 assert(expected_lines.size() == result_lines.size());
-            }
+            }*/
         }
 
         void TestRenderRouteNames() const {

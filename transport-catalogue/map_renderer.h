@@ -34,19 +34,6 @@ namespace transport_catalogue::maps /* Aliases */ {
     using Offset = geo::Offset;
     using Size = geo::Size;
     using GlobalCoordinates = geo::Coordinates;
-
-    class Style {
-    public:
-        Color color;
-        double stroke_width = 0.;
-    };
-
-    class TextStyle : public Style {
-    public:
-        Offset offset;
-        uint32_t font_size;
-        std::optional<Color> underlayer_color;
-    };
 }
 
 namespace transport_catalogue::maps /* Locations */ {
@@ -204,13 +191,8 @@ namespace transport_catalogue::maps {
 
     protected:
         IDrawable(const RenderSettings& settings) : settings_(settings) {}
-        /*Drawable(Style style) : style_(style) {}
-        Drawable(TextStyle style) : text_style_(style) {}
-        Drawable(Style style, TextStyle text_style) : style_(style), text_style_(text_style) {}*/
 
     protected:
-        // std::optional<Style> style_;
-        // std::optional<TextStyle> text_style_;
         const RenderSettings& settings_;
     };
 }
@@ -263,7 +245,6 @@ namespace transport_catalogue::io::renderer /* IRenderer */ {
     public:
         using Projection_ = geo::SphereProjection;
         virtual void UpdateMapProjection(Projection_&& projection) = 0;
-        // virtual void DrawTransportTracksLayer(std::vector<data::BusRecord>&& records) = 0;
         virtual void AddRouteToLayer(const data::BusRecord&& bus_record) = 0;
         virtual void DrawTransportTracksLayer(std::vector<data::BusRecord>&& records) = 0;  //! NOT USED YET
         virtual void AddRouteNameToLayer(data::BusRecord bus_record) = 0;
@@ -323,7 +304,6 @@ namespace transport_catalogue::maps /* MapRenderer */ {
         MapLayer route_names_layer_;
         Projection_ projection_;
         RenderSettings settings_;
-        // size_t color_index_ = 0;
         ColorPaletteСyclicIterator color_palette_iterator_;
     };
 }
@@ -365,10 +345,6 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute */ {
         class BusRouteLable;
 
     public:
-        /*BusRoute(const RenderSettings& settings, const Projection_& projection)
-            : DbObject{data::DbNull<data::Bus>, projection}, Drawable{settings} {
-            Build();
-        }*/
         BusRoute(data::BusRecord bus_record, const RenderSettings& settings, const Projection_& projection)
             : IDbObject{bus_record, projection}, IDrawable{settings} {
             Build();
@@ -421,8 +397,6 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
         };
 
     public:
-        /*BusRouteLable(data::BusRecord bus_record, const RenderSettings& settings, const Projection_& projection)
-            : DbObject{bus_record, projection}, Drawable{settings} {}*/
         BusRouteLable(const BusRoute& drawable_bus)
             : IDbObject{drawable_bus.db_record_, drawable_bus.projection_},
               IDrawable{drawable_bus.settings_},
@@ -439,8 +413,7 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
             }
             static const std::string font_weight("bold");
             static const std::string font_family("Verdana");
-            // std::vector<svg::Text> names{name_lables_.size()};
-            std::for_each(name_lables_.begin(), name_lables_.end(), [this, &layer /*, &names*/](const NameLable& lable) {
+            std::for_each(name_lables_.begin(), name_lables_.end(), [this, &layer](const NameLable& lable) {
                 svg::Text base;
                 base.SetData(lable.text)
                     .SetPosition(lable.location.GetMapPoint())
@@ -489,10 +462,8 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
             assert(HasValidParent());
             assert(db_record_ == drawable_bus_.db_record_);
 
-            // const auto& route = db_record_->route;
             const auto& locations = drawable_bus_.locations_;
-
-            // assert(route.size() == drawable_bus_.locations_.size());
+            assert(db_record_->route.size() == drawable_bus_.locations_.size());
 
             if (locations.empty()) {
                 return;
@@ -501,17 +472,6 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
             const std::string& name = db_record_->name;
             name_lables_.emplace_back(name, locations.front());
 
-            // if (/*db_record_->is_roundtrip &&*/ locations.size() > 1 && db_record_->route.front()->name != db_record_->route.back()->name){
-            //     [[maybe_unused]]const auto& start = db_record_->route.front();
-            //     [[maybe_unused]]const auto& stop = db_record_->route.back();
-            //     std::cerr << "";
-            // }
-
-            // if (locations.size() > 1 && (!db_record_->is_roundtrip || &db_record_->route.front()->name != &db_record_->route.back()->name)) {
-            //     //! assert(locations.size() % 2ul);
-            //     auto center = static_cast<size_t>(locations.size() / 2ul);
-            //     name_lables_.emplace_back(name, locations[center]);
-            // }
             if (locations.size() > 1 && !db_record_->is_roundtrip) {
                 //! assert(locations.size() % 2ul);
                 auto center = static_cast<size_t>(locations.size() / 2ul);
@@ -542,7 +502,7 @@ namespace transport_catalogue::maps /* MapRenderer::BusStop */ {
         }
 
         void Darw(svg::ObjectContainer& /*layer*/) const override {
-            // layer.Add(Polyline{})
+            //! layer.Add(Polyline{})
         }
 
     private:
