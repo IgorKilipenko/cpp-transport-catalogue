@@ -66,7 +66,12 @@ namespace transport_catalogue::maps /* MapRenderer implementation */ {
         return GetRouteLayer();
     }
 
-    svg::Document& MapRenderer::GetRouteLayer() {
+    svg::Document& MapRenderer::GetRouteLayer() {       
+        routes_layer_.Draw();
+        return routes_layer_.GetSvgDocument();
+    }
+
+    svg::Document& MapRenderer::GetRouteNamesLayer() {
         // routes_layer_.Draw();
         auto& routes = routes_layer_.GetObjects();
         auto& route_names = route_names_layer_.GetObjects();

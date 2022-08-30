@@ -198,6 +198,7 @@ namespace transport_catalogue::maps {
     class Drawable {
     public:
         virtual void Darw(svg::ObjectContainer& layer) const = 0;
+        virtual std::shared_ptr<Drawable> Clone() const = 0;
         virtual ~Drawable() = default;
 
     protected:
@@ -222,13 +223,13 @@ namespace transport_catalogue::maps /* MapLayer */ {
         }
 
         void Draw() {
+            svg_document_.Clear();
             std::for_each(objects_.begin(), objects_.end(), [this](auto& obj) {
                 obj->Darw(svg_document_);
             });
         }
 
-        template <
-            typename DrawableType>
+        template <typename DrawableType>
         void Add(DrawableType&& obj) {
             objects_.emplace_back(std::make_shared<std::decay_t<DrawableType>>(std::forward<DrawableType>(obj)));
         }
@@ -267,9 +268,12 @@ namespace transport_catalogue::io::renderer /* IRenderer */ {
         virtual void AddRouteNameToLayer(data::BusRecord bus_record) = 0;
         virtual void DrawTransportStopsLayer(std::vector<data::StopRecord>&& records) = 0;
         virtual void SetRenderSettings(maps::RenderSettings&& settings) = 0;
+
         virtual maps::RenderSettings& GetRenderSettings() = 0;
-        virtual svg::Document& GetMap() = 0;                //! FOR DEBUG ONLY
-        virtual svg::Document& GetRouteLayer() = 0;  //! FOR DEBUG ONLY
+
+        virtual svg::Document& GetMap() = 0;              //! FOR DEBUG ONLY
+        virtual svg::Document& GetRouteLayer() = 0;       //! FOR DEBUG ONLY
+        virtual svg::Document& GetRouteNamesLayer() = 0;  //! FOR DEBUG ONLY
         virtual ~IRenderer() = default;
     };
 }
@@ -309,6 +313,8 @@ namespace transport_catalogue::maps /* MapRenderer */ {
         svg::Document& GetMap() override;
 
         svg::Document& GetRouteLayer() override;
+
+        svg::Document& GetRouteNamesLayer() override;
 
     private:
         MapLayer map_layer_;
@@ -381,6 +387,10 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute */ {
         void SetColor(const Color&& color);
 
         BusRouteLable BuildLable() const;
+
+        std::shared_ptr<Drawable> Clone() const override {
+            return std::make_shared<MapRenderer::BusRoute>(*this);
+        }
 
     private:
         Polyline locations_;
@@ -458,6 +468,10 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
 
         bool HasValidParent() const {
             return !parent_ref_handle_.expired();
+        }
+
+        std::shared_ptr<Drawable> Clone() const override {
+            return std::make_shared<MapRenderer::BusRoute::BusRouteLable>(*this);
         }
 
     private:
