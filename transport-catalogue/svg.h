@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -412,6 +413,20 @@ namespace svg /* Svg Objects */ {
 
         size_t GetObjectsCount() const {
             return objects_.size();
+        }
+
+        void Clear() {
+            objects_.clear();
+        }
+
+        void Merge(const Document& document) {  //! NOT TESTED
+            std::for_each(document.objects_.begin(), document.objects_.end(), [this](const ObjectPtr& object_ptr) {
+                using T = std::decay_t<decltype(*object_ptr)>;
+                if constexpr (!std::is_abstract_v<T>) {
+                    auto copy = object_ptr.get();
+                    AddPtr(std::make_unique<T>(std::move(copy)));
+                }
+            });
         }
 
     private:

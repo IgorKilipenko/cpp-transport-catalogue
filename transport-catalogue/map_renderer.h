@@ -388,7 +388,7 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute */ {
 
         BusRouteLable BuildLable() const;
 
-        std::shared_ptr<IDrawable> Clone() const override {
+        virtual std::shared_ptr<IDrawable> Clone() const override final {
             return std::make_shared<MapRenderer::BusRoute>(*this);
         }
 
@@ -470,7 +470,7 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
             return !parent_ref_handle_.expired();
         }
 
-        std::shared_ptr<IDrawable> Clone() const override {
+        virtual std::shared_ptr<IDrawable> Clone() const override final {
             return std::make_shared<MapRenderer::BusRoute::BusRouteLable>(*this);
         }
 
@@ -504,8 +504,10 @@ namespace transport_catalogue::maps /* MapRenderer::BusStop */ {
 
     class MapRenderer::BusStop : public IDbObject<data::Stop>, public IDrawable {
     public:
-        BusStop(const RenderSettings& settings, const Projection_& projection) : IDbObject{data::DbNull<data::Stop>, projection}, IDrawable{settings} {}
-        BusStop(data::StopRecord id, const RenderSettings& settings, const Projection_& projection) : IDbObject{id, projection}, IDrawable{settings} {}
+        BusStop(const RenderSettings& settings, const Projection_& projection)
+            : IDbObject{data::DbNull<data::Stop>, projection}, IDrawable{settings} {}
+        BusStop(data::StopRecord id, const RenderSettings& settings, const Projection_& projection)
+            : IDbObject{id, projection}, IDrawable{settings} {}
 
         void Update() override {
             IDbObject::Update();
