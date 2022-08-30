@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1">
+  <text fill="rgba(255,255,255,0.85)" stroke="rgba(255,255,255,0.85)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" x="480.122" y="248.551" dx="7" dy="15" font-size="20" font-family="Verdana" font-weight="bold">256</text>
+  <text fill="green" x="480.122" y="248.551" dx="7" dy="15" font-size="20" font-family="Verdana" font-weight="bold">256</text>
+  <text fill="rgba(255,255,255,0.85)" stroke="rgba(255,255,255,0.85)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" x="480.122" y="248.551" dx="7" dy="15" font-size="20" font-family="Verdana" font-weight="bold">828</text>
+  <text fill="rgb(255,160,0)" x="480.122" y="248.551" dx="7" dy="15" font-size="20" font-family="Verdana" font-weight="bold">828</text>
+</svg>
