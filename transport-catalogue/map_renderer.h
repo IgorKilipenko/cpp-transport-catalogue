@@ -458,7 +458,7 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
         }
 
     private:
-        [[maybe_unused]] const BusRoute& drawable_bus_;
+        const BusRoute& drawable_bus_;
         std::weak_ptr<int> parent_ref_handle_;
         Color color_;
         std::vector<NameLable> name_lables_;
