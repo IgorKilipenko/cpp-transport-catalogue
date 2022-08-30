@@ -277,252 +277,32 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
     public:
         template <typename ObjectType>
-        class DbObject {
-        public:
-            virtual void Update() {
-                if (db_record_ == data::DbNull<ObjectType>) {
-                    return;
-                }
-                throw std::runtime_error("Not implemented");
-            }
+        class DbObject;
 
-            virtual void UpdateLocation() = 0;
+        class BusStop;
 
-            const std::string_view GetName() const {
-                return name_;
-            }
+        class BusRoute;
 
-            const data::DbRecord<ObjectType>& GetDbRecord() const {
-                return db_record_;
-            }
+    public:
+        void UpdateLayers();
 
-        protected:
-            DbObject(data::DbRecord<ObjectType> db_record, const Projection_& projection) : db_record_{db_record}, projection_{projection} {}
+        void UpdateMapProjection(Projection_&& projection) override;
 
-        protected:
-            std::string name_;
-            data::DbRecord<ObjectType> db_record_;
-            const Projection_& projection_;
-        };
+        void AddRouteToLayer(const data::BusRecord&& bus_record) override;
 
-        class BusStop : public DbObject<data::Stop>, public Drawable {
-        public:
-            BusStop(const RenderSettings& settings, const Projection_& projection)
-                : DbObject{data::DbNull<data::Stop>, projection}, Drawable{settings} {}
-            BusStop(data::StopRecord id, const RenderSettings& settings, const Projection_& projection)
-                : DbObject{id, projection}, Drawable{settings} {}
+        void AddRouteNameToLayer(data::BusRecord bus_record) override;
 
-            void Update() override {
-                DbObject::Update();
-            }
+        void DrawTransportTracksLayer(std::vector<data::BusRecord>&& /*records*/) override;
 
-            void UpdateLocation() override {
-                std::cerr << "BusRoute -> Update Location" << std::endl;  //! FOR DEBUG ONLY
-                location_.GetMapPoint() = {projection_.FromLatLngToMapPoint(location_.GetGlobalCoordinates())};
-            }
+        void DrawTransportStopsLayer(std::vector<data::StopRecord>&& /*records*/) override;
 
-            void Darw(svg::ObjectContainer& /*layer*/) const override {
-                // layer.Add(Polyline{})
-            }
+        void SetRenderSettings(RenderSettings&& settings) override;
 
-        private:
-            Location location_;
-        };
+        RenderSettings& GetRenderSettings() override;
 
-        class BusRoute : public DbObject<data::Bus>, public Drawable {
-        public:
-            class BusRouteLable : public DbObject<data::Bus>, public Drawable {
-            private:
-                struct NameLable {
-                    std::string text;
-                    Location location;
+        svg::Document& GetMap() override;
 
-                    NameLable(std::string text, Location location) : text(text), location(location) {}
-                };
-
-            public:
-                /*BusRouteLable(data::BusRecord bus_record, const RenderSettings& settings, const Projection_& projection)
-                    : DbObject{bus_record, projection}, Drawable{settings} {}*/
-                BusRouteLable(const BusRoute& drawable_bus)
-                    : DbObject{drawable_bus.db_record_, drawable_bus.projection_},
-                      Drawable{drawable_bus.settings_},
-                      drawable_bus_{drawable_bus},
-                      parent_ref_handle_{drawable_bus.ref_} {}
-
-                void Darw(svg::ObjectContainer& layer) const override {
-                    assert(HasValidParent());
-                    if (name_lables_.empty()) {
-                        return;
-                    }
-                    static const std::string font_weight("bold");
-                    static const std::string font_family("Verdana");
-                    // std::vector<svg::Text> names{name_lables_.size()};
-                    std::for_each(name_lables_.begin(), name_lables_.end(), [this, &layer /*, &names*/](const NameLable& lable) {
-                        svg::Text base;
-                        base.SetData(lable.text)
-                            .SetOffset(lable.location.GetMapPoint())
-                            .SetFontSize(settings_.bus_label_font_size)
-                            .SetFontFamily(font_family)
-                            .SetFontWeight(font_weight);
-                        svg::Text name = base.SetFillColor(drawable_bus_.color_);
-
-                        svg::Text underlay = base.SetFillColor(settings_.underlayer_color)
-                                                 .SetStrokeColor(settings_.underlayer_color)
-                                                 .SetStrokeWidth(settings_.underlayer_width)
-                                                 .SetStrokeLineCap(svg::StrokeLineCap::ROUND)
-                                                 .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND);
-
-                        layer.Add(std::move(underlay));
-                        layer.Add(std::move(name));
-                    });
-                }
-
-                void Update() override {
-                    assert(HasValidParent());
-                    DbObject::Update();
-                    UpdateLocation();
-                }
-
-                void UpdateLocation() override {
-                    Build();
-                }
-
-                bool HasValidParent() const {
-                    return !parent_ref_handle_.expired();
-                }
-
-            private:
-                [[maybe_unused]] const BusRoute& drawable_bus_;
-                std::weak_ptr<int> parent_ref_handle_;
-                std::vector<NameLable> name_lables_;
-
-                void Build() {
-                    assert(HasValidParent());
-                    assert(db_record_ == drawable_bus_.db_record_);
-
-                    const auto& route = db_record_->route;
-
-                    assert(route.size() == drawable_bus_.locations_.size());
-
-                    if (route.empty()) {
-                        return;
-                    }
-                    name_lables_.emplace_back(route.front()->name, drawable_bus_.locations_.front());
-
-                    if (route.size() > 1 && !db_record_->is_roundtrip) {
-                        auto center = static_cast<size_t>(route.size() / 2ul) + 1ul;
-                        name_lables_.emplace_back(route[center]->name, drawable_bus_.locations_[center]);
-                    }
-                }
-            };
-
-        public:
-            /*BusRoute(const RenderSettings& settings, const Projection_& projection)
-                : DbObject{data::DbNull<data::Bus>, projection}, Drawable{settings} {
-                Build();
-            }*/
-            BusRoute(data::BusRecord bus_record, const RenderSettings& settings, const Projection_& projection)
-                : DbObject{bus_record, projection}, Drawable{settings} {
-                Build();
-            }
-
-            void Update() override {
-                DbObject::Update();
-                UpdateLocation();
-            }
-
-            void UpdateLocation() override {
-                // std::cerr << "BusRoute -> Update Location" << std::endl;  //! FOR DEBUG ONLY
-                std::for_each(locations_.begin(), locations_.end(), [this](Location& location) {
-                    location.GetMapPoint() = {projection_.FromLatLngToMapPoint(location.GetGlobalCoordinates())};
-                });
-            }
-
-            void Darw(svg::ObjectContainer& layer) const override {
-                layer.Add(svg::Polyline(locations_)
-                              .SetFillColor(svg::NoneColor)
-                              .SetStrokeWidth(settings_.line_width)
-                              .SetStrokeLineCap(svg::StrokeLineCap::ROUND)
-                              .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND)
-                              .SetStrokeColor(color_));
-            }
-
-            const data::Route& GetRoute() const {
-                return db_record_->route;
-            }
-
-            void SetColor(const Color&& color) {
-                color_ = std::move(color);
-            }
-
-            const BusRoute* BuildLable() const {
-                return this;
-            }
-
-        private:
-            Polyline locations_;
-            Color color_ = ColorPaletteСyclicIterator::NoneColor;
-            std::shared_ptr<int> ref_ = std::make_shared<int>();
-            void Build() {
-                assert(locations_.empty());
-
-                const data::Route& route = db_record_->route;
-                locations_.reserve(route.size());
-                std::for_each(route.begin(), route.end(), [this](const data::StopRecord& stop) {
-                    locations_.emplace_back(projection_.FromLatLngToMapPoint(stop->coordinates), stop->coordinates);
-                });
-            }
-        };
-
-        void UpdateLayers() {
-            routes_layer_.Draw();
-        }
-
-        void UpdateMapProjection(Projection_&& projection) override {
-            if (projection == projection_) {
-                return;
-            }
-            projection_ = std::move(projection);
-            UpdateLayers();
-        }
-
-        void AddRouteToLayer(const data::BusRecord&& bus_record) override {
-            assert(!settings_.color_palette.empty());
-            BusRoute drawable_bus{bus_record, settings_, projection_};
-            drawable_bus.SetColor(Color(color_palette_iterator_.GetCurrentColor()));
-            drawable_bus.Darw(routes_layer_.GetSvgDocument());
-            color_palette_iterator_.NextColor();
-        }
-
-        void AddRouteNameToLayer(data::BusRecord bus_record) override {}
-
-        void DrawTransportTracksLayer(std::vector<data::BusRecord>&& /*records*/) override {
-            throw std::runtime_error("Not implemented");  //! Not implemented
-        }
-
-        void DrawTransportStopsLayer(std::vector<data::StopRecord>&& /*records*/) override {
-            throw std::runtime_error("Not implemented");  //! Not implemented
-        }
-
-        void SetRenderSettings(RenderSettings&& settings) override {
-            settings_ = std::move(settings);
-            color_palette_iterator_.SetColorPalette(ColorPalette(settings_.color_palette));
-            //! UpdateLayers();
-        }
-
-        RenderSettings& GetRenderSettings() override {
-            return settings_;
-        }
-
-        svg::Document& GetMap() override {
-            //! UpdateLayers();
-            return GetTransportLayerMap();
-        }
-
-        svg::Document& GetTransportLayerMap() override {
-            routes_layer_.Draw();
-            return routes_layer_.GetSvgDocument();
-        }
+        svg::Document& GetTransportLayerMap() override;
 
     private:
         MapLayer routes_layer_;
@@ -531,5 +311,213 @@ namespace transport_catalogue::maps /* MapRenderer */ {
         RenderSettings settings_;
         // size_t color_index_ = 0;
         ColorPaletteСyclicIterator color_palette_iterator_;
+    };
+}
+
+namespace transport_catalogue::maps /* MapRenderer::DbObject */ {
+    template <typename ObjectType>
+    class MapRenderer::DbObject {
+    public:
+        virtual void Update() {
+            if (db_record_ == data::DbNull<ObjectType>) {
+                return;
+            }
+            throw std::runtime_error("Not implemented");
+        }
+
+        virtual void UpdateLocation() = 0;
+
+        const std::string_view GetName() const {
+            return name_;
+        }
+
+        const data::DbRecord<ObjectType>& GetDbRecord() const {
+            return db_record_;
+        }
+
+    protected:
+        DbObject(data::DbRecord<ObjectType> db_record, const Projection_& projection) : db_record_{db_record}, projection_{projection} {}
+
+    protected:
+        std::string name_;
+        data::DbRecord<ObjectType> db_record_;
+        const Projection_& projection_;
+    };
+}
+
+namespace transport_catalogue::maps /* MapRenderer::BusRoute */ {
+    class MapRenderer::BusRoute : public DbObject<data::Bus>, public Drawable {
+    public:
+        class BusRouteLable;
+
+    public:
+        /*BusRoute(const RenderSettings& settings, const Projection_& projection)
+            : DbObject{data::DbNull<data::Bus>, projection}, Drawable{settings} {
+            Build();
+        }*/
+        BusRoute(data::BusRecord bus_record, const RenderSettings& settings, const Projection_& projection)
+            : DbObject{bus_record, projection}, Drawable{settings} {
+            Build();
+        }
+
+        void Update() override {
+            DbObject::Update();
+            UpdateLocation();
+        }
+
+        void UpdateLocation() override {
+            // std::cerr << "BusRoute -> Update Location" << std::endl;  //! FOR DEBUG ONLY
+            std::for_each(locations_.begin(), locations_.end(), [this](Location& location) {
+                location.GetMapPoint() = {projection_.FromLatLngToMapPoint(location.GetGlobalCoordinates())};
+            });
+        }
+
+        void Darw(svg::ObjectContainer& layer) const override {
+            layer.Add(svg::Polyline(locations_)
+                          .SetFillColor(svg::NoneColor)
+                          .SetStrokeWidth(settings_.line_width)
+                          .SetStrokeLineCap(svg::StrokeLineCap::ROUND)
+                          .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND)
+                          .SetStrokeColor(color_));
+        }
+
+        const data::Route& GetRoute() const {
+            return db_record_->route;
+        }
+
+        void SetColor(const Color&& color) {
+            color_ = std::move(color);
+        }
+
+        const BusRoute* BuildLable() const {
+            return this;
+        }
+
+    private:
+        Polyline locations_;
+        Color color_ = ColorPaletteСyclicIterator::NoneColor;
+        std::shared_ptr<int> ref_ = std::make_shared<int>();
+        void Build() {
+            assert(locations_.empty());
+
+            const data::Route& route = db_record_->route;
+            locations_.reserve(route.size());
+            std::for_each(route.begin(), route.end(), [this](const data::StopRecord& stop) {
+                locations_.emplace_back(projection_.FromLatLngToMapPoint(stop->coordinates), stop->coordinates);
+            });
+        }
+    };
+}
+
+namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
+
+    class MapRenderer::BusRoute::BusRouteLable : public DbObject<data::Bus>, public Drawable {
+    private:
+        struct NameLable {
+            std::string text;
+            Location location;
+
+            NameLable(std::string text, Location location) : text(text), location(location) {}
+        };
+
+    public:
+        /*BusRouteLable(data::BusRecord bus_record, const RenderSettings& settings, const Projection_& projection)
+            : DbObject{bus_record, projection}, Drawable{settings} {}*/
+        BusRouteLable(const BusRoute& drawable_bus)
+            : DbObject{drawable_bus.db_record_, drawable_bus.projection_},
+              Drawable{drawable_bus.settings_},
+              drawable_bus_{drawable_bus},
+              parent_ref_handle_{drawable_bus.ref_} {}
+
+        void Darw(svg::ObjectContainer& layer) const override {
+            assert(HasValidParent());
+            if (name_lables_.empty()) {
+                return;
+            }
+            static const std::string font_weight("bold");
+            static const std::string font_family("Verdana");
+            // std::vector<svg::Text> names{name_lables_.size()};
+            std::for_each(name_lables_.begin(), name_lables_.end(), [this, &layer /*, &names*/](const NameLable& lable) {
+                svg::Text base;
+                base.SetData(lable.text)
+                    .SetOffset(lable.location.GetMapPoint())
+                    .SetFontSize(settings_.bus_label_font_size)
+                    .SetFontFamily(font_family)
+                    .SetFontWeight(font_weight);
+                svg::Text name = base.SetFillColor(drawable_bus_.color_);
+
+                svg::Text underlay = base.SetFillColor(settings_.underlayer_color)
+                                         .SetStrokeColor(settings_.underlayer_color)
+                                         .SetStrokeWidth(settings_.underlayer_width)
+                                         .SetStrokeLineCap(svg::StrokeLineCap::ROUND)
+                                         .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND);
+
+                layer.Add(std::move(underlay));
+                layer.Add(std::move(name));
+            });
+        }
+
+        void Update() override {
+            assert(HasValidParent());
+            DbObject::Update();
+            UpdateLocation();
+        }
+
+        void UpdateLocation() override {
+            Build();
+        }
+
+        bool HasValidParent() const {
+            return !parent_ref_handle_.expired();
+        }
+
+    private:
+        [[maybe_unused]] const BusRoute& drawable_bus_;
+        std::weak_ptr<int> parent_ref_handle_;
+        std::vector<NameLable> name_lables_;
+
+        void Build() {
+            assert(HasValidParent());
+            assert(db_record_ == drawable_bus_.db_record_);
+
+            const auto& route = db_record_->route;
+
+            assert(route.size() == drawable_bus_.locations_.size());
+
+            if (route.empty()) {
+                return;
+            }
+            name_lables_.emplace_back(route.front()->name, drawable_bus_.locations_.front());
+
+            if (route.size() > 1 && !db_record_->is_roundtrip) {
+                auto center = static_cast<size_t>(route.size() / 2ul) + 1ul;
+                name_lables_.emplace_back(route[center]->name, drawable_bus_.locations_[center]);
+            }
+        }
+    };
+}
+
+namespace transport_catalogue::maps /* MapRenderer::BusStop */ {
+
+    class MapRenderer::BusStop : public DbObject<data::Stop>, public Drawable {
+    public:
+        BusStop(const RenderSettings& settings, const Projection_& projection) : DbObject{data::DbNull<data::Stop>, projection}, Drawable{settings} {}
+        BusStop(data::StopRecord id, const RenderSettings& settings, const Projection_& projection) : DbObject{id, projection}, Drawable{settings} {}
+
+        void Update() override {
+            DbObject::Update();
+        }
+
+        void UpdateLocation() override {
+            std::cerr << "BusRoute -> Update Location" << std::endl;  //! FOR DEBUG ONLY
+            location_.GetMapPoint() = {projection_.FromLatLngToMapPoint(location_.GetGlobalCoordinates())};
+        }
+
+        void Darw(svg::ObjectContainer& /*layer*/) const override {
+            // layer.Add(Polyline{})
+        }
+
+    private:
+        Location location_;
     };
 }
