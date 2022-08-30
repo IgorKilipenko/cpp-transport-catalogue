@@ -399,17 +399,24 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
 
     std::vector<svg::Document*> RequestHandler::RenderMap(/*maps::RenderSettings settings*/) const {
         const data::DatabaseScheme::BusRoutesTable& buses_table = db_reader_.GetDataReader().GetBusRoutesTable();
+        const data::DatabaseScheme::StopsTable& stops_table = db_reader_.GetDataReader().GetStopsTable();
         data::BusRecordSet sorted_busses;
-        //data::StopRecordSet stops_on_routes;
+
+        std::vector<data::StopRecord> stops_on_routes;
+        stops_on_routes.reserve(stops_table.size());
         std::vector<geo::Coordinates> points;
-        points.reserve(db_reader_.GetDataReader().GetStopsTable().size());
-        std::for_each(buses_table.begin(), buses_table.end(), [&sorted_busses, /*&stops_on_routes,*/ &points](const auto& bus) {
+        points.reserve(stops_table.size());
+        std::for_each(stops_table.begin(), stops_table.end(), [&db_reader = this->db_reader_, &stops_on_routes, &points](const auto& stop) {
+            if (db_reader.GetDataReader().GetBuses(&stop).empty()) {
+                return;
+            }
+            stops_on_routes.emplace_back(&stop);
+            points.emplace_back(stop.coordinates);
+        });
+
+        std::for_each(buses_table.begin(), buses_table.end(), [&sorted_busses](const auto& bus) {
             if (!bus.route.empty()) {
                 sorted_busses.emplace(&bus);
-                //stops_on_routes.insert(stops_on_routes.begin(), bus.route.begin(), bus.route.end());
-                std::for_each(bus.route.begin(), bus.route.end(), [&points](const auto& stop) {
-                    points.emplace_back(stop->coordinates);
-                });
             }
         });
 
@@ -418,9 +425,8 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
 
         renderer_.UpdateMapProjection(std::move(projection));
 
-        std::for_each(sorted_busses.begin(), sorted_busses.end(), [&renderer=this->renderer_](const auto& bus) {
+        std::for_each(sorted_busses.begin(), sorted_busses.end(), [&renderer = this->renderer_](const auto& bus) {
             renderer.AddRouteToLayer(data::BusRecordSet::value_type{bus});
-            //! renderer.AddRouteNameToLayer(data::BusRecordSet::value_type{bus});
         });
 
         return std::vector<svg::Document*>{&renderer_.GetRouteLayer(), &renderer_.GetRouteNamesLayer()};
