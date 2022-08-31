@@ -24,7 +24,7 @@
  */
 
 int main() {
-    /*
+    
     using namespace transport_catalogue;
     using namespace transport_catalogue::tests;
     using namespace svg::tests;
@@ -44,8 +44,8 @@ int main() {
 
     MapRendererTester test_render;
     test_render.RunTests();
-    */
-
+    
+/*
     using namespace transport_catalogue;
     using namespace transport_catalogue::io;
 
@@ -68,6 +68,6 @@ int main() {
     });
     
     svg_map.Render(std::cout);
-
+*/
     return 0;
 }

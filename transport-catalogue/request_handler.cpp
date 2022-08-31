@@ -312,9 +312,8 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         ExecuteRequest(std::move(reqs));
     }
 
-    void RequestHandler::OnStatRequest(std::vector<RawRequest>&& /*requests*/) {
-        //!!!!! DESABLED FOR TRAINER ONLY  !!
-        /*std::vector<StatRequest> reqs;
+    void RequestHandler::OnStatRequest(std::vector<RawRequest>&& requests) {
+        std::vector<StatRequest> reqs;
         reqs.reserve(requests.size());
 
         std::for_each(std::make_move_iterator(requests.begin()), std::make_move_iterator(requests.end()), [&reqs](RawRequest&& raw_req) {
@@ -322,7 +321,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
             reqs.emplace_back(std::move(stat_req));
         });
 
-        ExecuteRequest(std::move(reqs));*/
+        ExecuteRequest(std::move(reqs));
     }
 
     void RequestHandler::OnRenderSettingsRequest(RawRequest&& request) {
