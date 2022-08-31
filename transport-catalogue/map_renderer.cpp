@@ -27,27 +27,26 @@ namespace transport_catalogue::maps /* MapRenderer implementation */ {
     void MapRenderer::AddRouteToLayer(const data::BusRecord&& bus_record) {
         assert(!settings_.color_palette.empty());
         BusRoute drawable_bus{bus_record, settings_, projection_};
-        drawable_bus.SetColor(Color(route_color_palette_iterator_.GetCurrentColor()));
+        drawable_bus.SetColor(Color(color_picker_.GetRouteColor()));
 
         layers_.route_names.Add(drawable_bus.BuildLable());
         layers_.routes.Add(std::move(drawable_bus));
-        route_color_palette_iterator_.NextColor();
+        color_picker_.SetNextRouteColor();
     }
 
     void MapRenderer::AddStopToLayer(const data::StopRecord&& stop_record) {
         assert(!settings_.color_palette.empty());
         StopMarker drawable_stop{stop_record, settings_, projection_};
-        drawable_stop.SetColor(Color(busses_color_palette_iterator_.GetCurrentColor()));
+        drawable_stop.SetColor(Color(color_picker_.GetStopColor()));
 
         layers_.stop_marker_names.Add(drawable_stop.BuildLable());
         layers_.stop_markers.Add(std::move(drawable_stop));
-        busses_color_palette_iterator_.NextColor();
+        color_picker_.SetNextBusColor();
     }
 
     void MapRenderer::SetRenderSettings(RenderSettings&& settings) {
         settings_ = std::move(settings);
-        route_color_palette_iterator_.SetColorPalette(ColorPalette(settings_.color_palette));
-        busses_color_palette_iterator_.SetColorPalette(ColorPalette(settings_.color_palette));
+        color_picker_.SetColorPalette(settings_.color_palette);
         //! UpdateLayers();
     }
 
@@ -55,9 +54,9 @@ namespace transport_catalogue::maps /* MapRenderer implementation */ {
         return settings_;
     }
 
-    svg::Document& MapRenderer::GetMap() {
+    svg::Document& MapRenderer::GetMap() {  //! NOT DEV
         //! UpdateLayers();
-        return GetRouteLayer();
+        return GetRouteLayer(); //!
     }
 
     svg::Document& MapRenderer::GetRouteLayer() {

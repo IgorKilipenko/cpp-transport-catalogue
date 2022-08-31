@@ -266,8 +266,7 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
     public:
         MapRenderer()
-            : route_color_palette_iterator_{ColorPalette(settings_.color_palette)},
-              busses_color_palette_iterator_{ColorPalette(settings_.color_palette)} {}
+            : color_picker_{settings_.color_palette} {}
 
     public:
         template <typename ObjectType>
@@ -284,6 +283,34 @@ namespace transport_catalogue::maps /* MapRenderer */ {
             MapLayer route_names;
             MapLayer stop_markers;
             MapLayer stop_marker_names;
+        };
+
+        class ColorPicker {
+        public:
+            ColorPicker(ColorPalette color_palette)
+                : route_colors_iterator_{ColorPalette(color_palette)}, busses_colors_iterator_{ColorPalette(color_palette)} {}
+            Color GetRouteColor() {
+                return route_colors_iterator_.GetCurrentColorOrNone();
+            }
+            Color GetStopColor() {
+                return busses_colors_iterator_.GetCurrentColorOrNone();
+            }
+
+            void SetNextRouteColor() {
+                route_colors_iterator_.NextColor();
+            }
+            void SetNextBusColor() {
+                busses_colors_iterator_.NextColor();
+            }
+
+            void SetColorPalette(ColorPalette colors) {
+                route_colors_iterator_.SetColorPalette(ColorPalette{colors});
+                busses_colors_iterator_.SetColorPalette(ColorPalette{colors});
+            }
+
+        private:
+            ColorPaletteСyclicIterator route_colors_iterator_;
+            ColorPaletteСyclicIterator busses_colors_iterator_;
         };
 
     public:
@@ -313,8 +340,7 @@ namespace transport_catalogue::maps /* MapRenderer */ {
         LayerSet layers_;
         Projection_ projection_;
         RenderSettings settings_;
-        ColorPaletteСyclicIterator route_color_palette_iterator_;
-        ColorPaletteСyclicIterator busses_color_palette_iterator_;
+        ColorPicker color_picker_;
     };
 }
 
