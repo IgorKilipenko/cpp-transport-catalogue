@@ -3,11 +3,6 @@
 #include <type_traits>
 #include <variant>
 
-/*
- * Здесь можно разместить код наполнения транспортного справочника данными из JSON,
- * а также код обработки запросов к базе и формирование массива ответов в формате JSON
- */
-
 namespace transport_catalogue::io /* JsonReader implementation */ {
 
     void JsonReader::AddObserver(std::shared_ptr<IRequestObserver> observer) {
@@ -250,9 +245,6 @@ namespace transport_catalogue::io /* JsonResponseSender implementation */ {
         json::Array json_response;
         std::for_each(std::move_iterator(responses.begin()), std::move_iterator(responses.end()), [this, &json_response](StatResponse&& response) {
             json::Dict resp_value = BuildStatMessage(std::move(response));
-            if (resp_value.empty()) {  //! Mock for map requests
-                return;
-            }
             json_response.emplace_back(std::move(resp_value));
         });
         json::Document doc(std::move(json_response));
