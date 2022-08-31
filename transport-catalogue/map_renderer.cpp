@@ -13,7 +13,7 @@
 
 namespace transport_catalogue::maps /* MapRenderer implementation */ {
     void MapRenderer::UpdateLayers() {
-        routes_layer_.Draw();
+        layers_.routes.Draw();
     }
 
     void MapRenderer::UpdateMapProjection(Projection_&& projection) {
@@ -29,8 +29,8 @@ namespace transport_catalogue::maps /* MapRenderer implementation */ {
         BusRoute drawable_bus{bus_record, settings_, projection_};
         drawable_bus.SetColor(Color(route_color_palette_iterator_.GetCurrentColor()));
 
-        route_names_layer_.Add(drawable_bus.BuildLable());
-        routes_layer_.Add(std::move(drawable_bus));
+        layers_.route_names.Add(drawable_bus.BuildLable());
+        layers_.routes.Add(std::move(drawable_bus));
         route_color_palette_iterator_.NextColor();
     }
 
@@ -39,8 +39,8 @@ namespace transport_catalogue::maps /* MapRenderer implementation */ {
         StopMarker drawable_stop{stop_record, settings_, projection_};
         drawable_stop.SetColor(Color(busses_color_palette_iterator_.GetCurrentColor()));
 
-        stop_marker_names_layer_.Add(drawable_stop.BuildLable());
-        stop_markers_layer_.Add(std::move(drawable_stop));
+        layers_.stop_marker_names.Add(drawable_stop.BuildLable());
+        layers_.stop_markers.Add(std::move(drawable_stop));
         busses_color_palette_iterator_.NextColor();
     }
 
@@ -61,23 +61,23 @@ namespace transport_catalogue::maps /* MapRenderer implementation */ {
     }
 
     svg::Document& MapRenderer::GetRouteLayer() {
-        routes_layer_.Draw();
-        return routes_layer_.GetSvgDocument();
+        layers_.routes.Draw();
+        return layers_.routes.GetSvgDocument();
     }
 
     svg::Document& MapRenderer::GetRouteNamesLayer() {
-        route_names_layer_.Draw();
-        return route_names_layer_.GetSvgDocument();
+        layers_.route_names.Draw();
+        return layers_.route_names.GetSvgDocument();
     }
 
     svg::Document& MapRenderer::GetStopMarkersLayer() {
-        stop_markers_layer_.Draw();
-        return MapRenderer::stop_markers_layer_.GetSvgDocument();
+        layers_.stop_markers.Draw();
+        return layers_.stop_markers.GetSvgDocument();
     }
 
     svg::Document& MapRenderer::GetStopMarkerNamesLayer() {
-        stop_marker_names_layer_.Draw();
-        return stop_marker_names_layer_.GetSvgDocument();
+        layers_.stop_marker_names.Draw();
+        return layers_.stop_marker_names.GetSvgDocument();
     }
 }
 

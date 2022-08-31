@@ -251,10 +251,10 @@ namespace transport_catalogue::io::renderer /* IRenderer */ {
 
         virtual maps::RenderSettings& GetRenderSettings() = 0;
 
-        virtual svg::Document& GetMap() = 0;               //! FOR DEBUG ONLY
-        virtual svg::Document& GetRouteLayer() = 0;        //! FOR DEBUG ONLY
-        virtual svg::Document& GetRouteNamesLayer() = 0;   //! FOR DEBUG ONLY
-        virtual svg::Document& GetStopMarkersLayer() = 0;  //! FOR DEBUG ONLY
+        virtual svg::Document& GetMap() = 0;                   //! FOR DEBUG ONLY
+        virtual svg::Document& GetRouteLayer() = 0;            //! FOR DEBUG ONLY
+        virtual svg::Document& GetRouteNamesLayer() = 0;       //! FOR DEBUG ONLY
+        virtual svg::Document& GetStopMarkersLayer() = 0;      //! FOR DEBUG ONLY
         virtual svg::Document& GetStopMarkerNamesLayer() = 0;  //! FOR DEBUG ONLY
         virtual ~IRenderer() = default;
     };
@@ -276,6 +276,15 @@ namespace transport_catalogue::maps /* MapRenderer */ {
         class StopMarker;
 
         class BusRoute;
+
+    private:
+        struct LayerSet {
+            MapLayer map;
+            MapLayer routes;
+            MapLayer route_names;
+            MapLayer stop_markers;
+            MapLayer stop_marker_names;
+        };
 
     public:
         void UpdateLayers();
@@ -301,11 +310,7 @@ namespace transport_catalogue::maps /* MapRenderer */ {
         svg::Document& GetStopMarkerNamesLayer() override;
 
     private:
-        MapLayer map_layer_;
-        MapLayer routes_layer_;
-        MapLayer route_names_layer_;
-        MapLayer stop_markers_layer_;
-        MapLayer stop_marker_names_layer_;
+        LayerSet layers_;
         Projection_ projection_;
         RenderSettings settings_;
         ColorPaletteСyclicIterator route_color_palette_iterator_;
