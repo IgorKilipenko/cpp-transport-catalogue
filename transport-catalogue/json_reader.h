@@ -1,10 +1,5 @@
 #pragma once
 
-/*
- * Здесь можно разместить код наполнения транспортного справочника данными из JSON,
- * а также код обработки запросов к базе и формирование массива ответов в формате JSON
- */
-
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -110,9 +105,7 @@ namespace transport_catalogue::io /* JsonReader */ {
 
         void NotifyStatRequest(std::vector<RawRequest>&& requests) override;
 
-        void NotifyRenderSettingsRequest(RawRequest&& requests) override {
-            NotifyObservers(RequestType::RENDER_SETTINGS, std::vector<RawRequest>{std::move(requests)});
-        }
+        void NotifyRenderSettingsRequest(RawRequest&& requests) override;
 
         bool HasObserver() const override;
 

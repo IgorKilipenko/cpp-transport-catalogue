@@ -24,6 +24,10 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
         NotifyObservers(RequestType::STAT, std::move(requests));
     }
 
+    void JsonReader::NotifyRenderSettingsRequest(RawRequest&& requests) {
+        NotifyObservers(RequestType::RENDER_SETTINGS, std::vector<RawRequest>{std::move(requests)});
+    }
+
     bool JsonReader::HasObserver() const {
         return std::any_of(observers_.begin(), observers_.end(), [](const auto& map_item) {
             return !map_item.second.expired();
@@ -65,7 +69,7 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
         auto end = std::move_iterator(raw_requests.end());
 
         assert(base_req_ptr != end || stat_req_ptr != end || render_settings_req_ptr != end);
-        
+
         //! Fill data. Must be executed before requesting statistics
         if (base_req_ptr != end && base_req_ptr->second.IsArray()) {
             json::Array array = base_req_ptr->second.ExtractArray();
