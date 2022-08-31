@@ -125,7 +125,6 @@ namespace json /* Node */ {
 
     class Node : private NodeValueType {
     public:
-        // Делаем доступными все конструкторы родительского класса variant
         using NodeValueType::variant;
         using ValueType = NodeValueType;
 
@@ -330,7 +329,7 @@ namespace json /* Node Printer */ {
 namespace json /* Parser */ {
     class Parser : public INotifier<Node> {
     public:
-        class ParsingError : public std::runtime_error {  //!!!!!!!!!!
+        class ParsingError : public std::runtime_error {  //!
         public:
             using runtime_error::runtime_error;
         };

@@ -40,7 +40,6 @@ namespace json /* Document implementation */ {
     }
 
     void Document::Print(std::ostream& output, bool pretty_print) const {
-        // std::visit(NodePrinter{output, pretty_print}, GetRoot().GetValue());
         root_.Print(output, pretty_print);
     }
 
@@ -418,7 +417,7 @@ namespace json /* PrintContext implementation */ {
 
 namespace json /* Node implementation */ {
     bool Node::IsNull() const {
-        return /*IsType<std::monostate>() ||*/ IsType<std::nullptr_t>();
+        return IsType<std::nullptr_t>();
     }
 
     bool Node::IsBool() const {
@@ -534,7 +533,6 @@ namespace json /* Node implementation */ {
     }
 
     void Node::Print(std::ostream& output, bool pretty_print) const {
-        // std::visit(NodePrinter{output, pretty_print}, GetValue());
         Print(NodePrinter{output, pretty_print});
     }
 
