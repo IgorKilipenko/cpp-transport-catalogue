@@ -21,7 +21,7 @@ namespace transport_catalogue::tests {
         inline static const std::filesystem::path DATA_PATH = std::filesystem::current_path() / "transport-catalogue/tests/data/json_requests";
 
     public:
-        void TestRequestMap() const {
+        void TestRequestMap1() const {
             using namespace transport_catalogue::io;
 
             std::filesystem::path test_dir = DATA_PATH;
@@ -53,6 +53,41 @@ namespace transport_catalogue::tests {
             std::string expected_result = node_out.str();
 
             CheckResults(std::move(expected_result), std::move(result));
+        }
+
+        void TestRequestMapFull() const {
+            using namespace transport_catalogue::io;
+
+            std::filesystem::path test_dir = DATA_PATH;
+
+            std::string json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / "full_test.json");
+            std::string ecpected_json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / "full_test__output.json");
+
+            std::stringstream stream;
+            stream << json_file;
+            std::stringstream out;
+
+            TransportCatalogue catalog;
+            JsonReader json_reader(stream);
+            JsonResponseSender stat_sender(out);
+
+            maps::MapRenderer renderer;
+
+            const auto request_handler_ptr =
+                std::make_shared<RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer);
+            json_reader.AddObserver(request_handler_ptr);
+
+            json_reader.ReadDocument();
+
+            json::Document result = json::Document::Load(out);
+            json::Document expected_result = json::Document::Load(std::stringstream{ecpected_json_file});
+
+            CheckResultsExtend(std::move(expected_result.GetRoot().AsArray()), std::move(result.GetRoot().AsArray()));
+        }
+
+        void TestRequestMap() const {
+            TestRequestMap1();
+            TestRequestMapFull();
         }
 
         void RunTests() const {
