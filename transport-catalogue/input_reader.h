@@ -10,17 +10,18 @@
 #include <unordered_map>
 #include <vector>
 
+#include "domain.h"
 #include "geo.h"
 #include "transport_catalogue.h"
 
-namespace transport_catalogue::io::detail {
+namespace transport_catalogue::obsolete::io::detail {
     size_t TrimStart(std::string_view& str, const char ch = ' ');
     size_t TrimEnd(std::string_view& str, const char ch = ' ');
     void Trim(std::string_view& str, const char ch = ' ');
     std::vector<std::string_view> SplitIntoWords(std::string_view str, const char ch = ' ', size_t max_count = 0);
 }
 
-namespace transport_catalogue::io {
+namespace transport_catalogue::obsolete::io {
     using namespace std::literals;
 
     class Parser {
@@ -87,7 +88,7 @@ namespace transport_catalogue::io {
 
         bool IsRouteRequest(const std::string_view req) const;
 
-        bool IsCircularRoute(const std::string_view args) const;
+        bool IsRoundtripRoute(const std::string_view args) const;
 
         bool IsBidirectionalRoute(const std::string_view args) const;
 
@@ -98,14 +99,14 @@ namespace transport_catalogue::io {
         std::vector<DistanceBetween> ParseMeasuredDistancies(const std::string_view str, const std::string_view from_stop) const;
 
     private:
-        static const char CIRCULAR_ROUTE_SEPARATOR = '>';
+        static const char ROUNDTRIP_ROUTE_SEPARATOR = '>';
         static const char BIDIRECTIONAL_ROUTE_SEPARATOR = '-';
         static const char ARGS_SEPARATOR = ',';
     };
 
     class Reader {
     public:
-        Reader(TransportCatalogue::Database& db, std::istream& in_stream = std::cin) : in_stream_{in_stream}, catalog_db_{db} {}
+        Reader(const data::ITransportDataWriter& db_writer, std::istream& in_stream = std::cin) : in_stream_{in_stream}, db_writer_{db_writer} {}
 
         template <typename TOut = std::string>
         TOut Read() const;
@@ -127,11 +128,11 @@ namespace transport_catalogue::io {
     private:
         std::istream& in_stream_;
         Parser parser_;
-        TransportCatalogue::Database& catalog_db_;
+        const data::ITransportDataWriter& db_writer_;
     };
 }
 
-namespace transport_catalogue::io {
+namespace transport_catalogue::obsolete::io {
     template <typename TOut>
     TOut Reader::Read() const {
         TOut result;

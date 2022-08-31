@@ -9,7 +9,7 @@
 
 #include "stat_reader.h"
 
-namespace transport_catalogue::io::detail {
+namespace transport_catalogue::obsolete::io::detail {
     size_t TrimStart(std::string_view& str, const char ch) {
         size_t idx = str.find_first_not_of(ch);
         if (idx != std::string::npos) {
@@ -58,7 +58,7 @@ namespace transport_catalogue::io::detail {
     }
 }
 
-namespace transport_catalogue::io {
+namespace transport_catalogue::obsolete::io {
     std::string Reader::ReadLine() const {
         std::string line;
         std::getline(in_stream_, line);
@@ -80,12 +80,12 @@ namespace transport_catalogue::io {
 
         if (parser_.IsStopRequest(raw_req.command)) {
             auto stop = parser_.ParseStop(raw_req);
-            catalog_db_.AddStop(Stop{static_cast<std::string>(stop.name), std::move(stop.coordinates)});
+            db_writer_.AddStop(data::Stop{static_cast<std::string>(stop.name), std::move(stop.coordinates)});
             std::move(stop.measured_distancies.begin(), stop.measured_distancies.end(), std::back_inserter(out_distances));
 
         } else if (parser_.IsRouteRequest(raw_req.command)) {
-            auto [name, route, _] = parser_.ParseBusRoute(raw_req);
-            catalog_db_.AddBus(static_cast<std::string>(name), std::move(route));
+            auto [name, route, is_roundtrip] = parser_.ParseBusRoute(raw_req);
+            db_writer_.AddBus(static_cast<std::string>(name), std::move(route), is_roundtrip);
         }
     }
 
@@ -111,7 +111,7 @@ namespace transport_catalogue::io {
             });
 
         std::for_each(std::make_move_iterator(distances.begin()), std::make_move_iterator(distances.end()), [this](const auto& distance_btw) {
-            catalog_db_.SetMeasuredDistance(distance_btw.from_stop, distance_btw.to_stop, distance_btw.distance);
+            db_writer_.SetMeasuredDistance(distance_btw.from_stop, distance_btw.to_stop, distance_btw.distance);
         });
     }
 
@@ -120,7 +120,7 @@ namespace transport_catalogue::io {
     }
 }
 
-namespace transport_catalogue::io {
+namespace transport_catalogue::obsolete::io {
     Parser::StopRequest Parser::ParseStop(const RawRequest& req) const {
         assert(!req.value.empty() && !req.args.empty() && req.command == Names::STOP);
 
@@ -137,21 +137,21 @@ namespace transport_catalogue::io {
 
     Parser::RouteRequest Parser::ParseBusRoute(const RawRequest& req) const {
         assert(!req.value.empty() && !req.args.empty() && req.command == Names::BUS);
-        assert(IsCircularRoute(req.args) || IsBidirectionalRoute(req.args));
+        assert(IsRoundtripRoute(req.args) || IsBidirectionalRoute(req.args));
 
-        bool is_circular = IsCircularRoute(req.args);
+        bool is_roundtrip = IsRoundtripRoute(req.args);
 
         std::vector<std::string_view> stops =
-            detail::SplitIntoWords(req.args, is_circular ? CIRCULAR_ROUTE_SEPARATOR : BIDIRECTIONAL_ROUTE_SEPARATOR);
-        if (!is_circular && stops.size() > 1) {
+            detail::SplitIntoWords(req.args, is_roundtrip ? ROUNDTRIP_ROUTE_SEPARATOR : BIDIRECTIONAL_ROUTE_SEPARATOR);
+        if (!is_roundtrip && stops.size() > 1) {
             size_t old_size = stops.size();
             stops.resize(old_size * 2 - 1);
             std::copy(stops.begin(), stops.begin() + old_size - 1, stops.rbegin());
         }
 
-        RouteRequest result{req.value, std::move(stops), is_circular};
+        RouteRequest result{req.value, std::move(stops), is_roundtrip};
 
-        assert(!IsCircularRoute(req.args) || std::get<1>(result).front() == std::get<1>(result).back());
+        assert(!IsRoundtripRoute(req.args) || std::get<1>(result).front() == std::get<1>(result).back());
 
         return result;
     }
@@ -244,8 +244,8 @@ namespace transport_catalogue::io {
         return IsRequestType(req, Names::BUS);
     }
 
-    bool Parser::IsCircularRoute(const std::string_view args) const {
-        return args.find(CIRCULAR_ROUTE_SEPARATOR) != args.npos;
+    bool Parser::IsRoundtripRoute(const std::string_view args) const {
+        return args.find(ROUNDTRIP_ROUTE_SEPARATOR) != args.npos;
     }
 
     bool Parser::IsBidirectionalRoute(const std::string_view args) const {

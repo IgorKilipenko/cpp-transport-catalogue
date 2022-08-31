@@ -4,21 +4,21 @@
 #include <algorithm>
 #include <iterator>
 #include <string_view>
+#include "domain.h"
 
-namespace transport_catalogue::io {
+namespace transport_catalogue::obsolete::io {
 
     void StatReader::PrintBusInfo(const std::string_view bus_name) const {
         using namespace std::string_view_literals;
-
-        const data::Bus* bus = catalog_db_.GetBus(bus_name);
+        const data::Bus* bus = db_reader_.GetBus(bus_name);
         out_stream_ << "Bus "sv << bus_name << ": "sv;
 
         if (bus == nullptr) {
-            out_stream_ << "not found"sv << std::endl;
+            out_stream_ << "not found"sv << new_line;
         } else {
-            auto info = catalog_db_.GetBusInfo(bus);
+            auto info = db_stat_reader_.GetBusInfo(bus);
             out_stream_ << info.total_stops << " stops on route, "sv << info.unique_stops << " unique stops, "sv << std::setprecision(6)
-                      << info.route_length << " route length, "sv << info.route_curvature << " curvature"sv << std::endl;
+                      << info.route_length << " route length, "sv << info.route_curvature << " curvature"sv << new_line;
         }
     }
 
@@ -27,21 +27,21 @@ namespace transport_catalogue::io {
 
         out_stream_ << "Stop "sv << stop_name << ": "sv;
 
-        const Stop* stop = catalog_db_.GetStop(stop_name);
+        const data::Stop* stop = db_reader_.GetStop(stop_name);
         if (stop == nullptr) {
-            out_stream_ << "not found"sv << std::endl;
+            out_stream_ << "not found"sv << new_line;
             return;
         }
 
-        const auto& buses_names = catalog_db_.GetBuses(stop);
-        if (buses_names.empty()) {
-            out_stream_ << "no buses"sv << std::endl;
+        const auto& buses = db_reader_.GetBuses(stop);
+        if (buses.empty()) {
+            out_stream_ << "no buses"sv << new_line;
             return;
         }
 
         out_stream_ << "buses"sv;
-        std::for_each(buses_names.begin(), buses_names.end(), [this](const std::string_view bus) {
-            out_stream_ << " "sv << bus;
+        std::for_each(buses.begin(), buses.end(), [this](const data::BusRecord& bus) {
+            out_stream_ << " "sv << bus->name;
         });
 
         out_stream_ << std::endl;
@@ -56,6 +56,7 @@ namespace transport_catalogue::io {
                 ExecuteRequest(raw_req);
             }
         });
+        out_stream_.flush();
     }
 
     void StatReader::ExecuteRequest(const Parser::RawRequest& raw_req) const {
