@@ -133,6 +133,7 @@ namespace transport_catalogue::io /* RequestEnumConverter */ {
         std::string_view operator()(RequestType enum_value) const;
 
         RequestType ToRequestType(std::string_view enum_name) const;
+
         RequestCommand ToRequestCommand(std::string_view enum_name) const;
     };
 }
@@ -502,17 +503,12 @@ namespace transport_catalogue::io /* RequestHandler */ {
 
     class RequestHandler : public IRequestObserver {
     public:
-        // MapRenderer понадобится в следующей части итогового проекта
         RequestHandler(
             const data::ITransportStatDataReader& reader, const data::ITransportDataWriter& writer, const IStatResponseSender& response_sender,
             io::renderer::IRenderer& renderer)
             : db_reader_{reader}, db_writer_{writer}, response_sender_{response_sender}, renderer_{renderer} {}
 
-        ~RequestHandler() {
-#if (TRACE && REQUEST_TRACE && TRACE_CTR)
-            // std::cerr << "Stop request handler" << std::endl;
-#endif
-        };
+        ~RequestHandler() {}
 
         class SettingsBuilder;
 
