@@ -71,6 +71,7 @@ namespace transport_catalogue::io /* JsonResponseSender */ {
             inline static const std::string STOP_COUNT{"stop_count"};
             inline static const std::string UNIQUE_STOP_COUNT{"unique_stop_count"};
             inline static const std::string BUSES{"buses"};
+            inline static const std::string MAP{"map"};
         };
 
         JsonResponseSender(std::ostream& output_stream) : output_stream_(output_stream) {}

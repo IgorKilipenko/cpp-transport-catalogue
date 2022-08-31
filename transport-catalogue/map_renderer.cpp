@@ -54,9 +54,9 @@ namespace transport_catalogue::maps /* MapRenderer implementation */ {
         return settings_;
     }
 
-    svg::Document& MapRenderer::GetMap() {  //! NOT DEV
-        //! UpdateLayers();
-        return GetRouteLayer(); //!
+    MapRenderer::RawMapData MapRenderer::GetRawMap() {
+        layers_.DrawMap();
+        return layers_.ExtractRawMapData();
     }
 
     svg::Document& MapRenderer::GetRouteLayer() {

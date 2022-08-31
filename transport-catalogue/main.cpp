@@ -11,6 +11,7 @@
 #include "./tests/transport_catalogue_test.h"
 #include "json_reader.h"
 #include "request_handler.h"
+#include "tests/request_handler_test.h"
 #include "transport_catalogue.h"
 
 /*
@@ -44,6 +45,9 @@ int main() {
 
     MapRendererTester test_render;
     test_render.RunTests();
+
+    RequestHandlerTester request_handler_tester;
+    request_handler_tester.RunTests();
     
 /*
     using namespace transport_catalogue;

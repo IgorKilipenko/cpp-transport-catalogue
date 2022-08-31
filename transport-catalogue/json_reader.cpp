@@ -57,39 +57,34 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
     }
 
     void JsonReader::ReadDocument() {
-        /*[[maybe_unused]] char ch = input_stream_.peek();  //!!!!!!!!!!! FOR DEBUG ONLY
-        if (input_stream_.peek() != json::Parser::Token::START_OBJ) {
-            input_stream_.ignore(std::numeric_limits<std::streamsize>::max(), json::Parser::Token::START_OBJ)
-                .putback(json::Parser::Token::START_OBJ);
-        }
-        ch = input_stream_.peek();  //!!!!!!!!!!! FOR DEBUG ONLY*/
-
         json::Document doc = json::Document::Load(input_stream_);
         json::Node& root = doc.GetRoot();
 
         assert(root.IsMap());
 
         json::Dict raw_requests = root.ExtractMap();
+        auto render_settings_req_ptr = std::move_iterator(raw_requests.find(RENDER_SETTINGS_REQUESTS_LITERAL));
         auto base_req_ptr = std::move_iterator(raw_requests.find(BASE_REQUESTS_LITERAL));
         auto stat_req_ptr = std::move_iterator(raw_requests.find(STAT_REQUESTS_LITERAL));
-        auto render_settings_req_ptr = std::move_iterator(raw_requests.find(RENDER_SETTINGS_REQUESTS_LITERAL));
 
         auto end = std::move_iterator(raw_requests.end());
 
         assert(base_req_ptr != end || stat_req_ptr != end || render_settings_req_ptr != end);
-
+        
+        //! Fill data. Must be executed before requesting statistics
         if (base_req_ptr != end && base_req_ptr->second.IsArray()) {
             json::Array array = base_req_ptr->second.ExtractArray();
             auto req = Converter::JsonToRequest(std::move(array));
             NotifyBaseRequest(std::move(req));
         }
-        if (stat_req_ptr != end && stat_req_ptr->second.IsArray()) {
-            json::Array array = stat_req_ptr->second.ExtractArray();
-            NotifyStatRequest(Converter::JsonToRequest(std::move(array)));
-        }
+        //! Render configuration must be done before requesting statistics
         if (render_settings_req_ptr != end && render_settings_req_ptr->second.IsMap()) {
             json::Dict dict = render_settings_req_ptr->second.ExtractMap();
             NotifyRenderSettingsRequest(Converter::JsonToRequest(std::move(dict)));
+        }
+        if (stat_req_ptr != end && stat_req_ptr->second.IsArray()) {
+            json::Array array = stat_req_ptr->second.ExtractArray();
+            NotifyStatRequest(Converter::JsonToRequest(std::move(array)));
         }
     }
 }
@@ -219,32 +214,36 @@ namespace transport_catalogue::io /* JsonResponseSender implementation */ {
 
     json::Dict JsonResponseSender::BuildStatMessage(StatResponse&& response) const {
         static const json::Dict::ItemType ERROR_MESSAGE_ITEM{StatFields::ERROR_MESSAGE, "not found"};
-        json::Dict map;
-        map[StatFields::REQUEST_ID] = response.GetRequestId();
+        json::Dict dict;
+        dict[StatFields::REQUEST_ID] = response.GetRequestId();
         if (response.IsBusResponse()) {
             auto stat = std::move(response.GetBusInfo());
             if (!stat.has_value()) {
-                map.insert(ERROR_MESSAGE_ITEM);
+                dict.insert(ERROR_MESSAGE_ITEM);
             } else {
-                map[StatFields::CURVATURE] = stat->route_curvature;
-                map[StatFields::ROUTE_LENGTH] = static_cast<int>(stat->route_length);
-                map[StatFields::STOP_COUNT] = static_cast<int>(stat->total_stops);
-                map[StatFields::UNIQUE_STOP_COUNT] = static_cast<int>(stat->unique_stops);
+                dict[StatFields::CURVATURE] = stat->route_curvature;
+                dict[StatFields::ROUTE_LENGTH] = static_cast<int>(stat->route_length);
+                dict[StatFields::STOP_COUNT] = static_cast<int>(stat->total_stops);
+                dict[StatFields::UNIQUE_STOP_COUNT] = static_cast<int>(stat->unique_stops);
             }
         } else if (response.IsStopResponse()) {
             auto stat = std::move(response.GetStopInfo());
             if (!stat.has_value()) {
-                map.insert(ERROR_MESSAGE_ITEM);
+                dict.insert(ERROR_MESSAGE_ITEM);
             } else {
-                map[StatFields::BUSES] = json::Array(std::make_move_iterator(stat->buses.begin()), std::make_move_iterator(stat->buses.end()));
+                dict[StatFields::BUSES] = json::Array(std::make_move_iterator(stat->buses.begin()), std::make_move_iterator(stat->buses.end()));
             }
         } else if (response.IsMapResponse()) {
-            //!std::cerr << "IsMapResponse" << std::endl;  //!!
-            return {};
+            auto map = std::move(response.GetMapData());
+            if (!map.has_value()) {
+                dict.insert(ERROR_MESSAGE_ITEM);
+            } else {
+                dict[StatFields::MAP] = map.value();
+            }
         } else {
             throw exceptions::ReadingException("Invalid response (Is not stat response). Response does not contain stat info");
         }
-        return map;
+        return dict;
     }
 
     json::Document JsonResponseSender::BuildStatResponse(std::vector<StatResponse>&& responses) const {

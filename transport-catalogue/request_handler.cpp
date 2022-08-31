@@ -170,11 +170,6 @@ namespace transport_catalogue::io /* Request implementation */ {
               std::move(name), std::move(args)) {}
 
     Request::Request(RawRequest&& raw_request)
-        /*: Request(
-              (assert(raw_request.count("type") && std::holds_alternative<std::string>(raw_request.at("type"))),
-               std::get<std::string>(std::move(raw_request.extract("type").mapped()))),
-              (assert(raw_request.count("name")), std::get<std::string>(std::move(raw_request.extract("name").mapped()))),
-              ((assert(raw_request.size() > 0), std::move(raw_request)))) {}*/
         : Request(
               (assert(raw_request.count(RequestFields::TYPE) && std::holds_alternative<std::string>(raw_request.at(RequestFields::TYPE))),
                std::get<std::string>(std::move(raw_request.extract(RequestFields::TYPE).mapped()))),
@@ -287,14 +282,6 @@ namespace transport_catalogue::io /* RequestEnumConverter implementation */ {
 }
 
 namespace transport_catalogue::io /* RequestHandler implementation */ {
-    /*std::optional<data::BusStat> RequestHandler::GetBusStat(const std::string_view bus_name) const {
-        return db_reader_.GetBusInfo(bus_name);
-    }
-
-    const data::BusRecordSet& RequestHandler::GetBusesByStop(const std::string_view& stop_name) const {
-        return db_reader_.GetDataReader().GetBuses(stop_name);
-    }*/
-
     void RequestHandler::OnBaseRequest(std::vector<RawRequest>&& requests) {
         std::vector<BaseRequest> reqs;
         reqs.reserve(requests.size());
@@ -343,7 +330,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         }
     }
 
-    void RequestHandler::ExecuteRequest(std::vector<BaseRequest>&& base_req) const {
+    void RequestHandler::ExecuteRequest(std::vector<BaseRequest>&& base_req) {
         std::vector<data::MeasuredRoadDistance> out_distances;
         out_distances.reserve(base_req.size());
 
@@ -359,11 +346,11 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         out_distances.shrink_to_fit();
     }
 
-    void RequestHandler::ExecuteRequest(StatRequest&& request) const {
+    void RequestHandler::ExecuteRequest(StatRequest&& request) {
         ExecuteRequest(std::vector<StatRequest>{std::move(request)});
     }
 
-    void RequestHandler::ExecuteRequest(std::vector<StatRequest>&& requests) const {
+    void RequestHandler::ExecuteRequest(std::vector<StatRequest>&& requests) {
         std::vector<StatResponse> responses;
         responses.reserve(requests.size());
 
@@ -373,10 +360,13 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
 
             bool is_bus = request.IsBusCommand();
             bool is_stop = request.IsStopCommand();
+            bool is_map = request.IsMapCommand();
+
             std::string name = request.GetName();
 
             StatResponse resp(
-                std::move(request), is_bus ? db_reader_.GetBusInfo(name) : std::nullopt, is_stop ? db_reader_.GetStopInfo(name) : std::nullopt);
+                std::move(request), is_bus ? db_reader_.GetBusInfo(name) : std::nullopt, is_stop ? db_reader_.GetStopInfo(name) : std::nullopt,
+                is_map ? std::optional<RawMapData>(RenderMap()) : std::nullopt);
 
             responses.emplace_back(std::move(resp));
         });
@@ -384,7 +374,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         response_sender_.Send(std::move(responses));
     }
 
-    void RequestHandler::ExecuteRequest(RenderSettingsRequest&& request) const {
+    void RequestHandler::ExecuteRequest(RenderSettingsRequest&& request) {
         maps::RenderSettings settings = SettingsBuilder::BuildMapRenderSettings(std::move(request));
         renderer_.SetRenderSettings(std::move(settings));
     }
@@ -397,7 +387,9 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         response_sender_.Send(std::move(responses));
     }
 
-    std::vector<svg::Document*> RequestHandler::RenderMap(/*maps::RenderSettings settings*/) const {
+    bool RequestHandler::PrepareMapRendererData() {
+        //renderer_.ClearData();
+
         const data::DatabaseScheme::BusRoutesTable& buses_table = db_reader_.GetDataReader().GetBusRoutesTable();
         const data::DatabaseScheme::StopsTable& stops_table = db_reader_.GetDataReader().GetStopsTable();
         data::BusRecordSet sorted_busses;
@@ -426,6 +418,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         renderer_.UpdateMapProjection(std::move(projection));
 
         std::for_each(sorted_busses.begin(), sorted_busses.end(), [&renderer = this->renderer_](const auto& bus) {
+            //! In next version need add filtering for duplicates db objects
             renderer.AddRouteToLayer(data::BusRecord{bus});
         });
 
@@ -435,10 +428,25 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         });
 
         std::for_each(stops_on_routes.begin(), stops_on_routes.end(), [&renderer = this->renderer_](const auto& stop) {
+            //! In next version need add filtering for duplicates db objects
             renderer.AddStopToLayer(data::StopRecord{stop});
         });
 
-        return std::vector<svg::Document*>{&renderer_.GetRouteLayer(), &renderer_.GetRouteNamesLayer(), &renderer_.GetStopMarkersLayer(), &renderer_.GetStopMarkerNamesLayer()};
+        return true;
+    }
+
+    //! Used for testing only
+    std::vector<svg::Document*> RequestHandler::RenderMapByLayers(bool force_prepare_data) {
+        if (force_prepare_data) {
+            PrepareMapRendererData();
+        }
+        return std::vector<svg::Document*>{
+            &renderer_.GetRouteLayer(), &renderer_.GetRouteNamesLayer(), &renderer_.GetStopMarkersLayer(), &renderer_.GetStopMarkerNamesLayer()};
+    }
+
+    std::string RequestHandler::RenderMap() {
+        PrepareMapRendererData();
+        return renderer_.GetRawMap();
     }
 }
 
@@ -552,15 +560,21 @@ namespace transport_catalogue::io /* Response implementation */ {
 }
 
 namespace transport_catalogue::io /* StatResponse implementation */ {
+
     StatResponse::StatResponse(
         int&& request_id, RequestCommand&& command, std::string&& name, std::optional<data::BusStat>&& bus_stat,
-        std::optional<data::StopStat>&& stop_stat)
-        : Response(std::move(request_id), std::move(command), std::move(name)), bus_stat_{std::move(bus_stat)}, stop_stat_{std::move(stop_stat)} {}
+        std::optional<data::StopStat>&& stop_stat, std::optional<RawMapData>&& map_data)
+        : Response(std::move(request_id), std::move(command), std::move(name)),
+          bus_stat_{std::move(bus_stat)},
+          stop_stat_{std::move(stop_stat)},
+          map_data_{std::move(map_data)} {}
 
-    StatResponse::StatResponse(StatRequest&& request, std::optional<data::BusStat>&& bus_stat, std::optional<data::StopStat>&& stop_stat)
+    StatResponse::StatResponse(
+        StatRequest&& request, std::optional<data::BusStat>&& bus_stat, std::optional<data::StopStat>&& stop_stat,
+        std::optional<RawMapData>&& map_data)
         : StatResponse(
               std::move((assert(request.IsValidRequest()), request.GetRequestId().value())), std::move(request.GetCommand()),
-              std::move(request.GetName()), std::move(bus_stat), std::move(stop_stat)) {}
+              std::move(request.GetName()), std::move(bus_stat), std::move(stop_stat), std::move(map_data)) {}
 
     std::optional<data::BusStat>& StatResponse::GetBusInfo() {
         return bus_stat_;
@@ -568,6 +582,10 @@ namespace transport_catalogue::io /* StatResponse implementation */ {
 
     std::optional<data::StopStat>& StatResponse::GetStopInfo() {
         return stop_stat_;
+    }
+
+    std::optional<RawMapData>& StatResponse::GetMapData() {
+        return map_data_;
     }
 
     bool StatResponse::IsStatResponse() const {

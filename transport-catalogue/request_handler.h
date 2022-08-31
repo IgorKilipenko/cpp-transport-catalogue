@@ -35,6 +35,7 @@ namespace transport_catalogue::exceptions {
 }
 
 namespace transport_catalogue::io /* Requests aliases */ {
+    using RawMapData = maps::MapRenderer::RawMapData;
     using RequestInnerArrayValueType = std::variant<std::monostate, std::string, int, double, bool>;
     using RequestArrayValueType = std::variant<std::monostate, std::string, int, double, bool, std::vector<RequestInnerArrayValueType>>;
     using RequestDictValueType = std::variant<std::monostate, std::string, int, double, bool, std::vector<RequestInnerArrayValueType>>;
@@ -440,22 +441,28 @@ namespace transport_catalogue::io /* Response */ {
 
     class StatResponse final : public Response {
     public:
-        StatResponse(
-            int&& request_id, RequestCommand&& command, std::string&& name, std::optional<data::BusStat>&& bus_stat = std::nullopt,
-            std::optional<data::StopStat>&& stop_stat = std::nullopt);
+        StatResponse(StatRequest&& request) : StatResponse(std::move(request), std::nullopt, std::nullopt, std::nullopt) {}
 
         StatResponse(
-            StatRequest&& request, std::optional<data::BusStat>&& bus_stat = std::nullopt, std::optional<data::StopStat>&& stop_stat = std::nullopt);
+            int&& request_id, RequestCommand&& command, std::string&& name, std::optional<data::BusStat>&& bus_stat = std::nullopt,
+            std::optional<data::StopStat>&& stop_stat = std::nullopt, std::optional<RawMapData>&& map_data = std::nullopt);
+
+        StatResponse(
+            StatRequest&& request, std::optional<data::BusStat>&& bus_stat = std::nullopt, std::optional<data::StopStat>&& stop_stat = std::nullopt,
+            std::optional<RawMapData>&& map_data = std::nullopt);
 
         std::optional<data::BusStat>& GetBusInfo();
 
         std::optional<data::StopStat>& GetStopInfo();
+
+        std::optional<RawMapData>& GetMapData();
 
         bool IsStatResponse() const override;
 
     private:
         std::optional<data::BusStat> bus_stat_;
         std::optional<data::StopStat> stop_stat_;
+        std::optional<RawMapData> map_data_;
     };
 }
 
@@ -503,13 +510,18 @@ namespace transport_catalogue::io /* RequestHandler */ {
 
         ~RequestHandler() {
 #if (TRACE && REQUEST_TRACE && TRACE_CTR)
-            //std::cerr << "Stop request handler" << std::endl;
+            // std::cerr << "Stop request handler" << std::endl;
 #endif
         };
 
         class SettingsBuilder;
 
-        std::vector<svg::Document*> RenderMap(/*maps::RenderSettings settings*/) const;
+        //* Is non-const for use cahce in next versions
+        std::string RenderMap();
+
+        /// Build (or if force_prepare_data = false get pre-builded) map and return non-rendered layers (as svg documents).
+        ///! Used for testing only
+        std::vector<svg::Document*> RenderMapByLayers(bool force_prepare_data = false);
 
         void OnBaseRequest(std::vector<RawRequest>&& requests) override;
 
@@ -521,16 +533,16 @@ namespace transport_catalogue::io /* RequestHandler */ {
         void ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const;
 
         /// Execute Basic (Insert) requests
-        void ExecuteRequest(std::vector<BaseRequest>&& base_req) const;
+        void ExecuteRequest(std::vector<BaseRequest>&& base_req);
 
         /// Execute Stat (Get) request
-        void ExecuteRequest(StatRequest&& stat_req) const;
+        void ExecuteRequest(StatRequest&& stat_req);
 
         /// Execute Stat (Get) requests
-        void ExecuteRequest(std::vector<StatRequest>&& stat_req) const;
+        void ExecuteRequest(std::vector<StatRequest>&& stat_req);
 
         /// Execute RenderSettings (Set) request
-        void ExecuteRequest(RenderSettingsRequest&& request) const;
+        void ExecuteRequest(RenderSettingsRequest&& request);
 
         /// Send Stat Response
         void SendStatResponse(StatResponse&& response) const;
@@ -543,6 +555,8 @@ namespace transport_catalogue::io /* RequestHandler */ {
         const data::ITransportDataWriter& db_writer_;
         const IStatResponseSender& response_sender_;
         io::renderer::IRenderer& renderer_;
+
+        bool PrepareMapRendererData();
     };
 }
 

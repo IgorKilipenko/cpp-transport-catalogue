@@ -204,12 +204,12 @@ namespace transport_catalogue::tests {
             }
         }
 
-        void TestWithJsonReaderFull(std::string filename = "test4", bool check_result = true) const {
+        void TestWithJsonReaderFull(std::string filename = "test4_wo_map_req", bool check_result = true) const {
             std::filesystem::path test_dir = std::filesystem::current_path() / "transport-catalogue/tests/data/json_requests";
 
             std::string json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / (filename + ".json"));
             std::string json_result_file =
-                check_result ? transport_catalogue::detail::io::FileReader::Read(test_dir / (filename + "__result.json")) : "";
+                check_result ? transport_catalogue::detail::io::FileReader::Read(test_dir / (filename + "__output.json")) : "";
 
             std::stringstream istream;
             istream << json_file;
@@ -220,9 +220,11 @@ namespace transport_catalogue::tests {
                 istream << json_result_file;
                 json::Document expected_result = json::Document::Load(istream);
 
+                //! Remove map node from expected result
                 assert(expected_result.GetRoot().IsArray());
                 assert(!expected_result.GetRoot().AsArray().empty());
                 json::Node map_node = expected_result.GetRoot().AsArray().back();
+                assert(map_node.IsMap() && map_node.AsMap().count("map"));
                 expected_result.GetRoot().AsArray().pop_back();
 
                 assert(expected_result.GetRoot().IsArray() && result.GetRoot().IsArray());
@@ -243,7 +245,7 @@ namespace transport_catalogue::tests {
             // std::cin >> ch;
 
             std::filesystem::path test_dir = std::filesystem::current_path() / "transport-catalogue/tests/data/json_requests";
-            std::string json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / ("test6"s + ".json"s));
+            std::string json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / ("benchmark_wo_map"s + ".json"s));
 
             std::stringstream istream;
             io::JsonReader json_reader{istream};

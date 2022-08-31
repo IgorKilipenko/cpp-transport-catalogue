@@ -8343,7 +8343,6 @@
         { "id": 370368169, "type": "Bus", "name": "lToCUW95wr" },
         { "id": 908422937, "type": "Stop", "name": "9WKnD" },
         { "id": 370368169, "type": "Bus", "name": "lToCUW95wr" },
-        { "id": 790550720, "type": "Bus", "name": "Q" },
-        { "id": 346944586, "type": "Map" }
+        { "id": 790550720, "type": "Bus", "name": "Q" }
     ]
 }

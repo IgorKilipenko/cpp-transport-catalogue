@@ -79,8 +79,5 @@
         "underlayer_color": [255, 255, 255, 0.85],
         "underlayer_width": 3,
         "color_palette": ["green", [255, 160, 0], "red"]
-    },
-    "stat_requests": [
-        { "id": 346944586, "type": "Map" }
-    ]
+    }
 }

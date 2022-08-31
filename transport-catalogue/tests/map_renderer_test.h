@@ -51,7 +51,7 @@ namespace transport_catalogue::tests {
             json_reader.AddObserver(request_handler_ptr);
 
             json_reader.ReadDocument();
-            std::vector<svg::Document*> layer_ptrs = request_handler_ptr->RenderMap();
+            std::vector<svg::Document*> layer_ptrs = request_handler_ptr->RenderMapByLayers(true);
             std::vector<svg::Document> result;
             result.reserve(layer_ptrs.size());
             std::transform(layer_ptrs.begin(), layer_ptrs.end(), std::back_inserter(result), [](const auto* doc_ptr) {

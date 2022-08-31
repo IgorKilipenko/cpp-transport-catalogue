@@ -23,6 +23,8 @@ namespace transport_catalogue::tests {
     using namespace std::literals;
 
     class JsonReaderTester {
+        inline static const std::filesystem::path DATA_PATH = std::filesystem::current_path() / "transport-catalogue/tests/data/json_requests";
+
     private:
         class MockRequestObserver : public io::IRequestObserver {
         public:
@@ -252,9 +254,6 @@ namespace transport_catalogue::tests {
             json::Node expected_node = json::Node::LoadNode(std::stringstream(json_file)).AsMap()["render_settings"];
             CheckResults(std::move(expected_node), std::move(render_settings));
         }
-
-        template <typename T1, typename... T2>
-        using Union = std::variant<T1, T2...>;
 
         void TestJsonConverter() const {
             // base

@@ -201,8 +201,13 @@ namespace transport_catalogue::maps /* MapLayer */ {
     class MapLayer {
     public:
         using ObjectCollection = std::vector<std::shared_ptr<IDrawable>>;
+
         svg::Document& GetSvgDocument() {
             return svg_document_;
+        }
+
+        svg::Document&& ExtractSvgDocument() {
+            return std::move(svg_document_);
         }
 
         void Draw() {
@@ -244,14 +249,16 @@ namespace transport_catalogue::io::renderer /* IRenderer */ {
     class IRenderer {
     public:
         using Projection_ = geo::SphereProjection;
+        using RawMapData = std::string;
+
         virtual void UpdateMapProjection(Projection_&& projection) = 0;
-        virtual void AddRouteToLayer(const data::BusRecord&& bus_record) = 0;
-        virtual void AddStopToLayer(const data::StopRecord&& stop_record) = 0;
+        virtual void AddRouteToLayer(const data::BusRecord&& bus_record) = 0;   //! In next version need add filtering for duplicates db objects
+        virtual void AddStopToLayer(const data::StopRecord&& stop_record) = 0;  //! In next version need add filtering for duplicates db objects
         virtual void SetRenderSettings(maps::RenderSettings&& settings) = 0;
 
         virtual maps::RenderSettings& GetRenderSettings() = 0;
 
-        virtual svg::Document& GetMap() = 0;                   //! FOR DEBUG ONLY
+        virtual RawMapData GetRawMap() = 0;                    //! FOR DEBUG ONLY
         virtual svg::Document& GetRouteLayer() = 0;            //! FOR DEBUG ONLY
         virtual svg::Document& GetRouteNamesLayer() = 0;       //! FOR DEBUG ONLY
         virtual svg::Document& GetStopMarkersLayer() = 0;      //! FOR DEBUG ONLY
@@ -265,8 +272,10 @@ namespace transport_catalogue::maps /* MapRenderer */ {
         using Projection_ = IRenderer::Projection_;
 
     public:
-        MapRenderer()
-            : color_picker_{settings_.color_palette} {}
+        using RawMapData = IRenderer::RawMapData;
+
+    public:
+        MapRenderer() : color_picker_{settings_.color_palette} {}
 
     public:
         template <typename ObjectType>
@@ -278,11 +287,28 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
     private:
         struct LayerSet {
-            MapLayer map;
             MapLayer routes;
             MapLayer route_names;
             MapLayer stop_markers;
             MapLayer stop_marker_names;
+
+            void DrawMap() {
+                routes.Draw();
+                route_names.Draw();
+                stop_markers.Draw();
+                stop_marker_names.Draw();
+            }
+
+            RawMapData ExtractRawMapData() {
+                svg::Document doc;
+                doc.MoveObjectsFrom(routes.ExtractSvgDocument());
+                doc.MoveObjectsFrom(route_names.ExtractSvgDocument());
+                doc.MoveObjectsFrom(stop_markers.ExtractSvgDocument());
+                doc.MoveObjectsFrom(stop_marker_names.ExtractSvgDocument());
+                std::ostringstream stream;
+                doc.Render(stream);
+                return stream.str();
+            }
         };
 
         class ColorPicker {
@@ -326,7 +352,7 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
         RenderSettings& GetRenderSettings() override;
 
-        svg::Document& GetMap() override;
+        RawMapData GetRawMap() override;
 
         svg::Document& GetRouteLayer() override;
 
