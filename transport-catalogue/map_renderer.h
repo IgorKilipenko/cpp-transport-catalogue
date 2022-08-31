@@ -51,27 +51,15 @@ namespace transport_catalogue::maps /* Locations */ {
         Location() : Location({}, {}) {}
         Location(MapPoint map_position, GlobalCoordinates lat_lng) : map_position_{map_position}, lat_lng_{lat_lng} {}
 
-        void Transform(const geo::Projection& projection) {
-            const auto [north, east] = projection.FromLatLngToMapPoint(lat_lng_);
-            map_position_.north = north;
-            map_position_.east = east;
-        }
+        void Transform(const geo::Projection& projection);
 
-        const MapPoint& GetMapPoint() const {
-            return map_position_;
-        }
+        const MapPoint& GetMapPoint() const ;
 
-        MapPoint& GetMapPoint() {
-            return map_position_;
-        }
+        MapPoint& GetMapPoint() ;
 
-        const GlobalCoordinates& GetGlobalCoordinates() const {
-            return lat_lng_;
-        }
+        const GlobalCoordinates& GetGlobalCoordinates() const;
 
-        GlobalCoordinates& GetGlobalCoordinates() {
-            return lat_lng_;
-        }
+        GlobalCoordinates& GetGlobalCoordinates() ;
 
     private:
         MapPoint map_position_;
@@ -104,7 +92,7 @@ namespace transport_catalogue::maps /* Locations */ {
 
 }
 
-namespace transport_catalogue::maps {
+namespace transport_catalogue::maps /* ColorPaletteСyclicIterator */ {
 
     class ColorPaletteСyclicIterator {
     public:
@@ -113,55 +101,29 @@ namespace transport_catalogue::maps {
         ColorPaletteСyclicIterator() : ColorPaletteСyclicIterator(ColorPalette()) {}
         ColorPaletteСyclicIterator(ColorPalette&& palette) : palette_(std::move(palette)), curr_it_{palette_.begin()} {}
 
-        ColorPalette::const_iterator NextColor() {
-            if (curr_it_ != palette_.end() && ++curr_it_ != palette_.end()) {
-                return curr_it_;
-            } else {
-                curr_it_ = palette_.begin();
-                return curr_it_;
-            }
-        }
+        ColorPalette::const_iterator NextColor();
 
-        const ColorPalette& GetColorPalette() const {
-            return palette_;
-        }
+        const ColorPalette& GetColorPalette() const;
 
-        const ColorPalette::value_type& GetCurrentColor() const {
-            assert(!IsEmpty());
-            return *curr_it_;
-        }
+        const ColorPalette::value_type& GetCurrentColor() const;
 
-        const ColorPalette::value_type& GetPrevColor() const {
-            assert(!IsEmpty());
-            auto prev_it = curr_it_;
-            if (prev_it != palette_.begin() && --prev_it != palette_.begin()) {
-                return *prev_it;
-            } else {
-                return *std::prev(palette_.end());
-            }
-        }
+        const ColorPalette::value_type& GetPrevColor() const;
 
-        const ColorPalette::value_type& GetCurrentColorOrNone() const noexcept {
-            return IsEmpty() ? NoneColor : GetCurrentColor();
-        }
+        const ColorPalette::value_type& GetCurrentColorOrNone() const noexcept;
 
-        const ColorPalette::value_type& GetPrevColorOrNone() const noexcept {
-            return IsEmpty() ? NoneColor : GetPrevColor();
-        }
+        const ColorPalette::value_type& GetPrevColorOrNone() const noexcept;
 
-        bool IsEmpty() const {
-            return palette_.empty();
-        }
+        bool IsEmpty() const;
 
-        void SetColorPalette(ColorPalette&& new_palette) {
-            palette_ = std::move(new_palette);
-            curr_it_ = palette_.begin();
-        }
+        void SetColorPalette(ColorPalette&& new_palette);
 
     private:
         ColorPalette palette_;
         ColorPalette::iterator curr_it_;
     };
+}
+
+namespace transport_catalogue::maps /* RenderSettings */ {
 
     struct RenderSettings {
         Size map_size;
@@ -202,45 +164,22 @@ namespace transport_catalogue::maps /* MapLayer */ {
     public:
         using ObjectCollection = std::vector<std::shared_ptr<IDrawable>>;
 
-        svg::Document& GetSvgDocument() {
-            return svg_document_;
-        }
+        svg::Document& GetSvgDocument();
 
-        svg::Document&& ExtractSvgDocument() {
-            return std::move(svg_document_);
-        }
+        svg::Document&& ExtractSvgDocument();
 
-        void Draw() {
-            svg_document_.Clear();
-            std::for_each(objects_.begin(), objects_.end(), [this](auto& obj) {
-                obj->Darw(svg_document_);
-            });
-        }
+        void Draw();
 
         template <typename DrawableType>
         void Add(DrawableType&& obj) {
             objects_.emplace_back(std::make_shared<std::decay_t<DrawableType>>(std::forward<DrawableType>(obj)));
         }
 
-        ObjectCollection& GetObjects() {
-            return objects_;
-        }
+        ObjectCollection& GetObjects();
 
     private:
         std::vector<std::shared_ptr<IDrawable>> objects_;
         svg::Document svg_document_;
-    };
-
-    class Map {
-    public:
-        virtual geo::Bounds<geo::Point> GetProjectedBounds() {
-            return geo::Bounds<geo::Point>{projection_.FromLatLngToMapPoint(bounds_.min), projection_.FromLatLngToMapPoint(bounds_.max)};
-        }
-
-    private:
-        Size size_;
-        geo::Projection projection_;
-        geo::Bounds<geo::Coordinates> bounds_;
     };
 }
 
@@ -252,17 +191,17 @@ namespace transport_catalogue::io::renderer /* IRenderer */ {
         using RawMapData = std::string;
 
         virtual void UpdateMapProjection(Projection_&& projection) = 0;
-        virtual void AddRouteToLayer(const data::BusRecord&& bus_record) = 0;   //! In next version need add filtering for duplicates db objects
-        virtual void AddStopToLayer(const data::StopRecord&& stop_record) = 0;  //! In next version need add filtering for duplicates db objects
+        virtual void AddRouteToLayer(const data::BusRecord&& bus_record) = 0;
+        virtual void AddStopToLayer(const data::StopRecord&& stop_record) = 0;
         virtual void SetRenderSettings(maps::RenderSettings&& settings) = 0;
 
         virtual maps::RenderSettings& GetRenderSettings() = 0;
+        virtual RawMapData GetRawMap() = 0;
+        virtual svg::Document& GetRouteLayer() = 0;
+        virtual svg::Document& GetRouteNamesLayer() = 0;
+        virtual svg::Document& GetStopMarkersLayer() = 0;
+        virtual svg::Document& GetStopMarkerNamesLayer() = 0;
 
-        virtual RawMapData GetRawMap() = 0;                    //! FOR DEBUG ONLY
-        virtual svg::Document& GetRouteLayer() = 0;            //! FOR DEBUG ONLY
-        virtual svg::Document& GetRouteNamesLayer() = 0;       //! FOR DEBUG ONLY
-        virtual svg::Document& GetStopMarkersLayer() = 0;      //! FOR DEBUG ONLY
-        virtual svg::Document& GetStopMarkerNamesLayer() = 0;  //! FOR DEBUG ONLY
         virtual ~IRenderer() = default;
     };
 }
@@ -292,47 +231,25 @@ namespace transport_catalogue::maps /* MapRenderer */ {
             MapLayer stop_markers;
             MapLayer stop_marker_names;
 
-            void DrawMap() {
-                routes.Draw();
-                route_names.Draw();
-                stop_markers.Draw();
-                stop_marker_names.Draw();
-            }
+            void DrawMap();
 
-            RawMapData ExtractRawMapData() {
-                svg::Document doc;
-                doc.MoveObjectsFrom(routes.ExtractSvgDocument());
-                doc.MoveObjectsFrom(route_names.ExtractSvgDocument());
-                doc.MoveObjectsFrom(stop_markers.ExtractSvgDocument());
-                doc.MoveObjectsFrom(stop_marker_names.ExtractSvgDocument());
-                std::ostringstream stream;
-                doc.Render(stream);
-                return stream.str();
-            }
+            RawMapData ExtractRawMapData();
         };
 
         class ColorPicker {
         public:
             ColorPicker(ColorPalette color_palette)
                 : route_colors_iterator_{ColorPalette(color_palette)}, busses_colors_iterator_{ColorPalette(color_palette)} {}
-            Color GetRouteColor() {
-                return route_colors_iterator_.GetCurrentColorOrNone();
-            }
-            Color GetStopColor() {
-                return busses_colors_iterator_.GetCurrentColorOrNone();
-            }
 
-            void SetNextRouteColor() {
-                route_colors_iterator_.NextColor();
-            }
-            void SetNextBusColor() {
-                busses_colors_iterator_.NextColor();
-            }
+            Color GetRouteColor();
 
-            void SetColorPalette(ColorPalette colors) {
-                route_colors_iterator_.SetColorPalette(ColorPalette{colors});
-                busses_colors_iterator_.SetColorPalette(ColorPalette{colors});
-            }
+            Color GetStopColor();
+
+            void SetNextRouteColor();
+
+            void SetNextBusColor();
+
+            void SetColorPalette(ColorPalette colors);
 
         private:
             ColorPaletteСyclicIterator route_colors_iterator_;
@@ -412,10 +329,7 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute */ {
             Build();
         }
 
-        void Update() override {
-            IDbObject::Update();
-            UpdateLocation();
-        }
+        void Update() override;
 
         void UpdateLocation() override;
 
@@ -427,23 +341,14 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute */ {
 
         BusRouteLable BuildLable() const;
 
-        virtual std::shared_ptr<IDrawable> Clone() const override final {
-            return std::make_shared<MapRenderer::BusRoute>(*this);
-        }
+        virtual std::shared_ptr<IDrawable> Clone() const override final;
 
     private:
         Polyline locations_;
         Color color_ = ColorPaletteСyclicIterator::NoneColor;
         std::shared_ptr<int> ref_ = std::make_shared<int>();
-        void Build() {
-            assert(locations_.empty());
 
-            const data::Route& route = db_record_->route;
-            locations_.reserve(route.size());
-            std::for_each(route.begin(), route.end(), [this](const data::StopRecord& stop) {
-                locations_.emplace_back(projection_.FromLatLngToMapPoint(stop->coordinates), stop->coordinates);
-            });
-        }
+        void Build();
     };
 }
 
@@ -468,51 +373,15 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
             Build();
         }
 
-        void Darw(svg::ObjectContainer& layer) const override {
-            assert(HasValidParent());
-            if (name_lables_.empty()) {
-                return;
-            }
-            static const std::string font_weight("bold");
-            static const std::string font_family("Verdana");
-            std::for_each(name_lables_.begin(), name_lables_.end(), [this, &layer](const NameLable& lable) {
-                svg::Text base;
-                base.SetData(lable.text)
-                    .SetPosition(lable.location.GetMapPoint())
-                    .SetOffset(MapPoint(settings_.bus_label_offset))
-                    .SetFontSize(settings_.bus_label_font_size)
-                    .SetFontFamily(font_family)
-                    .SetFontWeight(font_weight);
-                svg::Text name = base.SetFillColor(color_);
+        void Darw(svg::ObjectContainer& layer) const override;
 
-                svg::Text underlay = base.SetFillColor(settings_.underlayer_color)
-                                         .SetStrokeColor(settings_.underlayer_color)
-                                         .SetStrokeWidth(settings_.underlayer_width)
-                                         .SetStrokeLineCap(svg::StrokeLineCap::ROUND)
-                                         .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND);
+        void Update() override;
 
-                layer.Add(std::move(underlay));
-                layer.Add(std::move(name));
-            });
-        }
+        void UpdateLocation() override;
 
-        void Update() override {
-            assert(HasValidParent());
-            IDbObject::Update();
-            UpdateLocation();
-        }
+        bool HasValidParent() const;
 
-        void UpdateLocation() override {
-            Build();
-        }
-
-        bool HasValidParent() const {
-            return !parent_ref_handle_.expired();
-        }
-
-        virtual std::shared_ptr<IDrawable> Clone() const override final {
-            return std::make_shared<MapRenderer::BusRoute::BusRouteLable>(*this);
-        }
+        virtual std::shared_ptr<IDrawable> Clone() const override final;
 
     private:
         const BusRoute& drawable_bus_;
@@ -520,28 +389,7 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
         Color color_;
         std::vector<NameLable> name_lables_;
 
-        void Build() {
-            assert(HasValidParent());
-            assert(db_record_ == drawable_bus_.db_record_);
-
-            const auto& locations = drawable_bus_.locations_;
-            assert(db_record_->route.size() == drawable_bus_.locations_.size());
-
-            if (locations.empty()) {
-                return;
-            }
-
-            const std::string& name = db_record_->name;
-            name_lables_.emplace_back(name, locations.front());
-
-            if (locations.size() > 1 && !db_record_->is_roundtrip) {
-                //! assert(locations.size() % 2ul);
-                auto center = static_cast<size_t>(locations.size() / 2ul);
-                if (db_record_->route[center]->name != db_record_->route.front()->name) {
-                    name_lables_.emplace_back(name, locations[center]);
-                }
-            }
-        }
+        void Build();
     };
 }
 
@@ -569,22 +417,16 @@ namespace transport_catalogue::maps /* MapRenderer::StopMarker */ {
 
         virtual std::shared_ptr<IDrawable> Clone() const override final;
 
-        const Location& GetLocation() const {
-            return location_;
-        }
+        const Location& GetLocation() const;
 
-        const std::string& GetName() const {
-            return db_record_->name;
-        }
+        const std::string& GetName() const;
 
     private:
         Location location_;
         Color color_ = ColorPaletteСyclicIterator::NoneColor;
         std::shared_ptr<int> ref_ = std::make_shared<int>();
 
-        void Build() {
-            location_ = Location(projection_.FromLatLngToMapPoint(db_record_->coordinates), db_record_->coordinates);
-        }
+        void Build();
     };
 }
 
@@ -609,73 +451,15 @@ namespace transport_catalogue::maps /* MapRenderer::StopMarker::StopMarkerLable 
             Build();
         }
 
-        void Darw(svg::ObjectContainer& layer) const override {
-            assert(HasValidParent());
-            if (name_lables_.empty()) {
-                return;
-            }
-            /*static const std::string font_weight("bold");
-            static const std::string font_family("Verdana");
-            std::for_each(name_lables_.begin(), name_lables_.end(), [this, &layer](const NameLable& lable) {
-                svg::Text base;
-                base.SetData(lable.text)
-                    .SetPosition(lable.location.GetMapPoint())
-                    .SetOffset(MapPoint(settings_.bus_label_offset))
-                    .SetFontSize(settings_.bus_label_font_size)
-                    .SetFontFamily(font_family)
-                    .SetFontWeight(font_weight);
-                svg::Text name = base.SetFillColor(color_);
+        void Darw(svg::ObjectContainer& layer) const override;
 
-                svg::Text underlay = base.SetFillColor(settings_.underlayer_color)
-                                         .SetStrokeColor(settings_.underlayer_color)
-                                         .SetStrokeWidth(settings_.underlayer_width)
-                                         .SetStrokeLineCap(svg::StrokeLineCap::ROUND)
-                                         .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND);
+        void Update() override;
 
-                layer.Add(std::move(underlay));
-                layer.Add(std::move(name));
-            });*/
+        void UpdateLocation() override;
 
-            static const std::string default_color("black");
-            static const std::string default_font_family("Verdana");
-            std::for_each(name_lables_.begin(), name_lables_.end(), [this, &layer](const NameLable& lable) {
-                svg::Text base;
-                base.SetData(lable.text)
-                    .SetPosition(lable.location.GetMapPoint())
-                    .SetOffset(MapPoint(settings_.stop_label_offset))
-                    .SetFontSize(settings_.stop_label_font_size)
-                    .SetFontFamily(default_font_family);
+        bool HasValidParent() const;
 
-                svg::Text name = base.SetFillColor(default_color);
-
-                svg::Text underlay = base.SetFillColor(settings_.underlayer_color)
-                                         .SetStrokeColor(settings_.underlayer_color)
-                                         .SetStrokeWidth(settings_.underlayer_width)
-                                         .SetStrokeLineCap(svg::StrokeLineCap::ROUND)
-                                         .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND);
-
-                layer.Add(std::move(underlay));
-                layer.Add(std::move(name));
-            });
-        }
-
-        void Update() override {
-            assert(HasValidParent());
-            IDbObject::Update();
-            UpdateLocation();
-        }
-
-        void UpdateLocation() override {
-            Build();
-        }
-
-        bool HasValidParent() const {
-            return !parent_ref_handle_.expired();
-        }
-
-        virtual std::shared_ptr<IDrawable> Clone() const override final {
-            return std::make_shared<MapRenderer::StopMarker::StopMarkerLable>(*this);
-        }
+        virtual std::shared_ptr<IDrawable> Clone() const override final;
 
     private:
         const StopMarker& bus_marker_;
@@ -683,11 +467,6 @@ namespace transport_catalogue::maps /* MapRenderer::StopMarker::StopMarkerLable 
         Color color_;
         std::vector<NameLable> name_lables_;
 
-        void Build() {
-            assert(HasValidParent());
-            assert(db_record_ == bus_marker_.db_record_);
-
-            name_lables_.emplace_back(db_record_->name, bus_marker_.location_);
-        }
+        void Build();
     };
 }
