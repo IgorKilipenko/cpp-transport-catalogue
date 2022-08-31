@@ -141,7 +141,6 @@ namespace transport_catalogue /* TransportCatalogue::StatReader implementation *
         std::transform(buses.begin(), buses.end(), buses_names.begin(), [](const auto& bus) {
             return bus->name;
         });
-        //! std::sort(buses_names.begin(), buses_names.end());
         return data::StopStat{std::move(buses_names)};
     }
 
