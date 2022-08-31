@@ -20,7 +20,6 @@
 #include <variant>
 #include <vector>
 
-#include "detail/type_traits.h"
 #include "domain.h"
 #include "json.h"
 #include "request_handler.h"

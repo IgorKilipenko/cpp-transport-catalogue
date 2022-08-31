@@ -19,7 +19,6 @@
 #include <variant>
 #include <vector>
 
-#include "detail/type_traits.h"
 #include "domain.h"
 #include "geo.h"
 #include "map_renderer.h"
