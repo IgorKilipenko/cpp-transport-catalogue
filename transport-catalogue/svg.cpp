@@ -130,6 +130,39 @@ namespace svg /* Text class implementation */ {
 
 namespace svg /* Document class implementation */
 {
+    Document::Document(const Document& other) {
+        if (this == &other) {
+            return;
+        }
+        assert(objects_.empty());
+
+        CloneObjects(other.objects_);
+    }
+
+    Document& Document::operator=(const Document& rhs) {
+        if (this == &rhs) {
+            return *this;
+        }
+        CloneObjects(rhs.objects_);
+        return *this;
+    }
+
+    void Document::CloneObjects(const ObjectCollection& other_objects) {
+        if (&objects_ == &other_objects) {
+            return;
+        }
+        objects_.reserve(other_objects.size());
+        std::for_each(other_objects.begin(), other_objects.end(), [&objects = this->objects_](const auto& other_obj) {
+            objects.emplace_back(other_obj->Clone());
+        });
+    }
+
+    void Document::MoveObjectsFrom(Document&& document) {
+        objects_.reserve(objects_.size() + document.objects_.size());
+        auto objects = std::move(document.objects_);
+        std::move(objects.begin(), objects.end(), std::back_inserter(objects_));
+    }
+
     void Document::AddPtr(ObjectPtr&& obj) {
         objects_.emplace_back(std::move(obj));
     }
@@ -146,9 +179,27 @@ namespace svg /* Document class implementation */
         out << SVG_TAG_CLOSE;
         out.flush();
     }
+
+    size_t Document::GetObjectsCount() const {
+        return objects_.size();
+    }
+
+    void Document::Clear() {
+        objects_.clear();
+    }
+
+    void Document::Merge(const Document& document) {
+        std::for_each(document.objects_.begin(), document.objects_.end(), [this](const ObjectPtr& object_ptr) {
+            using T = std::decay_t<decltype(*object_ptr)>;
+            if constexpr (!std::is_abstract_v<T>) {
+                auto copy = object_ptr.get();
+                AddPtr(std::make_unique<T>(std::move(copy)));
+            }
+        });
+    }
 }
 
-namespace svg /* Stroke class implementation */{
+namespace svg /* Stroke class implementation */ {
     template <>
     std::string_view Stroke::ToString(StrokeLineCap line_cap) {
         using namespace std::string_view_literals;

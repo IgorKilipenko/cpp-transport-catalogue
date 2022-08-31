@@ -421,43 +421,15 @@ namespace svg /* Svg Objects */ {
         constexpr static const std::string_view NEW_LINE{"\n"};
 
         Document() = default;
-
-        Document(const Document& other) {
-            if (this == &other) {
-                return;
-            }
-            assert(objects_.empty());
-
-            CloneObjects(other.objects_);
-        }
-
-        Document& operator=(const Document& rhs) {
-            if (this == &rhs) {
-                return *this;
-            }
-            CloneObjects(rhs.objects_);
-            return *this;
-        }
-
+        Document(const Document& other);
+        Document& operator=(const Document& rhs);
         Document(Document&& other) = default;
         Document& operator=(Document&& rhs) = default;
         virtual ~Document() = default;
 
-        void CloneObjects(const ObjectCollection& other_objects) {
-            if (&objects_ == &other_objects) {
-                return;
-            }
-            objects_.reserve(other_objects.size());
-            std::for_each(other_objects.begin(), other_objects.end(), [&objects = this->objects_](const auto& other_obj) {
-                objects.emplace_back(other_obj->Clone());
-            });
-        }
+        void CloneObjects(const ObjectCollection& other_objects);
 
-        void MoveObjectsFrom(Document&& document) {
-            objects_.reserve(objects_.size() + document.objects_.size());
-            auto objects = std::move(document.objects_);
-            std::move(objects.begin(), objects.end(), std::back_inserter(objects_));
-        }
+        void MoveObjectsFrom(Document&& document);
 
         /// Добавляет в svg-документ объект-наследник svg::Object
         void AddPtr(ObjectPtr&& obj) override;
@@ -465,23 +437,11 @@ namespace svg /* Svg Objects */ {
         /// Выводит в ostream svg-представление документа
         void Render(std::ostream& out) const;
 
-        size_t GetObjectsCount() const {
-            return objects_.size();
-        }
+        size_t GetObjectsCount() const;
 
-        void Clear() {
-            objects_.clear();
-        }
+        void Clear();
 
-        void Merge(const Document& document) {  //! NOT TESTED
-            std::for_each(document.objects_.begin(), document.objects_.end(), [this](const ObjectPtr& object_ptr) {
-                using T = std::decay_t<decltype(*object_ptr)>;
-                if constexpr (!std::is_abstract_v<T>) {
-                    auto copy = object_ptr.get();
-                    AddPtr(std::make_unique<T>(std::move(copy)));
-                }
-            });
-        }
+        void Merge(const Document& document);
 
     private:
         ObjectCollection objects_;
