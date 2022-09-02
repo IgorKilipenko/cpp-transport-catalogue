@@ -14,8 +14,6 @@ namespace transport_catalogue::tests {
     class JsonBuilderTester {
     public:
         void TestDict() const {
-            using namespace std;
-
             /*json::Print(
                 json::Document{json::Builder{}
                                    .StartDict()
@@ -47,12 +45,44 @@ namespace transport_catalogue::tests {
             }
 
             {
+                json::Node node = json::Builder{}.StartDict().Key("key1").Value("value1").Key("key2").Value("value2").EndDict().Build();
+                assert(node == json::Dict({{"key1", "value1"}, {"key2", "value2"}}));
+            }
+        }
+
+        void TestNestedDict() const {
+            {
                 json::Node expected = json::Dict({{"key1", json::Dict({{"nested_key1", "nested_value1"}})}});
 
                 json::Node node =
                     json::Builder{}.StartDict().Key("key1").StartDict().Key("nested_key1").Value("nested_value1").EndDict().EndDict().Build();
 
                 assert(node == expected);
+            }
+
+            {
+                json::Node expected = json::Dict({{"key1", json::Dict({{"nested_key1", "nested_value1"}, {"key2", "value2"}})}});
+
+                json::Node node = json::Builder{}
+                                      .StartDict()
+                                      .Key("key1")
+                                      .StartDict()
+                                      .Key("nested_key1")
+                                      .Value("nested_value1")
+                                      .EndDict()
+                                      .Key("key2")
+                                      .Value("value2")
+                                      .EndDict()
+                                      .Build();
+
+                assert(node == expected);
+            }
+        }
+
+        void TestArray() const {
+            {
+                //json::Node node = json::Builder{}.StartArray().Value("value").EndArray().Build();
+                //assert(node == json::Dict({{"key1", "value"}}));
             }
         }
 
@@ -61,6 +91,12 @@ namespace transport_catalogue::tests {
 
             TestDict();
             std::cerr << prefix << "TestDict : Done." << std::endl;
+
+            TestNestedDict();
+            std::cerr << prefix << "TestNestedDict : Done." << std::endl;
+
+            TestArray();
+            std::cerr << prefix << "TestArray : Done." << std::endl;
 
             std::cerr << std::endl << "All JsonBuilder Tests : Done." << std::endl << std::endl;
         }
