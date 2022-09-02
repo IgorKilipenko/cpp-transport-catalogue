@@ -81,9 +81,42 @@ namespace transport_catalogue::tests {
 
         void TestArray() const {
             {
-                //json::Node node = json::Builder{}.StartArray().Value("value").EndArray().Build();
-                //assert(node == json::Dict({{"key1", "value"}}));
+                json::Node node = json::Builder{}.StartArray().Value("value").EndArray().Build();
+                assert(node == json::Array{"value"});
             }
+            {
+                json::Node node = json::Builder{}
+                                      .StartArray()
+                                      .Value("value")
+                                      .Value("value")
+                                      .Value("value")
+                                      .Value("value")
+                                      .Value("value")
+                                      .Value("value")
+                                      .EndArray()
+                                      .Build();
+                assert(node == json::Array(6, "value"));
+            }
+        }
+
+        void TestDictAndArrayCompos() const {
+            /*{
+                json::Node node = json::Builder{}.StartArray().Value("value").StartDict().Key("key1").Value("value1").EndDict().EndArray().Build();
+                assert(node == json::Array{"value"});
+            }
+            {
+                json::Node node = json::Builder{}
+                                      .StartArray()
+                                      .Value("value")
+                                      .Value("value")
+                                      .Value("value")
+                                      .Value("value")
+                                      .Value("value")
+                                      .Value("value")
+                                      .EndArray()
+                                      .Build();
+                assert(node == json::Array(6, "value"));
+            }*/
         }
 
         void RunTests() const {
@@ -97,6 +130,9 @@ namespace transport_catalogue::tests {
 
             TestArray();
             std::cerr << prefix << "TestArray : Done." << std::endl;
+
+            TestDictAndArrayCompos();
+            std::cerr << prefix << "TestDictAndArrayCompos : Done." << std::endl;
 
             std::cerr << std::endl << "All JsonBuilder Tests : Done." << std::endl << std::endl;
         }

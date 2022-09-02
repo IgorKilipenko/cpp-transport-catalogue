@@ -14,12 +14,12 @@ namespace json /* Builder */ {
         template <typename ValueType_>
         class NodeContext;
 
-        template <>
-        class NodeContext<Dict>;
+        //template <>
+        //class NodeContext<Dict>;
         using DictContext = NodeContext<Dict>;
 
-        template <>
-        class NodeContext<Array>;
+        //template <>
+        //class NodeContext<Array>;
         using ArrayContext = NodeContext<Array>;
 
         class IObjectContext;
@@ -71,10 +71,17 @@ namespace json /* IBuilder */ {
     public:
         IObjectContext(Builder& builder) : builder_(builder) {}
         virtual ~IObjectContext() = default;
-        virtual DictContext StartDict() = 0;
-        virtual DictContext& EndDict() = 0;
-        //virtual ArrayContext StartArray();
-        //virtual ArrayContext& EndArray();
+        virtual DictContext StartDict();
+        virtual DictContext& EndDict() {
+            throw "Error";
+        }
+        virtual ArrayContext StartArray();
+        virtual ArrayContext& EndArray() {
+            throw "Error";
+        }
+        virtual Node Build() {
+            return builder_.Build();
+        }
 
     protected:
         Builder& builder_;
@@ -90,8 +97,8 @@ namespace json /* Builder::DictContext */ {
         using ValueType = json::Dict;
         using DictContext = NodeContext<Dict>;
 
-        NodeContext<Dict>(Builder& builder)
-            : Context<Dict>((assert(builder.nodes_stack_.back()->IsType<Dict>()), builder.nodes_stack_.back()->GetValue<Dict>())),
+        NodeContext<ValueType>(Builder& builder)
+            : Context<ValueType>((assert(builder.nodes_stack_.back()->IsType<ValueType>()), builder.nodes_stack_.back()->GetValue<ValueType>())),
               IObjectContext(builder) {}
 
         template <typename String_, json::detail::EnableIfConvertible<String_, std::string> = true>
@@ -111,53 +118,59 @@ namespace json /* Builder::DictContext */ {
             return *this;
         }
 
-        DictContext StartDict() override {
+        /*DictContext StartDict() override {
             return builder_.StartDict();
-        }
+        }*/
 
         DictContext& EndDict() override {
             builder_.nodes_stack_.pop_back();
             return *this;
         }
 
-        Node Build() {
+        /*Node Build() {
             return builder_.Build();
-        }
+        }*/
+
+    private:
+        using IObjectContext::EndArray;
     };
 }
 
 namespace json /* Builder::ArrayContext */ {
-    /*
+
     template <>
-    class Builder::NodeContext<Array> : public Context<Array> {
-        using Context<Array>::Context;
+    class Builder::NodeContext<Array> : public Context<Array>, public Builder::IObjectContext {
+        // using Context<Array>::Context;
 
     public:
         using ValueType = json::Array;
         using ArrayContext = NodeContext<Array>;
 
-        ArrayContext StartArray() {
-            return builder_.StartArray();
-        }
+        NodeContext<ValueType>(Builder& builder)
+            : Context<ValueType>((assert(builder.nodes_stack_.back()->IsType<ValueType>()), builder.nodes_stack_.back()->GetValue<ValueType>())),
+              IObjectContext(builder) {}
 
-        ArrayContext& EndArray() {
+        ArrayContext& EndArray() override {
             builder_.nodes_stack_.pop_back();
             return *this;
         }
 
-        Node Build() {
+        /*Node Build() {
             return builder_.Build();
-        }
+        }*/
 
         template <
             typename Node_, json::detail::EnableIf<
                                 json::detail::IsConvertibleV<Node_, json::Node> || json::detail::IsConvertibleV<Node_, json::Node::ValueType>> = true>
         ArrayContext& Value(Node_&& value) {
-            *(builder_.nodes_stack_.back()) = std::forward<Node_>(value);
+            builder_.nodes_stack_.back()->AsArray().emplace_back(std::forward<Node_>(value));
             return *this;
         }
+
+    private:
+        using IObjectContext::EndDict;
     };
-    */
+
 }
 
 namespace json /* Builder template implementation */ {

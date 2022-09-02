@@ -15,7 +15,7 @@ namespace json /* Builder */ {
         return DictContext(*this);
     }
 
-    /*Builder::ArrayContext Builder::StartArray() {
+    Builder::ArrayContext Builder::StartArray() {
         if (!nodes_stack_.empty() && !nodes_stack_.back()->IsArray() && !nodes_stack_.back()->IsNull()) {
             throw std::logic_error("ArrayContext error");
         }
@@ -28,6 +28,19 @@ namespace json /* Builder */ {
         } else if (nodes_stack_.back()->IsNull()) {
             *nodes_stack_.back() = Array();
         }
-        return *this;
-    }*/
+        return ArrayContext(*this);
+    }
+}
+
+namespace json /* Builder::IObjectContext implementation */ {
+
+    Builder::DictContext Builder::IObjectContext::StartDict() {
+        return builder_.StartDict();
+    }
+
+    Builder::ArrayContext Builder::IObjectContext::StartArray() {
+        return builder_.StartArray();
+    }
+    // virtual ArrayContext& EndArray();
+
 }
