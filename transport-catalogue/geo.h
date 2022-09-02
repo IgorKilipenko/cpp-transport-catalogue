@@ -10,7 +10,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace transport_catalogue::geo::detail /* template helpers */ {
+namespace transport_catalogue::detail /* template helpers */ {
     template <bool Condition>
     using EnableIf = typename std::enable_if_t<Condition, bool>;
 
@@ -49,10 +49,6 @@ namespace transport_catalogue::geo::detail /* template helpers */ {
 }
 
 namespace transport_catalogue::geo {
-
-    [[maybe_unused]] static constexpr double PI() {
-        return std::atan(1) * 4.;
-    }
 
     static const double EARTH_RADIUS = 6371000.;
     static constexpr const double THRESHOLD = 1e-6;

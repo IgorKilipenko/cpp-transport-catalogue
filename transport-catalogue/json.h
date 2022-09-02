@@ -23,6 +23,8 @@
 #include <variant>
 #include <vector>
 
+//! Здесь пользовательские псевдонимы для шаблонных ограничений я оставил,
+//! т.к. по "легенде" - json/svg - это отдельные самостоятельные библиотеки
 namespace json::detail /* template helpers */ {
     template <bool Condition>
     using EnableIf = typename std::enable_if_t<Condition, bool>;
@@ -127,14 +129,13 @@ namespace json /* Node */ {
     public:
         using NodeValueType::variant;
         using ValueType = NodeValueType;
+        using OnNodeItemParsedCallback = std::function<void(const Node&, const void*)>;
 
     public:
-        Node(const Node& other) = default;
-        Node& operator=(const Node& other) = default;
-        Node(Node&& other) = default;
-        Node& operator=(Node&& other) = default;
+        //! Я оставил константу EQUALITY_TOLERANCE в предела класса Node чтобы
+        //! не создать зависимость от модуля domain в библиотеке json
+        static constexpr const double EQUALITY_TOLERANCE = 1e-6;
 
-    public:
         bool IsNull() const;
 
         bool IsBool() const;
@@ -201,14 +202,14 @@ namespace json /* Node */ {
 
         bool operator!=(const Node& rhs) const;
 
-        bool EqualsWithTolerance(const Node& rhs, double tolerance = 1e-6) const {
+        bool EqualsWithTolerance(const Node& rhs, double tolerance = EQUALITY_TOLERANCE) const {
             return *this == rhs || (this->IsDouble() && std::abs(AsDouble() - rhs.AsDouble()) <= tolerance);
         }
 
-        static Node LoadNode(std::istream& stream, const std::function<void(const Node&, const void*)>* = nullptr);
+        static Node LoadNode(std::istream& stream, const OnNodeItemParsedCallback* = nullptr);
 
         template <typename InputStream, detail::EnableIf<detail::IsBaseOfV<std::istream, InputStream> && !std::is_reference_v<InputStream>> = true>
-        static Node LoadNode(InputStream&& stream, const std::function<void(const Node&, const void*)>* = nullptr);
+        static Node LoadNode(InputStream&& stream, const OnNodeItemParsedCallback* = nullptr);
 
         void Print(std::ostream& output, bool pretty_print = true) const;
 
@@ -444,6 +445,7 @@ namespace json /* Node class template implementation */ {
         }
     }
 
+    //! Нужно ли вносить изменения в этот метод я так и не понял
     template <typename T, detail::EnableIf<detail::IsConvertible<T, NodeValueType>::value || detail::IsSame<T, void>::value>>
     const auto& Node::GetValue() const {
         if constexpr (detail::IsConvertible<T, NodeValueType>::value == true) {
@@ -493,7 +495,7 @@ namespace json /* Node class template implementation */ {
     }
 
     template <typename InputStream, detail::EnableIf<detail::IsBaseOfV<std::istream, InputStream> && !std::is_reference_v<InputStream>>>
-    Node Node::LoadNode(InputStream&& stream, const std::function<void(const Node&, const void*)>* on_load) {
+    Node Node::LoadNode(InputStream&& stream, const OnNodeItemParsedCallback* on_load) {
         return LoadNode(stream, on_load);
     }
 }

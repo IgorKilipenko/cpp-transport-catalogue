@@ -21,44 +21,6 @@
 
 #include "geo.h"
 
-namespace transport_catalogue::detail /* template helpers */ {
-    template <bool Condition>
-    using EnableIf = typename std::enable_if_t<Condition, bool>;
-
-    template <typename FromType, typename ToType>
-    using EnableIfConvertible = std::enable_if_t<std::is_convertible_v<std::decay_t<FromType>, ToType>, bool>;
-
-    template <typename FromType, typename ToType>
-    using IsConvertible = std::is_convertible<std::decay_t<FromType>, ToType>;
-
-    template <typename FromType, typename ToType>
-    inline constexpr bool IsConvertibleV = std::is_convertible<std::decay_t<FromType>, ToType>::value;
-
-    template <typename FromType, typename ToType>
-    using IsSame = std::is_same<std::decay_t<FromType>, ToType>;
-
-    template <typename FromType, typename ToType>
-    inline constexpr bool IsSameV = std::is_same<std::decay_t<FromType>, ToType>::value;
-
-    template <typename FromType, typename ToType>
-    using EnableIfSame = std::enable_if_t<std::is_same_v<std::decay_t<FromType>, ToType>, bool>;
-
-    template <typename BaseType, typename DerivedType>
-    using IsBaseOf = std::is_base_of<BaseType, std::decay_t<DerivedType>>;
-
-    template <typename FromType, typename ToType>
-    inline constexpr bool IsBaseOfV = IsBaseOf<FromType, ToType>::value;
-
-    template <typename BaseType, typename DerivedType>
-    using EnableIfBaseOf = std::enable_if_t<std::is_base_of_v<BaseType, std::decay_t<DerivedType>>, bool>;
-
-    template <class ExecutionPolicy>
-    using IsExecutionPolicy = std::is_execution_policy<std::decay_t<ExecutionPolicy>>;
-
-    template <class ExecutionPolicy>
-    using EnableForExecutionPolicy = typename std::enable_if_t<IsExecutionPolicy<ExecutionPolicy>::value, bool>;
-}
-
 namespace transport_catalogue::exceptions {
     namespace data {
         class DatabaseException : public std::exception {
@@ -244,6 +206,7 @@ namespace transport_catalogue::data /* Db objects (ORM) */ {
 }
 
 namespace transport_catalogue::data /* Db scheme abstraction */ {
+    
     class DataTable {
     public:
         virtual const std::string_view GetName() const {
@@ -274,24 +237,26 @@ namespace transport_catalogue::data /* Db scheme abstraction */ {
 namespace transport_catalogue::data /* Db scheme */ {
     class DatabaseScheme {
     public: /* Aliases */
-        using StopsTableBase = std::deque<Stop>;
-        using BusRoutesTableBase = std::deque<Bus>;
         using DistanceBetweenStopsTableBase = std::unordered_map<std::pair<const Stop*, const Stop*>, DistanceBetweenStopsRecord, Hasher>;
         using NameToStopViewBase = std::unordered_map<std::string_view, const data::Stop*>;
         using NameToBusRoutesViewBase = std::unordered_map<std::string_view, const data::Bus*>;
         using StopToBusesViewBase = std::unordered_map<StopRecord, BusRecordSet>;
 
     public:
-        class StopsTable : public DataTable, public StopsTableBase {
+        //! Базовый класс DataTable я добавил в схему для имитации работы ORM + подчеркнуть зависимость
+        //! и роль таблиц (представлений) в структуре БД
+        //! Я хочу в перспективе для хранения данных использовать связку ORM + Sqlite
+        //! а в такой связке обращения к таблицам и элементам таблиц будут вида - auto bus = Table<Bus>.try_get(id);
+        class StopsTable : public DataTable, public std::deque<Stop> {
         public:
-            using StopsTableBase::deque;
-            StopsTable() : DataTable("StopsTable"), StopsTableBase() {}
+            using std::deque<Stop>::deque;
+            StopsTable() : DataTable("StopsTable"), std::deque<Stop>() {}
         };
 
-        class BusRoutesTable : public DataTable, public BusRoutesTableBase {
+        class BusRoutesTable : public DataTable, public std::deque<Bus> {
         public:
-            using BusRoutesTableBase::deque;
-            BusRoutesTable() : DataTable("BusRoutesTable"), BusRoutesTableBase() {}
+            using std::deque<Bus>::deque;
+            BusRoutesTable() : DataTable("BusRoutesTable"), std::deque<Bus>() {}
         };
 
         class DistanceBetweenStopsTable : public DataTable, public DistanceBetweenStopsTableBase {

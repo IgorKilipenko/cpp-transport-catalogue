@@ -85,13 +85,13 @@ namespace transport_catalogue /* TransportCatalogue::StatReader */ {
         const data::ITransportDataReader& db_reader_;
 
         template <typename Iterator>
-        static size_t CulculateUniqueStops(Iterator begin, Iterator end);
+        static size_t CalculateUniqueStops(Iterator begin, Iterator end);
     };
 }
 
 namespace transport_catalogue /* TransportCatalogue::StatReader template implementation */ {
     template <typename Iterator>
-    size_t TransportCatalogue::StatReader::CulculateUniqueStops(Iterator begin, Iterator end) {
+    size_t TransportCatalogue::StatReader::CalculateUniqueStops(Iterator begin, Iterator end) {
         return std::unordered_set<typename Iterator::value_type>(begin, end).size();
     }
 }
