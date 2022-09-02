@@ -16,7 +16,7 @@ set(LIBS
     ${SRC_DIR}/transport_catalogue.cpp
     ${SRC_DIR}/input_reader.cpp
     ${SRC_DIR}/stat_reader.cpp
-    ${SRC_DIR}/input_reader.cpp
+    ${SRC_DIR}/json_builder.cpp
     ${SRC_DIR}/svg.cpp
     ${SRC_DIR}/json.cpp
     ${SRC_DIR}/domain.cpp
