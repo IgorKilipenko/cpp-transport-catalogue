@@ -350,7 +350,7 @@ namespace transport_catalogue::tests {
             {  // Check equal buy lines
                 std::vector<std::string_view> expected_lines = SplitIntoWords(expected_result, '\n');
                 std::vector<std::string_view> result_lines = SplitIntoWords(map_result, '\n');
-                bool test_failed = false;
+                [[maybe_unused]]bool test_failed = false;
                 size_t size = std::min(expected_lines.size(), result_lines.size());
                 size_t line_index = 0;
                 for (auto res_it = std::make_move_iterator(result_lines.begin()), expected_it = std::make_move_iterator(expected_lines.begin());
@@ -416,7 +416,7 @@ namespace transport_catalogue::tests {
             {  // Check equal buy lines
                 std::vector<std::string_view> expected_lines = SplitIntoWords(expected_result, '\n');
                 std::vector<std::string_view> result_lines = SplitIntoWords(map_result, '\n');
-                bool test_failed = false;
+                [[maybe_unused]]bool test_failed = false;
                 size_t size = std::min(expected_lines.size(), result_lines.size());
                 size_t line_index = 0;
                 for (auto res_it = std::make_move_iterator(result_lines.begin()), expected_it = std::make_move_iterator(expected_lines.begin());
@@ -490,7 +490,7 @@ namespace transport_catalogue::tests {
             {  // Check equal buy lines
                 std::vector<std::string_view> expected_lines = SplitIntoWords(expected_result, '\n');
                 std::vector<std::string_view> result_lines = SplitIntoWords(map_result, '\n');
-                bool test_failed = false;
+                [[maybe_unused]]bool test_failed = false;
                 size_t size = std::min(expected_lines.size(), result_lines.size());
                 size_t line_index = 0;
                 for (auto res_it = std::make_move_iterator(result_lines.begin()), expected_it = std::make_move_iterator(expected_lines.begin());
