@@ -123,7 +123,7 @@ namespace transport_catalogue /* TransportCatalogue::StatReader implementation *
         }
 
         info.total_stops = route.size();
-        info.unique_stops = CulculateUniqueStops(route.begin(), route.end());
+        info.unique_stops = CalculateUniqueStops(route.begin(), route.end());
         info.route_length = route_length;
         info.route_curvature = route_length / std::max(pseudo_length, 1.);
 
