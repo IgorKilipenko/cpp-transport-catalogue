@@ -1,7 +1,5 @@
 #include "json_builder.h"
 
-#include <optional>
-
 namespace json /* Builder */ {
 
     using namespace std::literals;
@@ -13,13 +11,13 @@ namespace json /* Builder */ {
         return root_;
     }
 
-    Builder::DictItemContext Builder::StartDict() {
+    Builder::DictContext Builder::StartDict() {
         Value(Dict{});
         PutStack<Dict>();
         return *this;
     }
 
-    Builder::ItemContext Builder::EndDict() {
+    Builder::Context Builder::EndDict() {
         if (!nodes_stack_.empty() && nodes_stack_.back()->IsMap() && !state_.has_key) {
             nodes_stack_.pop_back();
             return *this;
@@ -27,13 +25,13 @@ namespace json /* Builder */ {
         throw std::logic_error("Buid dictionary error");
     }
 
-    Builder::ArrayItemContext Builder::StartArray() {
+    Builder::ArrayContext Builder::StartArray() {
         Value(Array{});
         PutStack<Array>();
         return *this;
     }
 
-    Builder::ItemContext Builder::EndArray() {
+    Builder::Context Builder::EndArray() {
         if (!nodes_stack_.empty() && nodes_stack_.back()->IsArray()) {
             nodes_stack_.pop_back();
             return *this;
@@ -41,7 +39,7 @@ namespace json /* Builder */ {
         throw std::logic_error("Build array error");
     }
 
-    Builder::ItemContext Builder::GetContext() {
+    Builder::Context Builder::GetContext() {
         return *this;
     }
 
@@ -65,19 +63,19 @@ namespace json /* Builder */ {
 
 namespace json /* Builder::Context implementation */ {
 
-    Builder::DictItemContext Builder::ContextBase::StartDict() {
+    Builder::DictContext Builder::ContextBase::StartDict() {
         return builder_.StartDict();
     }
 
-    Builder::ItemContext Builder::ContextBase::EndDict() {
+    Builder::Context Builder::ContextBase::EndDict() {
         return builder_.EndDict();
     }
 
-    Builder::ArrayItemContext Builder::ContextBase::StartArray() {
+    Builder::ArrayContext Builder::ContextBase::StartArray() {
         return builder_.StartArray();
     }
 
-    Builder::ItemContext Builder::ContextBase::EndArray() {
+    Builder::Context Builder::ContextBase::EndArray() {
         return builder_.EndArray();
     }
 
@@ -93,7 +91,7 @@ namespace json /* Builder::Context implementation */ {
         return builder_;
     }
 
-    Builder::ValueItemContext Builder::ItemContext::Value(Node value) {
+    Builder::ValueContext Builder::Context::Value(Node value) {
         return builder_.Value(std::move(value));
     }
 }
