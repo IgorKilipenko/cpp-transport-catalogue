@@ -31,7 +31,7 @@ int main() {
     using namespace transport_catalogue::tests;
     using namespace svg::tests;
     using namespace json::tests;
-/*
+
     SvgTester svg_tester;
     svg_tester.TestSvglib();
 
@@ -49,7 +49,6 @@ int main() {
 
     RequestHandlerTester request_handler_tester;
     request_handler_tester.RunTests();
-*/
 
     JsonBuilderTester json_builder_tester;
     json_builder_tester.RunTests();
