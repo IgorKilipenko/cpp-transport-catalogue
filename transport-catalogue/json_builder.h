@@ -2,6 +2,7 @@
 
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "json.h"
@@ -20,20 +21,17 @@ namespace json /* Builder */ {
     public:
         Builder() = default;
 
-        void Clear() {
-            ResetState_(true);
-        }
+        template <
+            typename NodeType_,
+            detail::EnableIf<detail::IsConvertibleV<NodeType_, Node> || detail::IsConvertibleV<NodeType_, Node::ValueType>> = true>
+        ValueItemContext Value(NodeType_&& value);
 
-        Node&& Extract() noexcept {
-            ResetState_(false);
-            return std::move(root_);
-        }
-
-        ItemContext GetContext() ;
-
-        ValueItemContext Value(Node value);
         DictItemContext StartDict();
         ArrayItemContext StartArray();
+
+        void Clear();
+        Node&& Extract() noexcept;
+        ItemContext GetContext();
 
     protected:
         KeyItemContext Key(std::string key);
@@ -42,8 +40,6 @@ namespace json /* Builder */ {
         const Node& Build() const;
 
     private:
-        void SetRef(const Node& value);
-
         Node root_;
         std::vector<Node*> nodes_stack_;
         bool has_key_ = false;
@@ -51,15 +47,9 @@ namespace json /* Builder */ {
         bool is_empty_ = true;
 
     private:
-        void ResetState_(bool clear_root = true) {
-            is_empty_ = true;
-            nodes_stack_.clear();
-            has_key_ = false;
-            key_.clear();
-            if (clear_root) {
-                root_ = Node();
-            }
-        }
+        template <typename NodeType_, detail::EnableIf<detail::IsSameV<NodeType_, Dict> || detail::IsSameV<NodeType_, Array>> = true>
+        void PutStack();
+        void ResetState_(bool clear_root = true);
     };
 }
 
@@ -67,14 +57,9 @@ namespace json /* Builder::Context */ {
     class Builder::ContextBase {
     public:
         ContextBase(Builder& builder) : builder_{builder} {}
-        
-        operator Builder&() {
-            return builder_;
-        }
 
-        const Builder& GetBuilder() const {
-            return builder_;
-        }
+        operator Builder&();
+        const Builder& GetBuilder() const;
 
     protected:
         KeyItemContext Key(std::string key);
@@ -153,4 +138,41 @@ namespace json /* Builder::Context */ {
     public:
         ArrayItemContext Value(Node value);
     };
+}
+
+namespace json /* Builder template implementation */ {
+
+    template <typename NodeType_, detail::EnableIf<detail::IsConvertibleV<NodeType_, Node> || detail::IsConvertibleV<NodeType_, Node::ValueType>>>
+    Builder::ValueItemContext Builder::Value(NodeType_&& value) {
+        if (is_empty_) {
+            root_ = std::forward<NodeType_>(value);
+            is_empty_ = false;
+            return *this;
+        }
+
+        if (!nodes_stack_.empty() && nodes_stack_.back()->IsMap() && has_key_) {
+            nodes_stack_.back()->AsMap().emplace(key_, std::forward<NodeType_>(value));
+            has_key_ = false;
+            return *this;
+        }
+
+        if (!nodes_stack_.empty() && nodes_stack_.back()->IsArray()) {
+            nodes_stack_.back()->AsArray().emplace_back(std::forward<NodeType_>(value));
+            return *this;
+        }
+
+        throw std::logic_error("Build value error");
+    }
+
+    template <typename NodeType_, detail::EnableIf<detail::IsSameV<NodeType_, Dict> || detail::IsSameV<NodeType_, Array>>>
+    void Builder::PutStack() {
+        if (nodes_stack_.empty()) {
+            nodes_stack_.emplace_back(&root_);
+        } else if (auto* ptr = nodes_stack_.back()->GetValuePtr<Array>(); ptr != nullptr) {
+            nodes_stack_.emplace_back(&ptr->back());
+        } else if (auto* ptr = nodes_stack_.back()->GetValuePtr<Dict>(); ptr != nullptr) {
+            nodes_stack_.emplace_back(&ptr->at(key_));
+        }
+    }
+
 }

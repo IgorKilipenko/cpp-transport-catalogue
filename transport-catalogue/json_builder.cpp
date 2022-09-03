@@ -23,30 +23,9 @@ namespace json /* Builder */ {
         throw std::logic_error("Build dictionary error");
     }
 
-    Builder::ValueItemContext Builder::Value(Node value) {
-        if (is_empty_) {
-            root_ = std::move(value);
-            is_empty_ = false;
-            return ValueItemContext(*this);
-        }
-
-        if (!nodes_stack_.empty() && nodes_stack_.back()->IsMap() && has_key_) {
-            nodes_stack_.back()->AsMap().emplace(key_, std::move(value));
-            has_key_ = false;
-            return *this;
-        }
-
-        if (!nodes_stack_.empty() && nodes_stack_.back()->IsArray()) {
-            nodes_stack_.back()->AsArray().emplace_back(std::move(value));
-            return *this;
-        }
-
-        throw std::logic_error("Build value error");
-    }
-
     Builder::DictItemContext Builder::StartDict() {
         Value(Dict{});
-        SetRef(Dict{});
+        PutStack<Dict>();
         return *this;
     }
 
@@ -60,7 +39,7 @@ namespace json /* Builder */ {
 
     Builder::ArrayItemContext Builder::StartArray() {
         Value(Array{});
-        SetRef(Array{});
+        PutStack<Array>();
         return *this;
     }
 
@@ -72,37 +51,31 @@ namespace json /* Builder */ {
         throw std::logic_error("Build array error");
     }
 
-    void Builder::SetRef(const Node& value) {
-        if (!value.IsArray() && !value.IsMap()) {
-            return;
-        }
-        if (nodes_stack_.empty()) {
-            nodes_stack_.push_back(&root_);
-        } else if (nodes_stack_.back()->IsArray()) {
-            auto* ptr = &nodes_stack_.back()->GetValuePtr<Array>()->back();
-            nodes_stack_.push_back(ptr);
-        } else if (nodes_stack_.back()->IsMap()) {
-            auto ptr = &nodes_stack_.back()->GetValuePtr<Dict>()->at(key_);
-            nodes_stack_.push_back(const_cast<Node*>(ptr));
-        }
-    }
-
     Builder::ItemContext Builder::GetContext() {
         return *this;
     }
+
+    void Builder::Clear() {
+        ResetState_(true);
+    }
+
+    Node&& Builder::Extract() noexcept {
+        ResetState_(false);
+        return std::move(root_);
+    }
+
+    void Builder::ResetState_(bool clear_root) {
+        is_empty_ = true;
+        nodes_stack_.clear();
+        has_key_ = false;
+        key_.clear();
+        if (clear_root) {
+            root_ = Node();
+        }
+    }
 }
 
-namespace json /* Builder::Context */ {
-
-    Builder::KeyValueItemContext Builder::KeyItemContext::Value(Node value) {
-        builder_.Value(std::move(value));
-        return KeyValueItemContext{builder_};
-    }
-
-    Builder::ArrayItemContext Builder::ArrayItemContext::Value(Node value) {
-        builder_.Value(std::move(value));
-        return ArrayItemContext{builder_};
-    }
+namespace json /* Builder::ContextBase */ {
 
     Builder::KeyItemContext Builder::ContextBase::Key(std::string key) {
         return builder_.Key(std::move(key));
@@ -128,8 +101,28 @@ namespace json /* Builder::Context */ {
         return builder_.Build();
     }
 
+    Builder::ContextBase::operator Builder&() {
+        return builder_;
+    }
+
+    const Builder& Builder::ContextBase::GetBuilder() const {
+        return builder_;
+    }
+}
+
+namespace json /* Builder::ItemsContext */ {
+
+    Builder::KeyValueItemContext Builder::KeyItemContext::Value(Node value) {
+        builder_.Value(std::move(value));
+        return KeyValueItemContext{builder_};
+    }
+
+    Builder::ArrayItemContext Builder::ArrayItemContext::Value(Node value) {
+        builder_.Value(std::move(value));
+        return ArrayItemContext{builder_};
+    }
+
     Builder::ValueItemContext Builder::ItemContext::Value(Node value) {
         return builder_.Value(std::move(value));
     }
-
 }
