@@ -10,13 +10,27 @@
 namespace json /* Builder */ {
     class Builder {
         class ContextBase;
-        class ItemContext;
 
+    public:
+        class ItemContext;
         class KeyItemContext;
         class ValueItemContext;
         class KeyValueItemContext;
         class DictItemContext;
         class ArrayItemContext;
+
+    private:
+        struct ContextState {
+            bool has_key = false;
+            std::string key;
+            bool has_context = false;
+
+            void Reset() {
+                has_key = false;
+                key.clear();
+                has_context = false;
+            }
+        };
 
     public:
         Builder() = default;
@@ -42,9 +56,7 @@ namespace json /* Builder */ {
     private:
         Node root_;
         std::vector<Node*> nodes_stack_;
-        bool has_key_ = false;
-        std::string key_;
-        bool is_empty_ = true;
+        ContextState state_;
 
     private:
         template <typename NodeType_, detail::EnableIf<detail::IsSameV<NodeType_, Dict> || detail::IsSameV<NodeType_, Array>> = true>
@@ -144,15 +156,15 @@ namespace json /* Builder template implementation */ {
 
     template <typename NodeType_, detail::EnableIf<detail::IsConvertibleV<NodeType_, Node> || detail::IsConvertibleV<NodeType_, Node::ValueType>>>
     Builder::ValueItemContext Builder::Value(NodeType_&& value) {
-        if (is_empty_) {
+        if (!state_.has_context) {
             root_ = std::forward<NodeType_>(value);
-            is_empty_ = false;
+            state_.has_context = true;
             return *this;
         }
 
-        if (!nodes_stack_.empty() && nodes_stack_.back()->IsMap() && has_key_) {
-            nodes_stack_.back()->AsMap().emplace(key_, std::forward<NodeType_>(value));
-            has_key_ = false;
+        if (!nodes_stack_.empty() && nodes_stack_.back()->IsMap() && state_.has_key) {
+            nodes_stack_.back()->AsMap().emplace(state_.key, std::forward<NodeType_>(value));
+            state_.has_key = false;
             return *this;
         }
 
@@ -171,7 +183,7 @@ namespace json /* Builder template implementation */ {
         } else if (auto* ptr = nodes_stack_.back()->GetValuePtr<Array>(); ptr != nullptr) {
             nodes_stack_.emplace_back(&ptr->back());
         } else if (auto* ptr = nodes_stack_.back()->GetValuePtr<Dict>(); ptr != nullptr) {
-            nodes_stack_.emplace_back(&ptr->at(key_));
+            nodes_stack_.emplace_back(&ptr->at(state_.key));
         }
     }
 

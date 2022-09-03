@@ -7,16 +7,16 @@ namespace json /* Builder */ {
     using namespace std::literals;
 
     const Node& Builder::Build() const {
-        if (is_empty_ || !nodes_stack_.empty()) {
+        if (!state_.has_context || !nodes_stack_.empty()) {
             throw std::logic_error("Builder state is invalid"s);
         }
         return root_;
     }
 
     Builder::KeyItemContext Builder::Key(std::string key) {
-        if (!nodes_stack_.empty() && nodes_stack_.back()->IsMap() && !has_key_) {
-            has_key_ = true;
-            key_ = std::move(key);
+        if (!nodes_stack_.empty() && nodes_stack_.back()->IsMap() && !state_.has_key) {
+            state_.has_key = true;
+            state_.key = std::move(key);
             return *this;
         }
 
@@ -30,7 +30,7 @@ namespace json /* Builder */ {
     }
 
     Builder::ItemContext Builder::EndDict() {
-        if (!nodes_stack_.empty() && nodes_stack_.back()->IsMap() && !has_key_) {
+        if (!nodes_stack_.empty() && nodes_stack_.back()->IsMap() && !state_.has_key) {
             nodes_stack_.pop_back();
             return *this;
         }
@@ -65,10 +65,8 @@ namespace json /* Builder */ {
     }
 
     void Builder::ResetState_(bool clear_root) {
-        is_empty_ = true;
+        state_.Reset();
         nodes_stack_.clear();
-        has_key_ = false;
-        key_.clear();
         if (clear_root) {
             root_ = Node();
         }

@@ -26,7 +26,6 @@
  */
 
 int main() {
-    
     using namespace transport_catalogue;
     using namespace transport_catalogue::tests;
     using namespace svg::tests;
@@ -37,6 +36,9 @@ int main() {
 
     JsonTester json_tester;
     json_tester.TestJsonlib();
+
+    JsonBuilderTester json_builder_tester;
+    json_builder_tester.RunTests();
 
     JsonReaderTester json_reader_tester;
     json_reader_tester.RunTests();
@@ -50,32 +52,29 @@ int main() {
     RequestHandlerTester request_handler_tester;
     request_handler_tester.RunTests();
 
-    JsonBuilderTester json_builder_tester;
-    json_builder_tester.RunTests();
+    /*
+        using namespace transport_catalogue;
+        using namespace transport_catalogue::io;
 
-/*
-    using namespace transport_catalogue;
-    using namespace transport_catalogue::io;
+        TransportCatalogue catalog;
+        JsonReader json_reader(std::cin);
+        JsonResponseSender stat_sender(std::cout);
 
-    TransportCatalogue catalog;
-    JsonReader json_reader(std::cin);
-    JsonResponseSender stat_sender(std::cout);
+        maps::MapRenderer renderer;
 
-    maps::MapRenderer renderer;
+        const auto request_handler_ptr = std::make_shared<RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender,
+       renderer); json_reader.AddObserver(request_handler_ptr);
 
-    const auto request_handler_ptr = std::make_shared<RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer);
-    json_reader.AddObserver(request_handler_ptr);
+        json_reader.ReadDocument();
 
-    json_reader.ReadDocument();
+        std::vector<svg::Document*> layer_ptrs = request_handler_ptr->RenderMap();
 
-    std::vector<svg::Document*> layer_ptrs = request_handler_ptr->RenderMap();
+        svg::Document svg_map;
+        std::for_each(std::make_move_iterator(layer_ptrs.begin()), std::make_move_iterator(layer_ptrs.end()), [&svg_map](svg::Document*&& layer) {
+            svg_map.MoveObjectsFrom(std::move(*layer));
+        });
 
-    svg::Document svg_map;
-    std::for_each(std::make_move_iterator(layer_ptrs.begin()), std::make_move_iterator(layer_ptrs.end()), [&svg_map](svg::Document*&& layer) {
-        svg_map.MoveObjectsFrom(std::move(*layer));
-    });
-    
-    svg_map.Render(std::cout);
-*/
+        svg_map.Render(std::cout);
+    */
     return 0;
 }
