@@ -130,7 +130,10 @@ namespace json /* Builder::Context */ {
         using ContextBase::StartDict;
 
     public:
-        KeyValueItemContext Value(Node value);
+        template <
+            typename NodeType_,
+            detail::EnableIf<detail::IsConvertibleV<NodeType_, Node> || detail::IsConvertibleV<NodeType_, Node::ValueType>> = true>
+        KeyValueItemContext Value(NodeType_&& value);
     };
 
     class Builder::DictItemContext : public ContextBase {
@@ -150,7 +153,10 @@ namespace json /* Builder::Context */ {
         using ContextBase::StartDict;
 
     public:
-        ArrayItemContext Value(Node value);
+        template <
+            typename NodeType_,
+            detail::EnableIf<detail::IsConvertibleV<NodeType_, Node> || detail::IsConvertibleV<NodeType_, Node::ValueType>> = true>
+        ArrayItemContext Value(NodeType_&& value);
     };
 }
 
@@ -163,15 +169,13 @@ namespace json /* Builder template implementation */ {
             state_.has_context = true;
             return *this;
         }
-
-        if (!nodes_stack_.empty() && nodes_stack_.back()->IsMap() && state_.has_key) {
-            nodes_stack_.back()->AsMap().emplace(state_.key, std::forward<NodeType_>(value));
+        if (auto * map_ptr = !nodes_stack_.empty() ?nodes_stack_.back()->GetValuePtr<Dict>() : nullptr; map_ptr != nullptr) {
+            map_ptr->emplace(state_.key, std::forward<NodeType_>(value));
             state_.has_key = false;
             return *this;
         }
-
-        if (!nodes_stack_.empty() && nodes_stack_.back()->IsArray()) {
-            nodes_stack_.back()->AsArray().emplace_back(std::forward<NodeType_>(value));
+        if (auto* array_ptr = !nodes_stack_.empty() ? nodes_stack_.back()->GetValuePtr<Array>() : nullptr; array_ptr != nullptr) {
+            array_ptr->emplace_back(std::forward<NodeType_>(value));
             return *this;
         }
 
@@ -193,10 +197,10 @@ namespace json /* Builder template implementation */ {
     void Builder::PutStack() {
         if (nodes_stack_.empty()) {
             nodes_stack_.emplace_back(&root_);
-        } else if (auto* ptr = nodes_stack_.back()->GetValuePtr<Array>(); ptr != nullptr) {
-            nodes_stack_.emplace_back(&ptr->back());
-        } else if (auto* ptr = nodes_stack_.back()->GetValuePtr<Dict>(); ptr != nullptr) {
-            nodes_stack_.emplace_back(&ptr->at(state_.key));
+        } else if (auto* map_ptr = nodes_stack_.back()->GetValuePtr<Array>(); map_ptr != nullptr) {
+            nodes_stack_.emplace_back(&map_ptr->back());
+        } else if (auto* array_ptr = nodes_stack_.back()->GetValuePtr<Dict>(); array_ptr != nullptr) {
+            nodes_stack_.emplace_back(&array_ptr->at(state_.key));
         }
     }
 
@@ -207,5 +211,17 @@ namespace json /* Builder::ContextBase template implementation */ {
     template <typename KeyType_, detail::EnableIf<detail::IsConvertibleV<KeyType_, std::string>>>
     Builder::KeyItemContext Builder::ContextBase::Key(KeyType_&& key) {
         return builder_.Key(std::forward<KeyType_>(key));
+    }
+
+    template <typename NodeType_, detail::EnableIf<detail::IsConvertibleV<NodeType_, Node> || detail::IsConvertibleV<NodeType_, Node::ValueType>>>
+    Builder::KeyValueItemContext Builder::KeyItemContext::Value(NodeType_&& value) {
+        builder_.Value(std::forward<NodeType_>(value));
+        return builder_;
+    }
+
+    template <typename NodeType_, detail::EnableIf<detail::IsConvertibleV<NodeType_, Node> || detail::IsConvertibleV<NodeType_, Node::ValueType>>>
+    Builder::ArrayItemContext Builder::ArrayItemContext::Value(NodeType_&& value) {
+        builder_.Value(std::forward<NodeType_>(value));
+        return builder_;
     }
 }

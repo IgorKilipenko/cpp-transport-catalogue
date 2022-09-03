@@ -63,7 +63,7 @@ namespace json /* Builder */ {
     }
 }
 
-namespace json /* Builder::ContextBase implementation */ {
+namespace json /* Builder::Context implementation */ {
 
     Builder::DictItemContext Builder::ContextBase::StartDict() {
         return builder_.StartDict();
@@ -91,19 +91,6 @@ namespace json /* Builder::ContextBase implementation */ {
 
     const Builder& Builder::ContextBase::GetBuilder() const {
         return builder_;
-    }
-}
-
-namespace json /* Builder::ItemsContext */ {
-
-    Builder::KeyValueItemContext Builder::KeyItemContext::Value(Node value) {
-        builder_.Value(std::move(value));
-        return KeyValueItemContext{builder_};
-    }
-
-    Builder::ArrayItemContext Builder::ArrayItemContext::Value(Node value) {
-        builder_.Value(std::move(value));
-        return ArrayItemContext{builder_};
     }
 
     Builder::ValueItemContext Builder::ItemContext::Value(Node value) {
