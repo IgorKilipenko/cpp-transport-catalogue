@@ -12,10 +12,6 @@
 
 namespace transport_catalogue::geo {
 
-    [[maybe_unused]] static constexpr double PI() {
-        return std::atan(1) * 4.;
-    }
-
     static const double EARTH_RADIUS = 6371000.;
     static constexpr const double THRESHOLD = 1e-6;
 
