@@ -520,7 +520,7 @@ namespace json /* Node implementation */ {
         return !(*this == rhs);
     }
 
-    Node Node::LoadNode(std::istream& stream, const std::function<void(const Node&, const void*)>* on_node_loaded) {
+    Node Node::LoadNode(std::istream& stream, const OnNodeItemParsedCallback* on_node_loaded) {
         Parser parser(stream);
 
         // For DEBUG ONLY
