@@ -127,12 +127,7 @@ namespace json /* Node */ {
     public:
         using NodeValueType::variant;
         using ValueType = NodeValueType;
-
-    public:
-        Node(const Node& other) = default;
-        Node& operator=(const Node& other) = default;
-        Node(Node&& other) = default;
-        Node& operator=(Node&& other) = default;
+        static constexpr const double EQUALITY_TOLERANCE = 1e-6;
 
     public:
         bool IsNull() const;
@@ -201,7 +196,7 @@ namespace json /* Node */ {
 
         bool operator!=(const Node& rhs) const;
 
-        bool EqualsWithTolerance(const Node& rhs, double tolerance = 1e-6) const {
+        bool EqualsWithTolerance(const Node& rhs, double tolerance = EQUALITY_TOLERANCE) const {
             return *this == rhs || (this->IsDouble() && std::abs(AsDouble() - rhs.AsDouble()) <= tolerance);
         }
 
