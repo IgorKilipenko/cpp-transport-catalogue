@@ -13,16 +13,6 @@ namespace json /* Builder */ {
         return root_;
     }
 
-    Builder::KeyItemContext Builder::Key(std::string key) {
-        if (!nodes_stack_.empty() && nodes_stack_.back()->IsMap() && !state_.has_key) {
-            state_.has_key = true;
-            state_.key = std::move(key);
-            return *this;
-        }
-
-        throw std::logic_error("Build dictionary error");
-    }
-
     Builder::DictItemContext Builder::StartDict() {
         Value(Dict{});
         PutStack<Dict>();
@@ -73,11 +63,7 @@ namespace json /* Builder */ {
     }
 }
 
-namespace json /* Builder::ContextBase */ {
-
-    Builder::KeyItemContext Builder::ContextBase::Key(std::string key) {
-        return builder_.Key(std::move(key));
-    }
+namespace json /* Builder::ContextBase implementation */ {
 
     Builder::DictItemContext Builder::ContextBase::StartDict() {
         return builder_.StartDict();

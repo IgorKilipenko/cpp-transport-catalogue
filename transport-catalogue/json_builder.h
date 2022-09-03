@@ -48,7 +48,8 @@ namespace json /* Builder */ {
         ItemContext GetContext();
 
     protected:
-        KeyItemContext Key(std::string key);
+        template <typename KeyType_, detail::EnableIf<detail::IsConvertibleV<KeyType_, std::string>> = true>
+        KeyItemContext Key(KeyType_&& key);
         ItemContext EndDict();
         ItemContext EndArray();
         const Node& Build() const;
@@ -74,7 +75,8 @@ namespace json /* Builder::Context */ {
         const Builder& GetBuilder() const;
 
     protected:
-        KeyItemContext Key(std::string key);
+        template <typename KeyType_, detail::EnableIf<detail::IsConvertibleV<KeyType_, std::string>> = true>
+        KeyItemContext Key(KeyType_&& key);
         DictItemContext StartDict();
         ItemContext EndDict();
         ArrayItemContext StartArray();
@@ -176,6 +178,17 @@ namespace json /* Builder template implementation */ {
         throw std::logic_error("Build value error");
     }
 
+    template <typename KeyType_, detail::EnableIf<detail::IsConvertibleV<KeyType_, std::string>>>
+    Builder::KeyItemContext Builder::Key(KeyType_&& key) {
+        if (!nodes_stack_.empty() && nodes_stack_.back()->IsMap() && !state_.has_key) {
+            state_.has_key = true;
+            state_.key = std::forward<KeyType_>(key);
+            return *this;
+        }
+
+        throw std::logic_error("Build dictionary error");
+    }
+
     template <typename NodeType_, detail::EnableIf<detail::IsSameV<NodeType_, Dict> || detail::IsSameV<NodeType_, Array>>>
     void Builder::PutStack() {
         if (nodes_stack_.empty()) {
@@ -187,4 +200,12 @@ namespace json /* Builder template implementation */ {
         }
     }
 
+}
+
+namespace json /* Builder::ContextBase template implementation */ {
+
+    template <typename KeyType_, detail::EnableIf<detail::IsConvertibleV<KeyType_, std::string>>>
+    Builder::KeyItemContext Builder::ContextBase::Key(KeyType_&& key) {
+        return builder_.Key(std::forward<KeyType_>(key));
+    }
 }
