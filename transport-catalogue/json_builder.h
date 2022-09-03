@@ -24,11 +24,13 @@ namespace json /* Builder */ {
             bool has_key = false;
             std::string key;
             bool has_context = false;
+            Node* current_value_ptr = nullptr;
 
             void Reset() {
                 has_key = false;
                 key.clear();
                 has_context = false;
+                current_value_ptr = nullptr;
             }
         };
 
@@ -169,8 +171,8 @@ namespace json /* Builder template implementation */ {
             state_.has_context = true;
             return *this;
         }
-        if (auto * map_ptr = !nodes_stack_.empty() ?nodes_stack_.back()->GetValuePtr<Dict>() : nullptr; map_ptr != nullptr) {
-            map_ptr->emplace(state_.key, std::forward<NodeType_>(value));
+        if (auto* map_ptr = !nodes_stack_.empty() ? nodes_stack_.back()->GetValuePtr<Dict>() : nullptr; map_ptr != nullptr) {
+            state_.current_value_ptr = &(map_ptr->emplace(state_.key, std::forward<NodeType_>(value)).first->second);
             state_.has_key = false;
             return *this;
         }
@@ -197,10 +199,10 @@ namespace json /* Builder template implementation */ {
     void Builder::PutStack() {
         if (nodes_stack_.empty()) {
             nodes_stack_.emplace_back(&root_);
-        } else if (auto* map_ptr = nodes_stack_.back()->GetValuePtr<Array>(); map_ptr != nullptr) {
-            nodes_stack_.emplace_back(&map_ptr->back());
-        } else if (auto* array_ptr = nodes_stack_.back()->GetValuePtr<Dict>(); array_ptr != nullptr) {
-            nodes_stack_.emplace_back(&array_ptr->at(state_.key));
+        } else if (auto* array_ptr = nodes_stack_.back()->GetValuePtr<Array>(); array_ptr != nullptr) {
+            nodes_stack_.emplace_back(&array_ptr->back());
+        } else if ((assert(state_.current_value_ptr != nullptr), nodes_stack_.back()->IsMap())) {
+            nodes_stack_.emplace_back(state_.current_value_ptr);
         }
     }
 
