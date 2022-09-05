@@ -19,7 +19,6 @@
 #include <variant>
 #include <vector>
 
-#include "detail/type_traits.h"
 #include "geo.h"
 
 namespace transport_catalogue::exceptions {
