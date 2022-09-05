@@ -96,7 +96,7 @@ namespace transport_catalogue::detail::converters {
         values.erase(last, values.end());
     }
 
-    [[maybe_unused]]static void MakeUnique(std::vector<std::string_view>& values) {
+    [[maybe_unused]] static void MakeUnique(std::vector<std::string_view>& values) {
         MakeUnique(std::execution::seq, values);
     }
 }
@@ -237,24 +237,22 @@ namespace transport_catalogue::data /* Db scheme abstraction */ {
 namespace transport_catalogue::data /* Db scheme */ {
     class DatabaseScheme {
     public: /* Aliases */
-        using StopsTableBase = std::deque<Stop>;
-        using BusRoutesTableBase = std::deque<Bus>;
         using DistanceBetweenStopsTableBase = std::unordered_map<std::pair<const Stop*, const Stop*>, DistanceBetweenStopsRecord, Hasher>;
         using NameToStopViewBase = std::unordered_map<std::string_view, const data::Stop*>;
         using NameToBusRoutesViewBase = std::unordered_map<std::string_view, const data::Bus*>;
         using StopToBusesViewBase = std::unordered_map<StopRecord, BusRecordSet>;
 
     public:
-        class StopsTable : public DataTable, public StopsTableBase {
+        class StopsTable : public DataTable, public std::deque<Stop> {
         public:
-            using StopsTableBase::deque;
-            StopsTable() : DataTable("StopsTable"), StopsTableBase() {}
+            using std::deque<Stop>::deque;
+            StopsTable() : DataTable("StopsTable"), std::deque<Stop>() {}
         };
 
-        class BusRoutesTable : public DataTable, public BusRoutesTableBase {
+        class BusRoutesTable : public DataTable, public std::deque<Bus> {
         public:
-            using BusRoutesTableBase::deque;
-            BusRoutesTable() : DataTable("BusRoutesTable"), BusRoutesTableBase() {}
+            using std::deque<Bus>::deque;
+            BusRoutesTable() : DataTable("BusRoutesTable"), std::deque<Bus>() {}
         };
 
         class DistanceBetweenStopsTable : public DataTable, public DistanceBetweenStopsTableBase {
