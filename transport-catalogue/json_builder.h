@@ -172,7 +172,7 @@ namespace json /* Builder template implementation */ {
             return *this;
         }
         if (auto* map_ptr = !nodes_stack_.empty() ? nodes_stack_.back()->GetValuePtr<Dict>() : nullptr; map_ptr != nullptr) {
-            state_.current_value_ptr = &(map_ptr->emplace(state_.key, std::forward<NodeType_>(value)).first->second);
+            state_.current_value_ptr = &(map_ptr->emplace(std::move(state_.key), std::forward<NodeType_>(value)).first->second);
             state_.has_key = false;
             return *this;
         }
