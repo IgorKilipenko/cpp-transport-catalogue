@@ -23,8 +23,6 @@
 #include <variant>
 #include <vector>
 
-//! Здесь пользовательские псевдонимы для шаблонных ограничений я оставил,
-//! т.к. по "легенде" - json/svg - это отдельные самостоятельные библиотеки
 namespace json::detail /* template helpers */ {
     template <bool Condition>
     using EnableIf = typename std::enable_if_t<Condition, bool>;
@@ -132,8 +130,6 @@ namespace json /* Node */ {
         using OnNodeItemParsedCallback = std::function<void(const Node&, const void*)>;
 
     public:
-        //! Я оставил константу EQUALITY_TOLERANCE в предела класса Node чтобы
-        //! не создать зависимость от модуля domain в библиотеке json
         static constexpr const double EQUALITY_TOLERANCE = 1e-6;
 
         bool IsNull() const;
@@ -445,7 +441,6 @@ namespace json /* Node class template implementation */ {
         }
     }
 
-    //! Нужно ли вносить изменения в этот метод я так и не понял
     template <typename T, detail::EnableIf<detail::IsConvertible<T, NodeValueType>::value || detail::IsSame<T, void>::value>>
     const auto& Node::GetValue() const {
         if constexpr (detail::IsConvertible<T, NodeValueType>::value == true) {

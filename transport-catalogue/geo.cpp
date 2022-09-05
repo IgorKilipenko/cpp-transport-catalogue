@@ -1,5 +1,4 @@
 #include "geo.h"
-#include <cmath>
 
 namespace transport_catalogue::geo {
     double ComputeDistance(Coordinates from, Coordinates to) {

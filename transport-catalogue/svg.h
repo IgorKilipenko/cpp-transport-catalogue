@@ -17,8 +17,6 @@
 #include <variant>
 #include <vector>
 
-//! Здесь пользовательские псевдонимы для шаблонных ограничений я оставил, 
-//! т.к. по "легенде" - json/svg - это отдельные самостоятельные библиотеки
 namespace svg::detail {
     template <typename FromType, typename ToType>
     using EnableIfConvertible = std::enable_if_t<std::is_convertible_v<std::decay_t<FromType>, ToType>, bool>;

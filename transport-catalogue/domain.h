@@ -19,6 +19,7 @@
 #include <variant>
 #include <vector>
 
+#include "detail/type_traits.h"
 #include "geo.h"
 
 namespace transport_catalogue::exceptions {
@@ -95,7 +96,7 @@ namespace transport_catalogue::detail::converters {
         values.erase(last, values.end());
     }
 
-    [[maybe_unused]]static void MakeUnique(std::vector<std::string_view>& values) {
+    [[maybe_unused]] static void MakeUnique(std::vector<std::string_view>& values) {
         MakeUnique(std::execution::seq, values);
     }
 }
@@ -206,7 +207,6 @@ namespace transport_catalogue::data /* Db objects (ORM) */ {
 }
 
 namespace transport_catalogue::data /* Db scheme abstraction */ {
-    
     class DataTable {
     public:
         virtual const std::string_view GetName() const {
@@ -243,10 +243,6 @@ namespace transport_catalogue::data /* Db scheme */ {
         using StopToBusesViewBase = std::unordered_map<StopRecord, BusRecordSet>;
 
     public:
-        //! Базовый класс DataTable я добавил в схему для имитации работы ORM + подчеркнуть зависимость
-        //! и роль таблиц (представлений) в структуре БД
-        //! Я хочу в перспективе для хранения данных использовать связку ORM + Sqlite
-        //! а в такой связке обращения к таблицам и элементам таблиц будут вида - auto bus = Table<Bus>.try_get(id);
         class StopsTable : public DataTable, public std::deque<Stop> {
         public:
             using std::deque<Stop>::deque;
