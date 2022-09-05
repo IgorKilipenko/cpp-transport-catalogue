@@ -2,6 +2,8 @@
 
 #include <type_traits>
 #include <variant>
+#include "json.h"
+#include "json_builder.h"
 
 namespace transport_catalogue::io /* JsonReader implementation */ {
 
@@ -213,35 +215,37 @@ namespace transport_catalogue::io /* JsonResponseSender implementation */ {
 
     json::Dict JsonResponseSender::BuildStatMessage(StatResponse&& response) const {
         static const json::Dict::ItemType ERROR_MESSAGE_ITEM{StatFields::ERROR_MESSAGE, "not found"};
-        json::Dict dict;
-        dict[StatFields::REQUEST_ID] = response.GetRequestId();
+        json::Builder builder;
+        auto dict_context = builder.StartDict().Key(StatFields::REQUEST_ID).Value(response.GetRequestId());
         if (response.IsBusResponse()) {
             auto stat = std::move(response.GetBusInfo());
             if (!stat.has_value()) {
-                dict.insert(ERROR_MESSAGE_ITEM);
+                dict_context.Key(ERROR_MESSAGE_ITEM.first).Value(ERROR_MESSAGE_ITEM.second);
             } else {
-                dict[StatFields::CURVATURE] = stat->route_curvature;
-                dict[StatFields::ROUTE_LENGTH] = static_cast<int>(stat->route_length);
-                dict[StatFields::STOP_COUNT] = static_cast<int>(stat->total_stops);
-                dict[StatFields::UNIQUE_STOP_COUNT] = static_cast<int>(stat->unique_stops);
+                dict_context.Key(StatFields::CURVATURE).Value(stat->route_curvature)
+                .Key(StatFields::ROUTE_LENGTH).Value(static_cast<int>(stat->route_length))
+                .Key(StatFields::STOP_COUNT).Value(static_cast<int>(stat->total_stops))
+                .Key(StatFields::UNIQUE_STOP_COUNT).Value(static_cast<int>(stat->unique_stops));
             }
         } else if (response.IsStopResponse()) {
             auto stat = std::move(response.GetStopInfo());
             if (!stat.has_value()) {
-                dict.insert(ERROR_MESSAGE_ITEM);
+                dict_context.Key(ERROR_MESSAGE_ITEM.first).Value(ERROR_MESSAGE_ITEM.second);
             } else {
-                dict[StatFields::BUSES] = json::Array(std::make_move_iterator(stat->buses.begin()), std::make_move_iterator(stat->buses.end()));
+                dict_context.Key(StatFields::BUSES).Value(json::Array(std::make_move_iterator(stat->buses.begin()), std::make_move_iterator(stat->buses.end())));
             }
         } else if (response.IsMapResponse()) {
             auto map = std::move(response.GetMapData());
             if (!map.has_value()) {
-                dict.insert(ERROR_MESSAGE_ITEM);
+                 dict_context.Key(ERROR_MESSAGE_ITEM.first).Value(ERROR_MESSAGE_ITEM.second);
             } else {
-                dict[StatFields::MAP] = map.value();
+                dict_context.Key(StatFields::MAP).Value(map.value());
             }
         } else {
             throw exceptions::ReadingException("Invalid response (Is not stat response). Response does not contain stat info");
         }
+        dict_context.EndDict();
+        json::Dict dict = std::move(builder.Extract().AsMap());
         return dict;
     }
 
