@@ -99,12 +99,11 @@ namespace ebooks {
 
         User() = default;
         explicit User(int id) : id(id) {}
-        explicit User(std::string&& str) : id(ParseId_(std::move(str))) {}
+        explicit User(std::string&& str) : id(ParseId(std::move(str))) {}
 
-    private:
-        static int ParseId_(std::string&& str) {
+        static int ParseId(std::string&& str) {
             assert(!str.empty());
-            auto id = detail::string_processing::TryPaseInt(std::move(str));
+            auto id = TryPaseInt(std::move(str));
             if (!id.has_value()) {
                 throw std::invalid_argument("User id parsing error");
             }
@@ -112,7 +111,7 @@ namespace ebooks {
         }
     };
 
-    struct Hasher {
+    /*struct Hasher {
         uint8_t operator()(const User& user) const {
             return id_hasher_(user.id);
         }
@@ -123,7 +122,7 @@ namespace ebooks {
     private:
         std::hash<int> id_hasher_{};
         std::hash<const void*> ptr_hasher_{};
-    };
+    };*/
 
     class EbookManager {
     public:
@@ -135,9 +134,28 @@ namespace ebooks {
         struct ReadRequest {
             User user;
             size_t page = 0;
+
+            ReadRequest() = default;
+            ReadRequest(User&& user, size_t page) : user{std::move(user)}, page{page} {}
+            ReadRequest(std::string&& user_str, std::string&& page_str)
+                : user(User(std::move(user_str))), page(ParsePageNumber(std::move(page_str))) {}
+
+            static size_t ParsePageNumber(std::string&& str) {
+                auto page = TryPaseNumeric<size_t, std::string&&>(std::move(str), [](std::string&& str) {
+                    return std::stoul(std::move(str));
+                });
+                if (!page.has_value()) {
+                    throw std::invalid_argument("Page number parsing error");
+                }
+                return page.value();
+            }
         };
         struct CheerRequest {
             User user;
+
+            CheerRequest() = default;
+            explicit CheerRequest(User&& user) : user{std::move(user)} {}
+            explicit CheerRequest(std::string&& str) : user(User(std::move(str))) {}
         };
 
     public:
@@ -149,7 +167,7 @@ namespace ebooks {
             size_t query_count = std::stoull(query_count_str);
 
             std::vector<std::string> request = ReadLines_(query_count);
-            std::for_each(std::make_move_iterator(request.begin()), std::make_move_iterator(request.end()), [](std::string&& req) {
+            std::for_each(std::make_move_iterator(request.begin()), std::make_move_iterator(request.end()), [this](std::string&& req) {
                 std::cerr << req << std::endl;
                 auto vals_str = detail::string_processing::SplitIntoWords(req);
                 assert(!vals_str.empty());
@@ -158,48 +176,64 @@ namespace ebooks {
                 std::string_view type = std::move(vals_str.front());
                 if (type == RequestTypes::READ) {
                     assert(vals_str.size() == 3);
-                    User(static_cast<std::string>(std::move(vals_str[1])));
+                    User user(static_cast<std::string>(std::move(vals_str[1])));
+                    size_t page = ReadRequest::ParsePageNumber(static_cast<std::string>(std::move(vals_str.back())));
+                    ExecuteRequest(ReadRequest(std::move(user), page));
+                    return;
 
                 } else if (type == RequestTypes::CHEER) {
                     assert(vals_str.size() == 2);
+                    User user(static_cast<std::string>(std::move(vals_str[1])));
+                    ExecuteRequest(CheerRequest(std::move(user)));
+                    return;
                 }
 
-                //! throw std::runtime_error("Invalid request type");
+                throw std::runtime_error("Invalid request type");
             });
         }
 
         void ExecuteRequest(ReadRequest&& request) {
-            const User user = std::move(request.user);
-            users_.emplace(std::move(user));
-            /*auto item_it = users_.emplace(static_cast<const User>(std::move(request.user))).first;
-            const User* db_user = &(*item_it);
-            book_states_[db_user] += request.page;*/
+            assert(!users_.empty() /* except first user - is admin*/ && users_.size() == book_states_.size());
+            assert(request.user.id == users_.size());
+
+            users_.emplace_back(std::move(request.user));
+            book_states_.emplace_back(std::move(request.page));
         }
+
         void ExecuteRequest(CheerRequest&& request) {
-            User user = std::move(request.user);
-            auto ptr = users_.find(user);
-            assert(ptr != users_.end());
+            assert(request.user.id > 0);    // except first user - is admin
 
-            const User* db_user =&(*ptr);
-            assert(book_states_.count(db_user));
-            size_t page = book_states_[db_user];
+            User db_user = users_[request.user.id];
+            size_t page = book_states_[db_user.id];
 
-            size_t m = 0;
-            std::for_each(book_states_.begin(), book_states_.end(), [&m, &db_user, page](const auto& item) {
-                if (&item.first == &db_user || item.second >= page) {
-                    return;
-                }
-                ++m;
-            });
+            if (page == 0) {
+                std::cerr << 0. << std::endl;
+                return;
+            }
 
-            double part_res = page == 0ul ? 0. : static_cast<double>(users_.size()) / std::max(1ul, m);
+            if (users_.size() == 2) {
+                std::cerr << 1. << std::endl;
+                return;
+            }
+
+            size_t wrost_users_count = 0;
+            int other_user_id = 0;
+            std::for_each(
+                std::next(book_states_.begin()), book_states_.end(), [&wrost_users_count, &other_user_id, page, db_user](size_t other_user_page) {
+                    if (other_user_id++ == db_user.id || other_user_page >= page) {
+                        return;
+                    }
+                    ++wrost_users_count;
+                });
+
+            double part_res = wrost_users_count / static_cast<double>(std::max(users_.size() - 1, 1ul));
             std::cerr << part_res << std::endl;
         }
 
     private:
         std::istream& in_stream_;
-        std::unordered_set<User, Hasher> users_;
-        std::unordered_map<const User*, size_t, Hasher> book_states_;
+        std::vector<User> users_ = std::vector<User>(1, User{});         //! First user - db admin
+        std::vector<size_t> book_states_ = std::vector<size_t>(1, 0ul);  //! admin doesn't read books)
 
         std::string ReadLine_() const {
             std::string line;
