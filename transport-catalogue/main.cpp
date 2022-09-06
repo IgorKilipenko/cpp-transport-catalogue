@@ -209,11 +209,11 @@ namespace ebooks {
             auto [it, success] = users_read_table_.emplace(std::move(request.user), new_page);
             auto* stat = &pages_read_stat_[it->second];
             if (!success) {
-                stat->extract(&it->first);
+                --*stat;
                 it->second = new_page;
                 stat = &pages_read_stat_[it->second];
             }
-            stat->emplace(&it->first);
+            ++*stat;
         }
 
         void ExecuteRequest(CheerRequest&& request) {
@@ -237,14 +237,14 @@ namespace ebooks {
 
             auto stat_first_it = pages_read_stat_.find(page);
             assert(stat_first_it != pages_read_stat_.end());
-            assert(stat_first_it->second.count(&user_ptr->first));
+            assert(stat_first_it->second);
             size_t top_readers_count = 0;
             std::for_each(stat_first_it, pages_read_stat_.end(), [&top_readers_count](const auto& stat_item) {
-                top_readers_count += stat_item.second.size();
+                top_readers_count += stat_item.second;
             });
             size_t wrost_users = users_read_table_.size() - top_readers_count;
-            
-            result = static_cast<double>(wrost_users) / std::max(users_read_table_.size()-1, 1ul);
+
+            result = wrost_users / static_cast<double>(users_read_table_.size() - 1ul);
             send(result);
         }
 
@@ -252,7 +252,7 @@ namespace ebooks {
         std::istream& in_stream_;
         std::ostream& out_stream_;
         std::unordered_map<User, size_t, Hasher, User::ByIdCompare> users_read_table_;
-        std::map<size_t, std::unordered_set<const User*, Hasher>> pages_read_stat_;
+        std::map<size_t, size_t> pages_read_stat_;
 
         std::string ReadLine_() const {
             std::string line;
