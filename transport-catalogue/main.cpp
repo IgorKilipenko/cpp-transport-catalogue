@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <functional>
 #include <iostream>
 #include <istream>
@@ -204,13 +205,13 @@ namespace ebooks {
         void ExecuteRequest(ReadRequest&& request) {
             size_t new_page = std::move(request.page);
             auto [it, success] = users_read_table_.emplace(std::move(request.user), new_page);
-            auto& stat = pages_read_stat_[it->second];
+            auto* stat = &pages_read_stat_[it->second];
             if (!success) {
-                stat.extract(&it->first);
+                stat->extract(&it->first);
                 it->second = new_page;
-                stat = pages_read_stat_[it->second];
+                stat = &pages_read_stat_[it->second];
             }
-            stat.emplace(&it->first);
+            stat->emplace(&it->first);
         }
 
         void ExecuteRequest(CheerRequest&& request) {
@@ -232,16 +233,15 @@ namespace ebooks {
                 return;
             }
 
-            size_t wrost_users_count = 0;
-            std::for_each(
-                std::next(users_read_table_.begin()), users_read_table_.end(), [&wrost_users_count, page, user_ptr](const auto& other_user) {
-                    if (user_ptr->first.id == other_user.first.id || other_user.second >= page) {
-                        return;
-                    }
-                    ++wrost_users_count;
-                });
-
-            double part_res = wrost_users_count / static_cast<double>(std::max(users_read_table_.size() - 1ul, 1ul));
+            auto stat_first_it = pages_read_stat_.find(page);
+            assert(stat_first_it != pages_read_stat_.end());
+            assert(stat_first_it->second.count(&user_ptr->first));
+            size_t top_readers_count = 0;
+            std::for_each(stat_first_it, pages_read_stat_.end(), [&top_readers_count](const auto& stat_item) {
+                top_readers_count += stat_item.second.size();
+            });
+            size_t wrost_users = users_read_table_.size() - top_readers_count;
+            double part_res = static_cast<double>(wrost_users) / std::max(users_read_table_.size()-1, 1ul);
             out_stream_ << part_res << std::endl;
         }
 
