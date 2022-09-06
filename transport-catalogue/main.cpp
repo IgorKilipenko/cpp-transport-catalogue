@@ -1,18 +1,17 @@
 #include <algorithm>
 #include <cassert>
-#include <cctype>
-#include <cstddef>
 #include <functional>
 #include <iostream>
 #include <istream>
 #include <iterator>
+#include <map>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
+#include <unordered_map>
 #include <unordered_set>
-#include <utility>
-#include <vector>
 
 namespace ebooks::detail::string_processing {
     size_t TrimStart(std::string_view& str, const char ch = ' ') {
@@ -109,10 +108,21 @@ namespace ebooks {
             }
             return id.value();
         }
+
+        struct ByIdCompare {
+        public:
+            bool operator()(const User& lhs, const User& rhs) const {
+                return id_equal_(lhs.id, rhs.id);
+            }
+
+        private:
+            std::unordered_set<int>::key_equal id_equal_;
+        };
     };
 
-    /*struct Hasher {
-        uint8_t operator()(const User& user) const {
+    struct Hasher {
+        template <typename UserType_, std::enable_if_t<std::is_same_v<std::decay_t<UserType_>, User>, bool> = true>
+        uint8_t operator()(UserType_&& user) const {
             return id_hasher_(user.id);
         }
         uint8_t operator()(const User* user) const {
@@ -122,7 +132,7 @@ namespace ebooks {
     private:
         std::hash<int> id_hasher_{};
         std::hash<const void*> ptr_hasher_{};
-    };*/
+    };
 
     class EbookManager {
     public:
@@ -159,7 +169,7 @@ namespace ebooks {
         };
 
     public:
-        EbookManager(std::istream& istream) : in_stream_{istream} {}
+        EbookManager(std::istream& istream, std::ostream& ostream) : in_stream_{istream}, out_stream_{ostream} {}
         void ProcessRequests() {
             std::string query_count_str = ReadLine_();
             assert(!query_count_str.empty());
@@ -168,7 +178,6 @@ namespace ebooks {
 
             std::vector<std::string> request = ReadLines_(query_count);
             std::for_each(std::make_move_iterator(request.begin()), std::make_move_iterator(request.end()), [this](std::string&& req) {
-                std::cerr << req << std::endl;
                 auto vals_str = detail::string_processing::SplitIntoWords(req);
                 assert(!vals_str.empty());
                 assert(vals_str.front() == RequestTypes::READ || vals_str.front() == RequestTypes::CHEER);
@@ -193,47 +202,54 @@ namespace ebooks {
         }
 
         void ExecuteRequest(ReadRequest&& request) {
-            assert(!users_.empty() /* except first user - is admin*/ && users_.size() == book_states_.size());
-            assert(request.user.id == users_.size());
-
-            users_.emplace_back(std::move(request.user));
-            book_states_.emplace_back(std::move(request.page));
+            size_t new_page = std::move(request.page);
+            auto [it, success] = users_read_table_.emplace(std::move(request.user), new_page);
+            auto& stat = pages_read_stat_[it->second];
+            if (!success) {
+                stat.extract(&it->first);
+                it->second = new_page;
+                stat = pages_read_stat_[it->second];
+            }
+            stat.emplace(&it->first);
         }
 
         void ExecuteRequest(CheerRequest&& request) {
-            assert(request.user.id > 0);    // except first user - is admin
-
-            User db_user = users_[request.user.id];
-            size_t page = book_states_[db_user.id];
-
-            if (page == 0) {
-                std::cerr << 0. << std::endl;
+            auto user_ptr = users_read_table_.find(request.user);
+            if (user_ptr == users_read_table_.end()) {
+                out_stream_ << 0. << std::endl;
                 return;
             }
 
-            if (users_.size() == 2) {
-                std::cerr << 1. << std::endl;
+            size_t page = user_ptr->second;
+
+            if (page == 0) {
+                out_stream_ << 0. << std::endl;
+                return;
+            }
+
+            if (users_read_table_.size() == 1) {
+                out_stream_ << 1. << std::endl;
                 return;
             }
 
             size_t wrost_users_count = 0;
-            int other_user_id = 0;
             std::for_each(
-                std::next(book_states_.begin()), book_states_.end(), [&wrost_users_count, &other_user_id, page, db_user](size_t other_user_page) {
-                    if (other_user_id++ == db_user.id || other_user_page >= page) {
+                std::next(users_read_table_.begin()), users_read_table_.end(), [&wrost_users_count, page, user_ptr](const auto& other_user) {
+                    if (user_ptr->first.id == other_user.first.id || other_user.second >= page) {
                         return;
                     }
                     ++wrost_users_count;
                 });
 
-            double part_res = wrost_users_count / static_cast<double>(std::max(users_.size() - 1, 1ul));
-            std::cerr << part_res << std::endl;
+            double part_res = wrost_users_count / static_cast<double>(std::max(users_read_table_.size() - 1ul, 1ul));
+            out_stream_ << part_res << std::endl;
         }
 
     private:
         std::istream& in_stream_;
-        std::vector<User> users_ = std::vector<User>(1, User{});         //! First user - db admin
-        std::vector<size_t> book_states_ = std::vector<size_t>(1, 0ul);  //! admin doesn't read books)
+        std::ostream& out_stream_;
+        std::unordered_map<User, size_t, Hasher, User::ByIdCompare> users_read_table_;
+        std::map<size_t, std::unordered_set<const User*, Hasher>> pages_read_stat_;
 
         std::string ReadLine_() const {
             std::string line;
@@ -272,7 +288,7 @@ int main() {
 
     std::istringstream in{input};
 
-    EbookManager manager{in};
+    EbookManager manager{in, std::cout};
     manager.ProcessRequests();
 
     return 0;
