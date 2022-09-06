@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <functional>
 #include <iostream>
 #include <istream>
@@ -12,7 +13,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-namespace ebooks::detail::string_processing {
+namespace ebooks::detail::string_processing /* detail */ {
     size_t TrimStart(std::string_view& str, const char ch = ' ') {
         size_t idx = str.find_first_not_of(ch);
         if (idx != std::string::npos) {
@@ -89,7 +90,7 @@ namespace ebooks::detail::string_processing {
     }
 }
 
-namespace ebooks {
+namespace ebooks /* User */ {
     using namespace detail::string_processing;
 
     struct User {
@@ -124,145 +125,168 @@ namespace ebooks {
             std::hash<int> id_hasher_{};
         };
     };
+}
+
+namespace ebooks /* EbookManager */ {
 
     class EbookManager {
     public:
-        struct RequestTypes {
-            inline static std::string_view READ{"READ"};
-            inline static std::string_view CHEER{"CHEER"};
-        };
-
-        struct ReadRequest {
-            User user;
-            size_t page = 0;
-
-            ReadRequest() = default;
-            ReadRequest(User&& user, size_t page) : user{std::move(user)}, page{page} {}
-            ReadRequest(std::string&& user_str, std::string&& page_str)
-                : user(User(std::move(user_str))), page(ParsePageNumber(std::move(page_str))) {}
-
-            static size_t ParsePageNumber(std::string&& str) {
-                auto page = TryParseNumeric<size_t, std::string&&>(std::move(str), [](std::string&& str) {
-                    return std::stoul(std::move(str));
-                });
-                if (!page.has_value()) {
-                    throw std::invalid_argument("Page number parsing error");
-                }
-                return page.value();
-            }
-        };
-        struct CheerRequest {
-            User user;
-
-            CheerRequest() = default;
-            explicit CheerRequest(User&& user) : user{std::move(user)} {}
-            explicit CheerRequest(std::string&& str) : user(User(std::move(str))) {}
-        };
+        struct RequestTypes;
+        struct ReadRequest;
+        struct CheerRequest;
+        using UserTable = std::unordered_map<User, size_t, User::Hasher, User::ByIdEqual>;
 
     public:
         EbookManager(std::istream& istream, std::ostream& ostream) : in_stream_{istream}, out_stream_{ostream} {}
-        void ProcessRequests() {
-            auto query_count = TryParseNumeric<size_t, std::string&&>(ReadLine_(), [](std::string&& str) {
-                return std::stoul(std::move(str));
-            });
-            if (!query_count.has_value()) {
-                throw std::runtime_error("Request processing error. Invalid request size value");
-            }
-
-            std::vector<std::string> request = ReadLines_(query_count.value());
-            std::for_each(std::make_move_iterator(request.begin()), std::make_move_iterator(request.end()), [this](std::string&& req) {
-                auto vals_str = detail::string_processing::SplitIntoWords(req);
-                assert(!vals_str.empty());
-                assert(vals_str.front() == RequestTypes::READ || vals_str.front() == RequestTypes::CHEER);
-
-                std::string_view type = std::move(vals_str.front());
-                if (type == RequestTypes::READ) {
-                    assert(vals_str.size() == 3);
-                    User user(static_cast<std::string>(std::move(vals_str[1])));
-                    size_t page = ReadRequest::ParsePageNumber(static_cast<std::string>(std::move(vals_str.back())));
-
-                    ExecuteRequest(ReadRequest(std::move(user), page));
-
-                } else if (type == RequestTypes::CHEER) {
-                    assert(vals_str.size() == 2);
-                    User user(static_cast<std::string>(std::move(vals_str[1])));
-
-                    ExecuteRequest(CheerRequest(std::move(user)));
-
-                } else {
-                    throw std::runtime_error("Invalid request type");
-                }
-            });
-
-            out_stream_.flush();
-        }
-
-        void ExecuteRequest(ReadRequest&& request) {
-            size_t new_page = std::move(request.page);
-            auto [it, success] = users_table_.emplace(std::move(request.user), new_page);
-            auto* stat = &reading_progress_[it->second];
-            if (!success) {
-                --*stat;
-                it->second = new_page;
-                stat = &reading_progress_[it->second];
-            }
-            ++*stat;
-        }
-
-        void ExecuteRequest(CheerRequest&& request) {
-            const auto send = [this](double value) {
-                out_stream_ << value << out_stream_.widen('\n');
-            };
-
-            double result = 0.;
-            auto user_ptr = users_table_.find(request.user);
-            if (user_ptr == users_table_.end()) {
-                send(result);
-                return;
-            }
-
-            size_t page = user_ptr->second;
-            if (users_table_.size() == 1) {
-                result = 1.;
-                send(result);
-                return;
-            }
-
-            auto stat_first_it = reading_progress_.find(page);
-            assert(stat_first_it != reading_progress_.end());
-            assert(stat_first_it->second);
-
-            size_t top_readers_count = 0;
-            std::for_each(stat_first_it, reading_progress_.end(), [&top_readers_count](const auto& stat_item) {
-                top_readers_count += stat_item.second;
-            });
-            size_t wrost_users = users_table_.size() - top_readers_count;
-
-            result = wrost_users / static_cast<double>(users_table_.size() - 1ul);
-            send(result);
-        }
+        void ProcessRequests();
+        void ExecuteRequest(ReadRequest&& request);
+        void ExecuteRequest(CheerRequest&& request);
 
     private:
         std::istream& in_stream_;
         std::ostream& out_stream_;
-        std::unordered_map<User, size_t, User::Hasher, User::ByIdEqual> users_table_;
+        UserTable users_table_;
         std::map<size_t, size_t> reading_progress_;
 
-        std::string ReadLine_() const {
-            std::string line;
-            std::getline(in_stream_, line);
-            return detail::string_processing::Trim(std::move(line));
-        }
+    private: /* private methods */
+        std::string ReadLine_() const;
+        std::vector<std::string> ReadLines_(size_t count) const;
+    };
+}
 
-        std::vector<std::string> ReadLines_(size_t count) const {
-            std::vector<std::string> result{count};
-            int idx = 0;
-            for (std::string line; idx < count && std::getline(in_stream_, line); ++idx) {
-                result[idx] = detail::string_processing::Trim(std::move(line));
+namespace ebooks /* EbookManager::Requests */ {
+
+    struct EbookManager::RequestTypes {
+        inline static std::string_view READ{"READ"};
+        inline static std::string_view CHEER{"CHEER"};
+    };
+
+    struct EbookManager::ReadRequest {
+        User user;
+        size_t page = 0;
+
+        ReadRequest() = default;
+        ReadRequest(User&& user, size_t page) : user{std::move(user)}, page{page} {}
+        ReadRequest(std::string&& user_str, std::string&& page_str) : user(User(std::move(user_str))), page(ParsePageNumber(std::move(page_str))) {}
+
+        static size_t ParsePageNumber(std::string&& str) {
+            auto page = TryParseNumeric<size_t, std::string&&>(std::move(str), [](std::string&& str) {
+                return std::stoul(std::move(str));
+            });
+            if (!page.has_value()) {
+                throw std::invalid_argument("Page number parsing error");
             }
-            return result;
+            return page.value();
         }
     };
+
+    struct EbookManager::CheerRequest {
+        User user;
+
+        CheerRequest() = default;
+        explicit CheerRequest(User&& user) : user{std::move(user)} {}
+        explicit CheerRequest(std::string&& str) : user(User(std::move(str))) {}
+    };
+}
+
+namespace ebooks /* EbookManager implementation */ {
+    using namespace detail::string_processing;
+
+    void EbookManager::ProcessRequests() {
+        auto query_count = TryParseNumeric<size_t, std::string&&>(ReadLine_(), [](std::string&& str) {
+            return std::stoul(std::move(str));
+        });
+        if (!query_count.has_value()) {
+            throw std::runtime_error("Request processing error. Invalid request size value");
+        }
+
+        std::vector<std::string> request = ReadLines_(query_count.value());
+        std::for_each(std::make_move_iterator(request.begin()), std::make_move_iterator(request.end()), [this](std::string&& req) {
+            auto vals_str = detail::string_processing::SplitIntoWords(req);
+            assert(!vals_str.empty());
+            assert(vals_str.front() == RequestTypes::READ || vals_str.front() == RequestTypes::CHEER);
+
+            std::string_view type = std::move(vals_str.front());
+            if (type == RequestTypes::READ) {
+                assert(vals_str.size() == 3);
+                User user(static_cast<std::string>(std::move(vals_str[1])));
+                size_t page = ReadRequest::ParsePageNumber(static_cast<std::string>(std::move(vals_str.back())));
+
+                ExecuteRequest(ReadRequest(std::move(user), page));
+
+            } else if (type == RequestTypes::CHEER) {
+                assert(vals_str.size() == 2);
+                User user(static_cast<std::string>(std::move(vals_str[1])));
+
+                ExecuteRequest(CheerRequest(std::move(user)));
+
+            } else {
+                throw std::runtime_error("Invalid request type");
+            }
+        });
+
+        out_stream_.flush();
+    }
+
+    void EbookManager::ExecuteRequest(ReadRequest&& request) {
+        size_t new_page = std::move(request.page);
+        auto [it, success] = users_table_.emplace(std::move(request.user), new_page);
+        auto* stat = &reading_progress_[it->second];
+        if (!success) {
+            --*stat;
+            it->second = new_page;
+            stat = &reading_progress_[it->second];
+        }
+        ++*stat;
+    }
+
+    void EbookManager::ExecuteRequest(CheerRequest&& request) {
+        const auto send = [this](double value) {
+            out_stream_ << value << out_stream_.widen('\n');
+        };
+
+        double result = 0.;
+        auto user_ptr = users_table_.find(request.user);
+        if (user_ptr == users_table_.end()) {
+            send(result);
+            return;
+        }
+
+        size_t page = user_ptr->second;
+        if (users_table_.size() == 1) {
+            result = 1.;
+            send(result);
+            return;
+        }
+
+        auto stat_first_it = reading_progress_.find(page);
+        assert(stat_first_it != reading_progress_.end());
+        assert(stat_first_it->second);
+
+        size_t top_readers_count = 0;
+        std::for_each(stat_first_it, reading_progress_.end(), [&top_readers_count](const auto& stat_item) {
+            top_readers_count += stat_item.second;
+        });
+        size_t wrost_users = users_table_.size() - top_readers_count;
+
+        result = wrost_users / static_cast<double>(users_table_.size() - 1ul);
+        send(result);
+    }
+
+    std::string EbookManager::ReadLine_() const {
+        std::string line;
+        std::getline(in_stream_, line);
+        return detail::string_processing::Trim(std::move(line));
+    }
+
+    std::vector<std::string> EbookManager::ReadLines_(size_t count) const {
+        std::vector<std::string> result{count};
+        size_t idx = 0;
+        for (std::string line; idx < count && std::getline(in_stream_, line); ++idx) {
+            result[idx] = detail::string_processing::Trim(std::move(line));
+        }
+        return result;
+    }
 }
 
 int main() {
