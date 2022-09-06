@@ -200,6 +200,8 @@ namespace ebooks {
 
                 throw std::runtime_error("Invalid request type");
             });
+
+            out_stream_.flush();
         }
 
         void ExecuteRequest(ReadRequest&& request) {
@@ -215,21 +217,21 @@ namespace ebooks {
         }
 
         void ExecuteRequest(CheerRequest&& request) {
+            const auto send = [this](double value) {
+                out_stream_ << value << out_stream_.widen('\n');
+            };
+            double result = 0.;
             auto user_ptr = users_read_table_.find(request.user);
             if (user_ptr == users_read_table_.end()) {
-                out_stream_ << 0. << std::endl;
+                send(result);
                 return;
             }
 
             size_t page = user_ptr->second;
 
-            if (page == 0) {
-                out_stream_ << 0. << std::endl;
-                return;
-            }
-
             if (users_read_table_.size() == 1) {
-                out_stream_ << 1. << std::endl;
+                result = 1.;
+                send(result);
                 return;
             }
 
@@ -241,8 +243,9 @@ namespace ebooks {
                 top_readers_count += stat_item.second.size();
             });
             size_t wrost_users = users_read_table_.size() - top_readers_count;
-            double part_res = static_cast<double>(wrost_users) / std::max(users_read_table_.size()-1, 1ul);
-            out_stream_ << part_res << std::endl;
+            
+            result = static_cast<double>(wrost_users) / std::max(users_read_table_.size()-1, 1ul);
+            send(result);
         }
 
     private:
