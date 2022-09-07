@@ -67,7 +67,7 @@ namespace ebooks::detail::string_processing /* detail */ {
         return result;
     }
 
-    template <typename NumType_, typename String_ = std::string&&>
+    template <typename NumType_, typename String_ = std::string>
     std::optional<NumType_> TryParseNumeric(String_&& str, std::function<NumType_(String_)> sto) {
         if (str.empty()) {
             return std::nullopt;
@@ -82,9 +82,9 @@ namespace ebooks::detail::string_processing /* detail */ {
         return result;
     }
 
-    template <typename String_ = std::string&&>
+    template <typename String_ = std::string>
     std::optional<int> TryParseInt(String_&& str) {
-        return TryParseNumeric<int, std::string&&>(std::move(str), [](String_&& str) -> int {
+        return TryParseNumeric<int, std::string>(std::move(str), [](String_&& str) -> int {
             return std::stoi(std::move(str));
         });
     }
@@ -170,7 +170,7 @@ namespace ebooks /* EbookManager::Requests */ {
         ReadRequest(std::string&& user_str, std::string&& page_str) : user(User(std::move(user_str))), page(ParsePageNumber(std::move(page_str))) {}
 
         static size_t ParsePageNumber(std::string&& str) {
-            auto page = TryParseNumeric<size_t, std::string&&>(std::move(str), [](std::string&& str) {
+            auto page = TryParseNumeric<size_t, std::string>(std::move(str), [](std::string&& str) {
                 return std::stoul(std::move(str));
             });
             if (!page.has_value()) {
@@ -193,7 +193,7 @@ namespace ebooks /* EbookManager implementation */ {
     using namespace detail::string_processing;
 
     void EbookManager::ProcessRequests() {
-        auto query_count = TryParseNumeric<size_t, std::string&&>(ReadLine_(), [](std::string&& str) {
+        auto query_count = TryParseNumeric<size_t, std::string>(ReadLine_(), [](std::string&& str) {
             return std::stoul(std::move(str));
         });
         if (!query_count.has_value()) {
