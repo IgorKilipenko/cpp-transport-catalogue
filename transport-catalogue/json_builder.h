@@ -118,7 +118,7 @@ namespace json /* Builder::Context */ {
     class Builder::ValueContext : public ContextBase {
         using ContextBase::ContextBase;
 
-    public:
+    public: /* Base class methods */
         using ContextBase::Build;
         using ContextBase::EndArray;
         using ContextBase::EndDict;
