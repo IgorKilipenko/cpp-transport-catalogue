@@ -39,4 +39,10 @@ namespace transport_catalogue::detail /* template helpers */ {
 
     template <class ExecutionPolicy>
     using EnableForExecutionPolicy = typename std::enable_if_t<IsExecutionPolicy<ExecutionPolicy>::value, bool>;
+
+    template <typename Iterator>
+    using IterValueType = typename std::iterator_traits<Iterator>::value_type;
+
+    template<typename T>
+    using RemoveRef = std::remove_reference_t<T>;
 }
