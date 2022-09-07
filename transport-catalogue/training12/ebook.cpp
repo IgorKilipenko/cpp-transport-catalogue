@@ -88,6 +88,13 @@ namespace ebooks::detail::string_processing /* detail */ {
             return std::stoi(std::move(str));
         });
     }
+
+    template <typename String_ = std::string>
+    std::optional<uint64_t> TryParseUlong(String_&& str) {
+        return TryParseNumeric<uint64_t, std::string>(std::move(str), [](String_&& str) -> uint64_t {
+            return std::stoul(std::move(str));
+        });
+    }
 }
 
 namespace ebooks /* User */ {
@@ -170,9 +177,7 @@ namespace ebooks /* EbookManager::Requests */ {
         ReadRequest(std::string&& user_str, std::string&& page_str) : user(User(std::move(user_str))), page(ParsePageNumber(std::move(page_str))) {}
 
         static size_t ParsePageNumber(std::string&& str) {
-            auto page = TryParseNumeric<size_t, std::string>(std::move(str), [](std::string&& str) {
-                return std::stoul(std::move(str));
-            });
+            auto page = TryParseUlong(std::move(str));
             if (!page.has_value()) {
                 throw std::invalid_argument("Page number parsing error");
             }
@@ -193,9 +198,7 @@ namespace ebooks /* EbookManager implementation */ {
     using namespace detail::string_processing;
 
     void EbookManager::ProcessRequests() {
-        auto query_count = TryParseNumeric<size_t, std::string>(ReadLine_(), [](std::string&& str) {
-            return std::stoul(std::move(str));
-        });
+        auto query_count = TryParseUlong(ReadLine_());
         if (!query_count.has_value()) {
             throw std::runtime_error("Request processing error. Invalid request size value");
         }
