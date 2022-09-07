@@ -90,8 +90,4 @@ namespace json /* Builder::Context implementation */ {
     const Builder& Builder::ContextBase::GetBuilder() const {
         return builder_;
     }
-
-    Builder::ValueContext Builder::Context::Value(Node value) {
-        return builder_.Value(std::move(value));
-    }
 }

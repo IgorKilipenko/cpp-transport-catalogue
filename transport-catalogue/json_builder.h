@@ -101,7 +101,10 @@ namespace json /* Builder::Context */ {
         using ContextBase::StartDict;
 
     public:
-        ValueContext Value(Node value);
+        template <
+            typename NodeType_,
+            detail::EnableIf<detail::IsConvertibleV<NodeType_, Node> || detail::IsConvertibleV<NodeType_, Node::ValueType>> = true>
+        ValueContext Value(NodeType_&& value);
     };
 
     class Builder::KeyValueContext : public ContextBase {
@@ -225,5 +228,10 @@ namespace json /* Builder::ContextBase template implementation */ {
     Builder::ArrayContext Builder::ArrayContext::Value(NodeType_&& value) {
         builder_.Value(std::forward<NodeType_>(value));
         return builder_;
+    }
+
+    template <typename NodeType_, detail::EnableIf<detail::IsConvertibleV<NodeType_, Node> || detail::IsConvertibleV<NodeType_, Node::ValueType>>>
+    Builder::ValueContext Builder::Context::Value(NodeType_&& value) {
+        return builder_.Value(std::forward<NodeType_>(value));
     }
 }
