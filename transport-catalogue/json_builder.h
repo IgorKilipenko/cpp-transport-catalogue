@@ -211,7 +211,7 @@ namespace json /* Builder template implementation */ {
 
 }
 
-namespace json /* Builder::ContextBase template implementation */ {
+namespace json /* Builder::Context template implementation */ {
 
     template <typename KeyType_, detail::EnableIf<detail::IsConvertibleV<KeyType_, std::string>>>
     Builder::KeyContext Builder::ContextBase::Key(KeyType_&& key) {
