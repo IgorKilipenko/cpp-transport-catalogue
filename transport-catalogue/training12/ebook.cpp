@@ -68,7 +68,7 @@ namespace ebooks::detail::string_processing /* detail */ {
     }
 
     template <typename NumType_, typename String_ = std::string>
-    std::optional<NumType_> TryParseNumeric(String_&& str, std::function<NumType_(String_)> sto) {
+    std::optional<NumType_> TryParseNumeric(String_&& str, const std::function<NumType_(String_)>& sto) {
         if (str.empty()) {
             return std::nullopt;
         }
