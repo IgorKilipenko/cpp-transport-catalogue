@@ -1,6 +1,7 @@
 #pragma once
 
 #include <execution>
+#include <iterator>
 #include <type_traits>
 
 namespace transport_catalogue::detail /* template helpers */ {
@@ -43,6 +44,18 @@ namespace transport_catalogue::detail /* template helpers */ {
     template <typename Iterator>
     using IterValueType = typename std::iterator_traits<Iterator>::value_type;
 
-    template<typename T>
+    template <typename Iterator>
+    using IsRandomAccessIterator = std::is_same<typename std::iterator_traits<Iterator>::iterator_category, std::random_access_iterator_tag>;
+
+    template <typename Iterator>
+    inline constexpr bool IsRandomAccessIteratorV = IsRandomAccessIterator<Iterator>::value;
+
+    template <typename Iterator>
+    using IsForwardIterator = std::is_same<typename std::iterator_traits<Iterator>::iterator_category, std::forward_iterator_tag>;
+
+    template <typename Iterator>
+    inline constexpr bool IsForwardIteratorV = IsForwardIterator<Iterator>::value;
+
+    template <typename T>
     using RemoveRef = std::remove_reference_t<T>;
 }
