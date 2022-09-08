@@ -162,7 +162,7 @@ namespace domains /* DomainChecker implementation */ {
     DomainChecker::DomainChecker(IteratorType_ first, IteratorType_ last) : forbidden_domains_{first, last} {
         std::sort(forbidden_domains_.begin(), forbidden_domains_.end(), Domain::Compare());
         auto end = std::unique(forbidden_domains_.begin(), forbidden_domains_.end(), [](const Domain& lhs, const Domain& rhs) {
-            return lhs == rhs /*|| lhs.IsSubdomain(rhs)*/ || rhs.IsSubdomain(lhs);
+            return lhs == rhs || rhs.IsSubdomain(lhs);
         });
         forbidden_domains_.erase(end, forbidden_domains_.end());
     }
