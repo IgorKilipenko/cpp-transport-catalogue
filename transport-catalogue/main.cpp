@@ -14,47 +14,14 @@ namespace domains {
     class Domain {
     public:
         template <typename String_, std::enable_if_t<std::is_convertible_v<std::decay_t<String_>, std::string>, bool> = true>
-        Domain(String_&& str) : domain_{(assert(!std::string(str).empty()), std::forward<String_>(str))}, parts_(Split_(domain_)) {
-            assert(!parts_.empty());
-            std::reverse(parts_.begin(), parts_.end());
-        }
+        Domain(String_&& str);
+        Domain(const Domain& other);
 
-        Domain(const Domain& other) : domain_(other.domain_) {
-            if (this == &other) {
-                return;
-            }
-            CopyParts_(other);
-        }
+        Domain& operator=(const Domain& other);
+        bool operator==(const Domain& other) const;
+        bool operator!=(const Domain& other) const;
 
-        Domain& operator=(const Domain& other) {
-            if (this == &other) {
-                return *this;
-            }
-            domain_ = other.domain_;
-            parts_.clear();
-            CopyParts_(other);
-            return *this;
-        }
-
-        bool operator==(const Domain& other) const {
-            return this == &other || domain_ == other.domain_;
-        }
-
-        bool operator!=(const Domain& other) const {
-            return !(*this == other);
-        }
-
-        bool IsSubdomain(const Domain& domain) const {
-            if (domain.parts_.size() >= parts_.size()) {
-                return false;
-            }
-            for (auto it = domain.parts_.begin(), sub_it = parts_.begin(); it != domain.parts_.end(); ++it, ++sub_it) {
-                if (*it != *sub_it) {
-                    return false;
-                }
-            }
-            return true;
-        }
+        bool IsSubdomain(const Domain& domain) const;
 
     public:
         struct Compare {
@@ -71,36 +38,8 @@ namespace domains {
         std::string domain_;
         std::vector<std::string_view> parts_;
 
-        static std::vector<std::string_view> Split_(std::string_view str, const char ch = '.', size_t max_count = 0) {
-            if (str.empty()) {
-                return {};
-            }
-            std::vector<std::string_view> result;
-
-            do {
-                int64_t pos = str.find(ch, 0);
-                std::string_view substr = (pos == static_cast<int64_t>(str.npos)) ? str.substr(0) : str.substr(0, pos);
-                result.push_back(std::move(substr));
-                str.remove_prefix(std::min(str.find_first_not_of(ch, pos), str.size()));
-                if (max_count && result.size() == max_count - 1) {
-                    result.push_back(std::move(str));
-                    break;
-                }
-            } while (!str.empty());
-
-            return result;
-        }
-
-        void CopyParts_(const Domain& other) {
-            assert(other.domain_ == domain_);
-
-            parts_.reserve(other.parts_.size());
-            for (const auto& p : other.parts_) {
-                const size_t first = p.data() - other.domain_.data();
-                const size_t size = p.size();
-                parts_.push_back(std::string_view(domain_.data() + first, size));
-            }
-        }
+        static std::vector<std::string_view> Split_(std::string_view str, const char ch = '.', size_t max_count = 0);
+        void CopyParts_(const Domain& other);
     };
 
     class DomainChecker {
@@ -108,22 +47,10 @@ namespace domains {
         template <
             typename IteratorType_,
             std::enable_if_t<std::is_convertible_v<typename std::iterator_traits<IteratorType_>::value_type, Domain>, bool> = true>
-        DomainChecker(IteratorType_ first, IteratorType_ last) : forbidden_domains_{first, last} {
-            std::sort(forbidden_domains_.begin(), forbidden_domains_.end(), Domain::Compare());
-            auto end = std::unique(forbidden_domains_.begin(), forbidden_domains_.end(), [](const Domain& lhs, const Domain& rhs) {
-                return lhs == rhs || lhs.IsSubdomain(rhs) || rhs.IsSubdomain(lhs);
-            });
-            forbidden_domains_.erase(end, forbidden_domains_.end());
-        }
+        DomainChecker(IteratorType_ first, IteratorType_ last);
 
-        const std::vector<Domain>& GetForbiddenDomains() const {
-            return forbidden_domains_;
-        }
-
-        bool IsForbidden(const Domain& domain) const {
-            auto it = std::upper_bound(forbidden_domains_.begin(), forbidden_domains_.end(), domain, Domain::Compare());
-            return it == forbidden_domains_.begin() ? false : *std::prev(it) == domain || domain.IsSubdomain(*std::prev(it));
-        }
+        const std::vector<Domain>& GetForbiddenDomains() const;
+        bool IsForbidden(const Domain& domain) const;
 
     private:
         std::vector<Domain> forbidden_domains_;
@@ -150,6 +77,103 @@ namespace domains {
             domains.emplace_back(std::move(domain_name));
         }
         return domains;
+    }
+}
+
+namespace domains /* Domain implementation */ {
+
+    template <typename String_, std::enable_if_t<std::is_convertible_v<std::decay_t<String_>, std::string>, bool>>
+    Domain::Domain(String_&& str) : domain_{(assert(!std::string(str).empty()), std::forward<String_>(str))}, parts_(Split_(domain_)) {
+        assert(!parts_.empty());
+        std::reverse(parts_.begin(), parts_.end());
+    }
+
+    Domain::Domain(const Domain& other) : domain_(other.domain_) {
+        if (this == &other) {
+            return;
+        }
+        CopyParts_(other);
+    }
+
+    Domain& Domain::operator=(const Domain& other) {
+        if (this == &other) {
+            return *this;
+        }
+        domain_ = other.domain_;
+        parts_.clear();
+        CopyParts_(other);
+        return *this;
+    }
+
+    bool Domain::operator==(const Domain& other) const {
+        return this == &other || domain_ == other.domain_;
+    }
+
+    bool Domain::operator!=(const Domain& other) const {
+        return !(*this == other);
+    }
+
+    bool Domain::IsSubdomain(const Domain& domain) const {
+        if (domain.parts_.size() >= parts_.size()) {
+            return false;
+        }
+        for (auto it = domain.parts_.begin(), sub_it = parts_.begin(); it != domain.parts_.end(); ++it, ++sub_it) {
+            if (*it != *sub_it) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    std::vector<std::string_view> Domain::Split_(std::string_view str, const char ch, size_t max_count) {
+        if (str.empty()) {
+            return {};
+        }
+        std::vector<std::string_view> result;
+
+        do {
+            int64_t pos = str.find(ch, 0);
+            std::string_view substr = (pos == static_cast<int64_t>(str.npos)) ? str.substr(0) : str.substr(0, pos);
+            result.push_back(std::move(substr));
+            str.remove_prefix(std::min(str.find_first_not_of(ch, pos), str.size()));
+            if (max_count && result.size() == max_count - 1) {
+                result.push_back(std::move(str));
+                break;
+            }
+        } while (!str.empty());
+
+        return result;
+    }
+
+    void Domain::CopyParts_(const Domain& other) {
+        assert(other.domain_ == domain_);
+
+        parts_.reserve(other.parts_.size());
+        for (const auto& p : other.parts_) {
+            const size_t first = p.data() - other.domain_.data();
+            const size_t size = p.size();
+            parts_.push_back(std::string_view(domain_.data() + first, size));
+        }
+    }
+}
+
+namespace domains /* DomainChecker implementation */ {
+    template <typename IteratorType_, std::enable_if_t<std::is_convertible_v<typename std::iterator_traits<IteratorType_>::value_type, Domain>, bool>>
+    DomainChecker::DomainChecker(IteratorType_ first, IteratorType_ last) : forbidden_domains_{first, last} {
+        std::sort(forbidden_domains_.begin(), forbidden_domains_.end(), Domain::Compare());
+        auto end = std::unique(forbidden_domains_.begin(), forbidden_domains_.end(), [](const Domain& lhs, const Domain& rhs) {
+            return lhs == rhs /*|| lhs.IsSubdomain(rhs)*/ || rhs.IsSubdomain(lhs);
+        });
+        forbidden_domains_.erase(end, forbidden_domains_.end());
+    }
+
+    const std::vector<Domain>& DomainChecker::GetForbiddenDomains() const {
+        return forbidden_domains_;
+    }
+
+    bool DomainChecker::IsForbidden(const Domain& domain) const {
+        auto it = std::upper_bound(forbidden_domains_.begin(), forbidden_domains_.end(), domain, Domain::Compare());
+        return it == forbidden_domains_.begin() ? false : *std::prev(it) == domain || domain.IsSubdomain(*std::prev(it));
     }
 }
 
@@ -272,5 +296,6 @@ int main() {
     for (const Domain& domain : test_domains) {
         std::cout << (checker.IsForbidden(domain) ? "Bad"sv : "Good"sv) << std::endl;
     }
+
     return 0;
 }
