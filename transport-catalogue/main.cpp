@@ -152,7 +152,8 @@ private:
 template <typename Number>
 Number ReadNumberOnLine(istream& input) {
     string line;
-    getline(input, line);
+    // getline(input, line);
+    input >> line;
 
     Number num;
     std::istringstream(line) >> num;
@@ -167,9 +168,8 @@ std::vector<Domain> ReadDomains(std::istream& in, const size_t domains_count) {
 
     for (size_t i = 0; i < domains_count; ++i) {
         in >> domain_name;
-        std::string reverse(domain_name.rbegin(), domain_name.rend());
-        domains.push_back({ reverse + '.'});
-    }    
+        domains.push_back(domain_name);
+    }
     return domains;
 }
 
@@ -235,12 +235,28 @@ void TestDomainChecker() {
 }
 
 int main() {
-    TestDomain();
-    TestDomainChecker();
-    const std::vector<Domain> forbidden_domains = ReadDomains(cin, ReadNumberOnLine<size_t>(cin));
+    // TestDomain();
+    // TestDomainChecker();
+
+    /*std::stringstream ss;
+    ss << R"(4
+gdz.ru
+maps.me
+m.gdz.ru
+com
+7
+gdz.ru
+gdz.com
+m.maps.me
+alg.m.gdz.ru
+maps.com
+maps.ru
+gdz.ua)";*/
+
+    const std::vector<Domain> forbidden_domains = ReadDomains(std::cin, ReadNumberOnLine<size_t>(std::cin));
     DomainChecker checker(forbidden_domains.begin(), forbidden_domains.end());
 
-    const std::vector<Domain> test_domains = ReadDomains(cin, ReadNumberOnLine<size_t>(cin));
+    const std::vector<Domain> test_domains = ReadDomains(std::cin, ReadNumberOnLine<size_t>(std::cin));
     for (const Domain& domain : test_domains) {
         cout << (checker.IsForbidden(domain) ? "Bad"sv : "Good"sv) << endl;
     }
