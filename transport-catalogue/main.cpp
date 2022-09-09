@@ -1,70 +1,93 @@
-#include <filesystem>
+#include <cassert>
 #include <iostream>
-#include <memory>
-#include <sstream>
-#include <vector>
+#include <string>
+#include <string_view>
 
-#include "./tests/json_reader_test.h"
-#include "./tests/json_test.h"
-#include "./tests/map_renderer_test.h"
-#include "./tests/svg_test.h"
-#include "./tests/transport_catalogue_test.h"
-#include "json_reader.h"
-#include "request_handler.h"
-#include "tests/json_builder_test.h"
-#include "tests/request_handler_test.h"
-#include "transport_catalogue.h"
+#include "training12/budget_manager/budget_manager.h"
+#include "training12/budget_manager/parser.h"
+
+namespace budget_manager {
+    void ParseAndProcessQuery(BudgetManager& manager, std::string&& line) {
+        // разработайте функцию чтения и обработки запроса
+        auto request = Parser::Parse(std::move(line));
+        if (request.cmd == Parser::Command::EARN) {
+            assert(request.args.size() == 3);
+            manager.Earn(Date::FromString(request.args[0]), Date::FromString(request.args[1]), std::stod(request.args[2]));
+        } else if (request.cmd == Parser::Command::PAY_TAX) {
+            assert(request.args.size() == 2);
+            manager.PayTax(Date::FromString(request.args[0]), Date::FromString(request.args[1]));
+        } else if (request.cmd == Parser::Command::COMPUTE_INCOME) {
+            assert(request.args.size() == 2);
+            manager.ComputeIncome(Date::FromString(request.args[0]), Date::FromString(request.args[1]));
+        }
+    }
+
+    int ReadNumberOnLine(std::istream& input) {
+        std::string line;
+        input >> line;
+        input.get();
+        return std::stoi(line);
+    }
+}
+
+namespace budget_manager::tests {
+    void Test1() {
+        std::stringstream ss;
+        ss << R"(8
+                Earn 2000-01-02 2000-01-06 20
+                ComputeIncome 2000-01-01 2001-01-01
+                PayTax 2000-01-02 2000-01-03
+                ComputeIncome 2000-01-01 2001-01-01
+                Earn 2000-01-03 2000-01-03 10
+                ComputeIncome 2000-01-01 2001-01-01
+                PayTax 2000-01-03 2000-01-03
+                ComputeIncome 2000-01-01 2001-01-01)";
+
+        std::ostringstream out;
+        BudgetManager manager{out};
+
+        const int query_count = ReadNumberOnLine(ss);
+
+        for (int i = 0; i < query_count; ++i) {
+            std::string line;
+            std::getline(ss, line);
+            ParseAndProcessQuery(manager, std::move(line));
+        }
+
+        std::string expected_result = "2018.96\n28.96\n27.2076";
+        if (expected_result != out.str()) {
+            std::cerr << "Result: \n";
+            std::cerr << out.str() << "\n";
+            std::cerr << "Expected: \n";
+            std::cerr << expected_result << "\n" << std::endl;
+            std::cerr << "Test1: "
+                      << "Test FAILED" << std::endl;
+            assert(false);
+        }
+
+        std::cerr << "Test1: "
+                  << "Test DONE" << std::endl;
+    }
+
+    void RunTests() {
+        Test1();
+
+        std::cerr << "All Tests DONE" << std::endl << std::endl;
+    }
+}
 
 int main() {
-    using namespace transport_catalogue;
-    using namespace transport_catalogue::tests;
-    using namespace svg::tests;
-    using namespace json::tests;
+    using namespace budget_manager;
 
-    SvgTester svg_tester;
-    svg_tester.TestSvglib();
+    tests::RunTests();
 
-    JsonTester json_tester;
-    json_tester.TestJsonlib();
+    BudgetManager manager{std::cout};
 
-    JsonBuilderTester json_builder_tester;
-    json_builder_tester.RunTests();
+    const int query_count = ReadNumberOnLine(std::cin);
 
-    JsonReaderTester json_reader_tester;
-    json_reader_tester.RunTests();
-
-    TransportCatalogueTester catalogue_tester;
-    catalogue_tester.TestTransportCatalogue();
-
-    MapRendererTester test_render;
-    test_render.RunTests();
-
-    RequestHandlerTester request_handler_tester;
-    request_handler_tester.RunTests();
-
-    /*
-        using namespace transport_catalogue;
-        using namespace transport_catalogue::io;
-
-        TransportCatalogue catalog;
-        JsonReader json_reader(std::cin);
-        JsonResponseSender stat_sender(std::cout);
-
-        maps::MapRenderer renderer;
-
-        const auto request_handler_ptr = std::make_shared<RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender,
-       renderer); json_reader.AddObserver(request_handler_ptr);
-
-        json_reader.ReadDocument();
-
-        std::vector<svg::Document*> layer_ptrs = request_handler_ptr->RenderMap();
-
-        svg::Document svg_map;
-        std::for_each(std::make_move_iterator(layer_ptrs.begin()), std::make_move_iterator(layer_ptrs.end()), [&svg_map](svg::Document*&& layer) {
-            svg_map.MoveObjectsFrom(std::move(*layer));
-        });
-
-        svg_map.Render(std::cout);
-    */
-    return 0;
+    for (int i = 0; i < query_count; ++i) {
+        std::string line;
+        std::getline(std::cin, line);
+        ParseAndProcessQuery(manager, std::move(line));
+    }
 }
