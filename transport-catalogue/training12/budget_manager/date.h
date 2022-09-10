@@ -9,7 +9,7 @@ class Date {
 public:
     Date() {}
     Date(int year, int month, int day) : year_(year), month_(month), day_(day) {
-        CalculateTimestamp_();
+        //CalculateTimestamp_();
     }
 
     Date operator+(const Date& other) const {
@@ -18,7 +18,7 @@ public:
 
     Date& operator++() {
         ++day_;
-        CalculateTimestamp_();
+        //CalculateTimestamp_();
         return *this;
     }
 
@@ -87,7 +87,7 @@ private:
     int year_ = 0, month_ = 0, day_ = 0;
     time_t timestamp_ = 0;
 
-    void CalculateTimestamp_() {
+    /*void CalculateTimestamp_() {
         tm timestamp;
         timestamp.tm_sec = 0;
         timestamp.tm_min = 0;
@@ -97,5 +97,5 @@ private:
         timestamp.tm_year = year_ - 1900;
         timestamp.tm_isdst = 0;
         timestamp_ = mktime(&timestamp);
-    }
+    }*/
 };
