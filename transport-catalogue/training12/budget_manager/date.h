@@ -8,7 +8,9 @@
 class Date {
 public:
     Date() {}
-    Date(int year, int month, int day) : year_(year), month_(month), day_(day) {}
+    Date(int year, int month, int day) : year_(year), month_(month), day_(day) {
+        CalculateTimestamp_();
+    }
 
     Date operator+(const Date& other) const {
         return Date{year_ + other.year_, month_ + other.month_, day_ + other.day_};
@@ -16,6 +18,7 @@ public:
 
     Date& operator++() {
         ++day_;
+        CalculateTimestamp_();
         return *this;
     }
 
@@ -26,11 +29,13 @@ public:
 
         // return day_ * 86400ul + month_ * 2629746ul + year_ * 31556952ul < other.day_ * 86400ul + other.month_ * 2629746ul + other.year_ *
         // 31556952ul;
-        return (static_cast<int64_t>(day_) - static_cast<int64_t>(other.day_)) * 86400l +
-                   (static_cast<int64_t>(month_) - static_cast<int64_t>(other.month_)) * 2629746l + (static_cast<int64_t>(year_) - static_cast<int64_t>(other.year_)) * 31556952l <
-               0l;
+        /*return (static_cast<int64_t>(day_) - static_cast<int64_t>(other.day_)) * 86400l +
+                   (static_cast<int64_t>(month_) - static_cast<int64_t>(other.month_)) * 2629746l +
+                   (static_cast<int64_t>(year_) - static_cast<int64_t>(other.year_)) * 31556952l <
+               0l;*/
 
-        //return ComputeDistance(*this, other) > 0;
+        // return ComputeDistance(*this, other) > 0;
+        return timestamp_ < other.timestamp_;
     }
 
     bool operator==(const Date& other) const {
@@ -80,4 +85,17 @@ public:
 
 private:
     int year_ = 0, month_ = 0, day_ = 0;
+    time_t timestamp_ = 0;
+
+    void CalculateTimestamp_() {
+        tm timestamp;
+        timestamp.tm_sec = 0;
+        timestamp.tm_min = 0;
+        timestamp.tm_hour = 0;
+        timestamp.tm_mday = day_;
+        timestamp.tm_mon = month_ - 1;
+        timestamp.tm_year = year_ - 1900;
+        timestamp.tm_isdst = 0;
+        timestamp_ = mktime(&timestamp);
+    }
 };
