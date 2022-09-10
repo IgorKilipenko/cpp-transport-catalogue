@@ -23,13 +23,14 @@ public:
         if (this == &other || year_ > other.year_) {
             return false;
         }
-        /*if (year_ == other.year_ && month_ > other.month_) {
-            return false;
-        }
-        if (year_ == other.year_ && month_ == other.month_ && day_ > other.day_) {
-            return false;
-        }*/
-        return day_ * 86400ul + month_ * 2629746ul + year_ * 31556952ul < other.day_ * 86400ul + other.month_ * 2629746ul + other.year_ * 31556952ul;
+
+        // return day_ * 86400ul + month_ * 2629746ul + year_ * 31556952ul < other.day_ * 86400ul + other.month_ * 2629746ul + other.year_ *
+        // 31556952ul;
+        return (static_cast<int64_t>(day_) - static_cast<int64_t>(other.day_)) * 86400l +
+                   (static_cast<int64_t>(month_) - static_cast<int64_t>(other.month_)) * 2629746l + (static_cast<int64_t>(year_) - static_cast<int64_t>(other.year_)) * 31556952l <
+               0l;
+
+        //return ComputeDistance(*this, other) > 0;
     }
 
     bool operator==(const Date& other) const {
