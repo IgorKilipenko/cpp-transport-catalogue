@@ -8,6 +8,12 @@
 
 namespace budget_manager {
     class BudgetManager {
+    private:
+        struct BudgetSpane {
+            double earning_before_taxes = 0.0;
+            double net_income = 0.0;
+        };
+
     public:
         inline static const Date FirstDate{2000, 1, 1};
         inline static const Date LastDate{2100, 1, 1};
@@ -24,9 +30,8 @@ namespace budget_manager {
             auto begin = earnings_.begin() + Date::ComputeDistance(FirstDate, from);
             auto end = begin + Date::ComputeDistance(from, to) + 1;
 
-            std::for_each(begin, end, [&result](const auto& ebt_item) {
-                auto& [ebt, earn] = ebt_item;
-                result += ebt + earn;
+            std::for_each(begin, end, [&result](const BudgetSpane& span) {
+                result += span.earning_before_taxes + span.net_income;
             });
 
             out_stream_ << result << std::endl;
@@ -37,23 +42,22 @@ namespace budget_manager {
             size_t size = Date::ComputeDistance(from, to) + 1ul;
             auto begin = earnings_.begin() + Date::ComputeDistance(FirstDate, from);
             auto end = begin + size;
-            std::for_each(begin, end, [value, size](auto& ebt) {
-                ebt.first += value / size;
+            std::for_each(begin, end, [value, size](BudgetSpane& span) {
+                span.earning_before_taxes += value / size;
             });
         }
 
         void PayTax(Date from, Date to) {
             auto begin = earnings_.begin() + Date::ComputeDistance(FirstDate, from);
             auto end = begin + Date::ComputeDistance(from, to) + 1;
-            std::for_each(begin, end, [](auto& ebt_item) {
-                auto& [ebt, tax_free] = ebt_item;
-                tax_free = (ebt + tax_free) * (1. - TAX_RATE);
-                ebt = 0.;
+            std::for_each(begin, end, [](BudgetSpane& span) {
+                span.net_income = (span.earning_before_taxes + span.net_income) * (1. - TAX_RATE);
+                span.earning_before_taxes = 0.;
             });
         }
 
     private:
         std::ostream& out_stream_;
-        std::vector<std::pair<double, double>> earnings_;
+        std::vector<BudgetSpane> earnings_;
     };
 }
