@@ -40,6 +40,10 @@ public:
         return !(*this == other);
     }
 
+    std::string ToString() const {
+        return std::string(std::to_string(day_) + "." + std::to_string(month_) + "." + std::to_string(year_));
+    }
+
     // тут правильно использовать string_view, но regex его пока не поддерживает
     static Date FromString(const std::string& str) {
         static const std::regex date_regex(R"/(([0-9]{4})-([0-9]{2})-([0-9]{2}))/");

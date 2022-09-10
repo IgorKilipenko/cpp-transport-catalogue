@@ -54,7 +54,7 @@ namespace budget_manager::tests {
             ParseAndProcessQuery(manager, std::move(line));
         }
 
-        std::string expected_result = "2018.96\n28.96\n27.2076";
+        std::string expected_result = "20\n18.96\n28.96\n27.2076";
         if (expected_result != out.str()) {
             std::cerr << "Result: \n";
             std::cerr << out.str() << "\n";
