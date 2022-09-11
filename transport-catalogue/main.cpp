@@ -1,33 +1,71 @@
-#include "./training12/budget_manager2/parser.h"
-
-#include <iostream>
+#include <algorithm>
+#include <cassert>
+#include <optional>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 using namespace std;
 
-void ParseAndProcessQuery(BudgetManager& manager, string_view line) {
-    auto query = ParseQuery(line);
+// напишите функцию ComputeStatistics, принимающую 5 параметров:
+// два итератора, выходное значение для суммы, суммы квадратов и максимального элемента
+template <typename InputIt, typename OutSum, typename OutSqrSum, typename OutMax>
+void ComputeStatistics(InputIt first, InputIt last, OutSum& out_sum, OutSqrSum& out_sqr_sum, OutMax& out_max) {
+    using Elem = std::decay_t<decltype(*first)>;
 
-    if (!query) {
-        return;
+    constexpr bool need_sum = !is_same_v<OutSum, const nullopt_t>;
+    constexpr bool need_sq_sum = !is_same_v<OutSqrSum, const nullopt_t>;
+    constexpr bool need_max = !is_same_v<OutMax, const nullopt_t>;
+
+    if constexpr (need_sum) {
+        Elem sum = *first;
+        for (auto i = first + 1; i != last; ++i) {
+            sum += *i;
+        }
+        out_sum = sum;
     }
-
-    query->ProcessAndPrint(manager, cout);
+    if constexpr (need_sq_sum) {
+        Elem sqr_sum = *first * *first;
+        for (auto i = first + 1; i != last; ++i) {
+            sqr_sum += *i * *i;
+        }
+        out_sqr_sum = sqr_sum;
+    }
+    if constexpr (need_max) {
+        Elem max = *first;
+        for (auto i = first + 1; i != last; ++i) {
+            max = std::max(*i, max);
+        }
+        out_max = max;
+    }
 }
 
-int ReadNumberOnLine(istream& input) {
-    std::string line;
-    std::getline(input, line);
-    return std::stoi(line);
+struct OnlySum {
+    int value;
+};
+
+OnlySum operator+(OnlySum l, OnlySum r) {
+    return {l.value + r.value};
+}
+OnlySum& operator+=(OnlySum& l, OnlySum r) {
+    return l = l + r;
 }
 
 int main() {
-    BudgetManager manager;
+    vector input = {1, 2, 3, 4, 5, 6};
+    int sq_sum;
+    std::optional<int> max;
 
-    const int query_count = ReadNumberOnLine(cin);
+    // Переданы выходные параметры разных типов - std::nullopt_t, int и std::optional<int>
+    ComputeStatistics(input.begin(), input.end(), nullopt, sq_sum, max);
 
-    for (int i = 0; i < query_count; ++i) {
-        std::string line;
-        std::getline(cin, line);
-        ParseAndProcessQuery(manager, line);
-    }
+    assert(sq_sum == 91 && max && *max == 6);
+
+    vector<OnlySum> only_sum_vector = {{100}, {-100}, {20}};
+    OnlySum sum;
+
+    // Поданы значения поддерживающие только суммирование, но запрошена только сумма
+    ComputeStatistics(only_sum_vector.begin(), only_sum_vector.end(), sum, nullopt, nullopt);
+
+    assert(sum.value == 20);
 }
