@@ -2,21 +2,30 @@
 
 #include <cmath>
 #include <cstdint>
+#include <functional>
+#include <numeric>
+#include <utility>
+#include <vector>
 
 #include "entities.h"
 #include "summing_segment_tree.h"
 
 struct BulkMoneyAdder {
-    double delta = {};
+    BudgetSpan delta = {};
 };
 
 struct BulkTaxApplier {
-    double ComputeFactor() const {
-        static const double factor = 0.87;
-        return std::pow(factor, count);
+    BulkTaxApplier() {}
+
+    BulkTaxApplier(int tax_rate) {
+        factors.push_back(1 - (0.01 * tax_rate));
     }
 
-    int count = 0;
+    double ComputeFactor() const {
+        return std::accumulate(factors.begin(), factors.end(), 1.0, std::multiplies<double>());
+    }
+
+    std::vector<double> factors;
 };
 
 class BulkLinearUpdater {
@@ -28,16 +37,16 @@ public:
     BulkLinearUpdater(const BulkTaxApplier& tax) : tax_(tax) {}
 
     void CombineWith(const BulkLinearUpdater& other) {
-        tax_.count += other.tax_.count;
-        add_.delta = add_.delta * other.tax_.ComputeFactor() + other.add_.delta;
+        tax_.factors.reserve(tax_.factors.size() + other.tax_.factors.size());
+        tax_.factors.insert(tax_.factors.end(), other.tax_.factors.begin(), other.tax_.factors.end());
+        add_.delta = add_.delta.Tax(other.tax_.ComputeFactor()) + other.add_.delta;
     }
 
-    double Collapse(double origin, IndexSegment segment) const {
-        return origin * tax_.ComputeFactor() + add_.delta * static_cast<double>(segment.length());
+    BudgetSpan Collapse(BudgetSpan origin, IndexSegment segment) const {
+        return origin.Tax(tax_.ComputeFactor()) + add_.delta * static_cast<double>(segment.length());
     }
 
 private:
-    // apply tax first, then add
     BulkTaxApplier tax_;
     BulkMoneyAdder add_;
 };

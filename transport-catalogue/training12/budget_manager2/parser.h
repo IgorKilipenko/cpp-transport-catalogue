@@ -13,7 +13,7 @@
 
 struct ReadResult {
     void Print(std::ostream& out) {
-        out << total_income << std::endl;
+        out << total_income << "\n";
     }
 
     double total_income;
