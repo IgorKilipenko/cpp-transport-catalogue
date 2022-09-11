@@ -11,18 +11,14 @@
 namespace budget_manager {
     class Parser {
     public:
-        enum class Command : uint8_t {
-            INVALID,
-            COMPUTE_INCOME,
-            EARN,
-            PAY_TAX,
-        };
+        enum class Command : uint8_t { INVALID, COMPUTE_INCOME, EARN, PAY_TAX, SPEND };
 
         struct CommandValue {
             inline static std::string INVALID = "";
             inline static std::string COMPUTE_INCOME = "ComputeIncome";
             inline static std::string EARN = "Earn";
             inline static std::string PAY_TAX = "PayTax";
+            inline static std::string SPEND = "Spend";
         };
 
         struct Request {
@@ -43,6 +39,8 @@ namespace budget_manager {
                 cmd = Command::EARN;
             } else if (cmd_str == CommandValue::PAY_TAX) {
                 cmd = Command::PAY_TAX;
+            } else if (cmd_str == CommandValue::SPEND) {
+                cmd = Command::SPEND;
             }
 
             std::vector<std::string> args(parts.size() - 1);
