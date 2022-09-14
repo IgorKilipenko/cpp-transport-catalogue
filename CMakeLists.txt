@@ -24,6 +24,7 @@ set(LIBS
     ${SRC_DIR}/json_reader.cpp
     ${SRC_DIR}/map_renderer.cpp
     ${SRC_DIR}/request_handler.cpp
+    ${SRC_DIR}/transport_router.cpp
 )
 
 if (DEFINED TESTS AND TESTS)
