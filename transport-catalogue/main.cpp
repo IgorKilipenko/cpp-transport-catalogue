@@ -13,6 +13,7 @@
 #include "request_handler.h"
 #include "tests/json_builder_test.h"
 #include "tests/request_handler_test.h"
+#include "tests/transport_router_test.h"
 #include "transport_catalogue.h"
 
 int main() {
@@ -21,7 +22,7 @@ int main() {
     using namespace svg::tests;
     using namespace json::tests;
 
-    SvgTester svg_tester;
+    /*SvgTester svg_tester;
     svg_tester.TestSvglib();
 
     JsonTester json_tester;
@@ -40,7 +41,10 @@ int main() {
     test_render.RunTests();
 
     RequestHandlerTester request_handler_tester;
-    request_handler_tester.RunTests();
+    request_handler_tester.RunTests();*/
+
+    TransportRouterTester transport_router_tester;
+    transport_router_tester.RunTests();
 
     /*
         using namespace transport_catalogue;
