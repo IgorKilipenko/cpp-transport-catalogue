@@ -56,9 +56,14 @@ namespace transport_catalogue::tests {
             void OnStatRequest(std::vector<io::RawRequest>&& /*requests*/) override {
                 out_ << "OnStatRequest" << std::endl;
             }
+
             void OnRenderSettingsRequest(io::RawRequest&& request) override {
                 out_ << "OnRenderSettingsRequest" << std::endl;
                 render_settings_requests_->emplace_back(io::JsonReader::Converter::ConvertToJson(std::move(request)));
+            }
+
+            void OnRoutingSettingsRequest(io::RawRequest&& request) override {
+                out_ << "OnRoutingSettingsRequest" << std::endl;
             }
 
             std::string& GetName() {
