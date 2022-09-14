@@ -42,9 +42,7 @@ namespace transport_catalogue /* TransportCatalogue */ {
         data::BusRecord GetBus(const std::string_view name) const override;
         data::StopRecord GetStop(const std::string_view name) const override;
         const data::DatabaseScheme::StopsTable& GetStopsTable() const override;
-        const data::DatabaseScheme::BusRoutesTable& GetBusRoutesTable() const override {
-            return db_reader_.GetBusRoutesTable();
-        }
+        const data::DatabaseScheme::BusRoutesTable& GetBusRoutesTable() const override;
         const data::BusRecordSet& GetBuses(data::StopRecord stop) const override;
         const data::BusRecordSet& GetBuses(const std::string_view bus_name) const override;
         data::DistanceBetweenStopsRecord GetDistanceBetweenStops(data::StopRecord from, data::StopRecord to) const override;
