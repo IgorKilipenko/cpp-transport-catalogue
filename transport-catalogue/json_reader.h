@@ -106,6 +106,8 @@ namespace transport_catalogue::io /* JsonReader */ {
         void NotifyStatRequest(std::vector<RawRequest>&& requests) override;
 
         void NotifyRenderSettingsRequest(RawRequest&& requests) override;
+        
+        void NotifyRoutingSettingsRequest(RawRequest&& requests) override;
 
         bool HasObserver() const override;
 
@@ -134,6 +136,7 @@ namespace transport_catalogue::io /* JsonReader */ {
         constexpr static const std::string_view BASE_REQUESTS_LITERAL = "base_requests"sv;
         constexpr static const std::string_view STAT_REQUESTS_LITERAL = "stat_requests"sv;
         constexpr static const std::string_view RENDER_SETTINGS_REQUESTS_LITERAL = "render_settings"sv;
+        constexpr static const std::string_view ROUTING_SETTINGS_REQUESTS_LITERAL = "routing_settings"sv;
     };
 }
 
