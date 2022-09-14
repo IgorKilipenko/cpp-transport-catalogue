@@ -4,10 +4,12 @@
 #include <cassert>
 #include <iterator>
 #include <optional>
+#include <stdexcept>
 #include <vector>
 
 #include "domain.h"
 #include "svg.h"  //! FOR DEBUG ONLY
+#include "transport_router.h"
 
 namespace transport_catalogue::io /* RequestValueType implementation */ {
 
@@ -157,7 +159,9 @@ namespace transport_catalogue::io /* Request implementation */ {
 
     Request::Request(std::string&& type, std::string&& name, RequestArgsMap&& args)
         : Request(
-              (assert(type == converter(RequestCommand::BUS) || type == converter(RequestCommand::STOP) || type == converter(RequestCommand::MAP)),
+              (assert(
+                   type == converter(RequestCommand::BUS) || type == converter(RequestCommand::STOP) || type == converter(RequestCommand::MAP) ||
+                   type == converter(RequestCommand::ROUTE)),
                converter.ToRequestCommand(std::move(type))),
               std::move(name), std::move(args)) {}
 
@@ -182,8 +186,13 @@ namespace transport_catalogue::io /* Request implementation */ {
         return false;
     }
 
+    bool Request::IsRoutingSettingsRequest() const {
+        return false;
+    }
+
     bool Request::IsValidRequest() const {
-        return (IsBusCommand() || IsStopCommand() || IsMapCommand() || IsRenderSettingsRequest()) && !name_.empty();
+        return (IsBusCommand() || IsStopCommand() || IsMapCommand() || IsRouteCommand() || IsRenderSettingsRequest() || IsRenderSettingsRequest()) &&
+               !name_.empty();
     }
 
     RequestCommand& Request::GetCommand() {
@@ -215,6 +224,8 @@ namespace transport_catalogue::io /* RequestEnumConverter implementation */ {
             return "Stop"sv;
         case io::RequestCommand::MAP:
             return "Map"sv;
+        case io::RequestCommand::ROUTE:
+            return "Route"sv;
         case io::RequestCommand::UNKNOWN:
             return "Unknown"sv;
         default:
@@ -248,6 +259,8 @@ namespace transport_catalogue::io /* RequestEnumConverter implementation */ {
             return RequestType::STAT;
         } else if (enum_name == RequestFields::RENDER_SETTINGS) {
             return RequestType::RENDER_SETTINGS;
+        } else if (enum_name == RequestFields::ROUTING_SETTINGS) {
+            return RequestType::ROUTING_SETTINGS;
         } else if (enum_name == "Unknown"sv) {
             return RequestType::UNKNOWN;
         }
@@ -263,9 +276,12 @@ namespace transport_catalogue::io /* RequestEnumConverter implementation */ {
             return io::RequestCommand::STOP;
         } else if (enum_name == "Map"sv) {
             return io::RequestCommand::MAP;
+        } else if (enum_name == "Route"sv) {
+            return io::RequestCommand::ROUTE;
         } else if (enum_name == "SetSettings"sv) {
-            return io::RequestCommand::SET_SETTINGS;
-
+            return io::RequestCommand::SET_RENDER_SETTINGS;
+        } else if (enum_name == "SetRouteSettings"sv) {
+            return io::RequestCommand::SET_ROUTING_SETTINGS;
         } else if (enum_name == "Unknown"sv) {
             return io::RequestCommand::UNKNOWN;
         }
@@ -305,6 +321,11 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
 
     void RequestHandler::OnRenderSettingsRequest(RawRequest&& request) {
         RenderSettingsRequest reqs(std::move(request));
+        ExecuteRequest(std::move(reqs));
+    }
+
+    void RequestHandler::OnRoutingSettingsRequest(RawRequest&& request) {
+        RoutingSettingsRequest reqs(std::move(request));
         ExecuteRequest(std::move(reqs));
     }
 
@@ -353,12 +374,13 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
             bool is_bus = request.IsBusCommand();
             bool is_stop = request.IsStopCommand();
             bool is_map = request.IsMapCommand();
+            bool is_router = request.IsRouteCommand();
 
             std::string name = request.GetName();
 
             StatResponse resp(
                 std::move(request), is_bus ? db_reader_.GetBusInfo(name) : std::nullopt, is_stop ? db_reader_.GetStopInfo(name) : std::nullopt,
-                is_map ? std::optional<RawMapData>(RenderMap()) : std::nullopt);
+                is_map ? std::optional<RawMapData>(RenderMap()) : std::nullopt, is_router ? std::optional<RouteInfo>({}) : std::nullopt);
 
             responses.emplace_back(std::move(resp));
         });
@@ -371,6 +393,13 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         renderer_.SetRenderSettings(std::move(settings));
     }
 
+    void RequestHandler::ExecuteRequest(RoutingSettingsRequest&& request) {
+        //! throw std::runtime_error("Not implemented");
+        router_.SetWaitTime(request.GetBusWaitTimeMin().value_or(0));
+        router_.SetVelocity(request.GetBusVelocityKmh().value_or(0));
+        router_.Build();
+    }
+
     void RequestHandler::SendStatResponse(StatResponse&& response) const {
         response_sender_.Send(std::move(response));
     }
@@ -380,7 +409,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
     }
 
     bool RequestHandler::PrepareMapRendererData() {
-        //renderer_.ClearData();
+        // renderer_.ClearData();
 
         const data::DatabaseScheme::BusRoutesTable& buses_table = db_reader_.GetDataReader().GetBusRoutesTable();
         const data::DatabaseScheme::StopsTable& stops_table = db_reader_.GetDataReader().GetStopsTable();
@@ -555,18 +584,19 @@ namespace transport_catalogue::io /* StatResponse implementation */ {
 
     StatResponse::StatResponse(
         int&& request_id, RequestCommand&& command, std::string&& name, std::optional<data::BusStat>&& bus_stat,
-        std::optional<data::StopStat>&& stop_stat, std::optional<RawMapData>&& map_data)
+        std::optional<data::StopStat>&& stop_stat, std::optional<RawMapData>&& map_data, std::optional<RouteInfo>&& route_info)
         : Response(std::move(request_id), std::move(command), std::move(name)),
           bus_stat_{std::move(bus_stat)},
           stop_stat_{std::move(stop_stat)},
-          map_data_{std::move(map_data)} {}
+          map_data_{std::move(map_data)},
+          route_info_{std::move(route_info)} {}
 
     StatResponse::StatResponse(
         StatRequest&& request, std::optional<data::BusStat>&& bus_stat, std::optional<data::StopStat>&& stop_stat,
-        std::optional<RawMapData>&& map_data)
+        std::optional<RawMapData>&& map_data, std::optional<RouteInfo>&& route_info)
         : StatResponse(
               std::move((assert(request.IsValidRequest()), request.GetRequestId().value())), std::move(request.GetCommand()),
-              std::move(request.GetName()), std::move(bus_stat), std::move(stop_stat), std::move(map_data)) {}
+              std::move(request.GetName()), std::move(bus_stat), std::move(stop_stat), std::move(map_data), std::move(route_info)) {}
 
     std::optional<data::BusStat>& StatResponse::GetBusInfo() {
         return bus_stat_;

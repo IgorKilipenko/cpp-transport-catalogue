@@ -25,6 +25,7 @@
 #include "map_renderer.h"
 #include "svg.h"
 #include "transport_catalogue.h"
+#include "transport_router.h"
 
 namespace transport_catalogue::exceptions {
     class RequestParsingException : public std::logic_error {
@@ -36,6 +37,7 @@ namespace transport_catalogue::exceptions {
 
 namespace transport_catalogue::io /* Requests aliases */ {
     using RawMapData = maps::MapRenderer::RawMapData;
+    using RouteInfo = router::RouteInfo;
     using RequestInnerArrayValueType = std::variant<std::monostate, std::string, int, double, bool>;
     using RequestArrayValueType = std::variant<std::monostate, std::string, int, double, bool, std::vector<RequestInnerArrayValueType>>;
     using RequestDictValueType = std::variant<std::monostate, std::string, int, double, bool, std::vector<RequestInnerArrayValueType>>;
@@ -82,17 +84,19 @@ namespace transport_catalogue::io /* Requests aliases */ {
 }
 
 namespace transport_catalogue::io /* Request fields enums */ {
-    enum class RequestType : int8_t { BASE, STAT, RENDER_SETTINGS, UNKNOWN };
+    enum class RequestType : int8_t { BASE, STAT, RENDER_SETTINGS, ROUTING_SETTINGS, UNKNOWN };
 
-    enum class RequestCommand : uint8_t { STOP, BUS, MAP, SET_SETTINGS, UNKNOWN };
+    enum class RequestCommand : uint8_t { STOP, BUS, MAP, ROUTE, SET_RENDER_SETTINGS, SET_ROUTING_SETTINGS, UNKNOWN };
 
     struct RequestFields {
         inline static const std::string BASE_REQUESTS{"base_requests"};
         inline static const std::string STAT_REQUESTS{"stat_requests"};
         inline static const std::string RENDER_SETTINGS{"render_settings"};
+        inline static const std::string ROUTING_SETTINGS{"routing_settings"};
         inline static const std::string TYPE{"type"};
         inline static const std::string NAME{"name"};
     };
+
     struct BaseRequestFields {
         inline static const std::string TYPE = RequestFields::TYPE;
         inline static const std::string NAME = RequestFields::NAME;
@@ -102,11 +106,13 @@ namespace transport_catalogue::io /* Request fields enums */ {
         inline static const std::string LONGITUDE{"longitude"};
         inline static const std::string ROAD_DISTANCES{"road_distances"};
     };
+
     struct StatRequestFields {
         inline static const std::string TYPE = RequestFields::TYPE;
         inline static const std::string NAME = RequestFields::NAME;
         inline static const std::string ID{"id"};
     };
+
     struct RenderSettingsRequestFields {
         inline static const std::string ID = StatRequestFields::ID;
         inline static const std::string WIDTH{"width"};
@@ -121,6 +127,11 @@ namespace transport_catalogue::io /* Request fields enums */ {
         inline static const std::string UNDERLAYER_WIDTH{"underlayer_width"};
         inline static const std::string UNDERLAYER_COLOR{"underlayer_color"};
         inline static const std::string COLOR_PALETTE{"color_palette"};
+    };
+    struct RoutingSettingsRequestFields {
+        inline static const std::string ID = StatRequestFields::ID;
+        inline static const std::string BUS_WAIT_TIME{"bus_wait_time"};
+        inline static const std::string BUS_VELOCITY{"bus_velocity"};
     };
 }
 
@@ -195,7 +206,7 @@ namespace transport_catalogue::io /* RawRequest */ {
     };
 }
 
-namespace transport_catalogue::io /* Requests */ {
+namespace transport_catalogue::io /* Request */ {
 
     struct Request {
     public: /* Aliases */
@@ -213,6 +224,7 @@ namespace transport_catalogue::io /* Requests */ {
         virtual bool IsBaseRequest() const;
         virtual bool IsStatRequest() const;
         virtual bool IsRenderSettingsRequest() const;
+        virtual bool IsRoutingSettingsRequest() const;
         virtual bool IsValidRequest() const;
 
         virtual bool IsStopCommand() const {
@@ -225,6 +237,10 @@ namespace transport_catalogue::io /* Requests */ {
 
         virtual bool IsMapCommand() const {
             return command_ == RequestCommand::MAP;
+        }
+
+        virtual bool IsRouteCommand() const {
+            return command_ == RequestCommand::ROUTE;
         }
 
         RequestCommand& GetCommand();
@@ -255,7 +271,9 @@ namespace transport_catalogue::io /* Requests */ {
             assert(command_ != RequestCommand::MAP || !name_.empty());
         }
     };
+}
 
+namespace transport_catalogue::io /* BaseRequest */ {
     class BaseRequest : public Request {
     public:
         BaseRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args) : Request(std::move(type), std::move(name), std::move(args)) {
@@ -319,7 +337,9 @@ namespace transport_catalogue::io /* Requests */ {
 
         void FillRoadDistances();
     };
+}
 
+namespace transport_catalogue::io /* StatRequest */ {
     class IStatRequest {
     public:
         virtual const std::optional<int>& GetRequestId() const = 0;
@@ -336,22 +356,68 @@ namespace transport_catalogue::io /* Requests */ {
             Build();
         }
 
-        bool IsBaseRequest() const override;
+        virtual bool IsBaseRequest() const override;
 
-        bool IsStatRequest() const override;
+        virtual bool IsStatRequest() const override;
 
-        bool IsValidRequest() const override;
+        virtual bool IsValidRequest() const override;
 
-        const std::optional<int>& GetRequestId() const override;
+        virtual const std::optional<int>& GetRequestId() const override;
 
-        std::optional<int>& GetRequestId() override;
+        virtual std::optional<int>& GetRequestId() override;
 
     protected:
-        void Build() override;
+        virtual void Build() override;
 
     private:
         std::optional<int> request_id_;
     };
+}
+
+namespace transport_catalogue::io /* RouteSataRequest */ {
+
+    class RouteSataRequest final : public StatRequest {
+        using StatRequest::StatRequest;
+        inline static const std::string NAME{"Route"};
+
+    public:
+        bool IsValidRequest() const override {
+            return StatRequest::IsValidRequest() && name_ == NAME && from_ != std::nullopt && to_ != std::nullopt;
+        }
+
+        const std::optional<std::string>& GetFromStop() const {
+            return from_;
+        }
+
+        std::optional<std::string>& GetFromStop() {
+            return from_;
+        }
+
+        const std::optional<std::string>& GetToStop() const {
+            return to_;
+        }
+
+        std::optional<std::string>& GetToStop() {
+            return to_;
+        }
+
+    private:
+        std::optional<std::string> from_;
+        std::optional<std::string> to_;
+
+    private:
+        void Build() override {
+            if (name_.empty()) {
+                name_ = NAME;
+            }
+            StatRequest::Build();
+            from_ = args_.ExtractIf<std::string>("from");
+            to_ = args_.ExtractIf<std::string>("to");
+        }
+    };
+}
+
+namespace transport_catalogue::io /* RenderSettingsRequest */ {
 
     class RenderSettingsRequest : public Request {
     public:
@@ -364,7 +430,7 @@ namespace transport_catalogue::io /* Requests */ {
             Build();
         }
 
-        explicit RenderSettingsRequest(RawRequest&& raw_request) : RenderSettingsRequest(RequestCommand::SET_SETTINGS, "", std::move(raw_request)) {}
+        explicit RenderSettingsRequest(RawRequest&& raw_request) : RenderSettingsRequest(RequestCommand::SET_RENDER_SETTINGS, "", std::move(raw_request)) {}
 
         bool IsBaseRequest() const override;
 
@@ -408,6 +474,43 @@ namespace transport_catalogue::io /* Requests */ {
     };
 }
 
+namespace transport_catalogue::io /* RoutingSettingsRequest */ {
+
+    class RoutingSettingsRequest : public Request {
+    public:
+        RoutingSettingsRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args)
+            : Request(std::move(type), std::move(name), std::move(args)) {
+            Build();
+        }
+
+        explicit RoutingSettingsRequest(RawRequest&& raw_request)
+            : RoutingSettingsRequest(RequestCommand::SET_RENDER_SETTINGS, "", std::move(raw_request)) {}
+
+        const std::optional<uint16_t>& GetBusWaitTimeMin() const {
+            return bus_wait_time_min_;
+        }
+
+        const std::optional<uint16_t>& GetBusVelocityKmh() const {
+            return bus_velocity_kmh_;
+        }
+
+        bool IsRoutingSettingsRequest() const override {
+            return true;
+        }
+
+    protected:
+        void Build() override {
+            bus_wait_time_min_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::WIDTH);
+            bus_wait_time_min_ = args_.ExtractNumberValueIf(RoutingSettingsRequestFields::BUS_WAIT_TIME);
+            bus_velocity_kmh_ = args_.ExtractNumberValueIf(RoutingSettingsRequestFields::BUS_VELOCITY);
+        }
+
+    private:
+        std::optional<uint16_t> bus_wait_time_min_;
+        std::optional<uint16_t> bus_velocity_kmh_;
+    };
+}
+
 namespace transport_catalogue::io /* Response */ {
     using ResponseBase = RequestBase;
     class RawResponse : public ResponseBase {
@@ -446,11 +549,12 @@ namespace transport_catalogue::io /* Response */ {
 
         StatResponse(
             int&& request_id, RequestCommand&& command, std::string&& name, std::optional<data::BusStat>&& bus_stat = std::nullopt,
-            std::optional<data::StopStat>&& stop_stat = std::nullopt, std::optional<RawMapData>&& map_data = std::nullopt);
+            std::optional<data::StopStat>&& stop_stat = std::nullopt, std::optional<RawMapData>&& map_data = std::nullopt,
+            std::optional<RouteInfo>&& route_info = std::nullopt);
 
         StatResponse(
             StatRequest&& request, std::optional<data::BusStat>&& bus_stat = std::nullopt, std::optional<data::StopStat>&& stop_stat = std::nullopt,
-            std::optional<RawMapData>&& map_data = std::nullopt);
+            std::optional<RawMapData>&& map_data = std::nullopt, std::optional<RouteInfo>&& route_info = std::nullopt);
 
         std::optional<data::BusStat>& GetBusInfo();
 
@@ -458,12 +562,17 @@ namespace transport_catalogue::io /* Response */ {
 
         std::optional<RawMapData>& GetMapData();
 
+        std::optional<RouteInfo>& GetRouteInfo() {
+            return route_info_;
+        }
+
         bool IsStatResponse() const override;
 
     private:
         std::optional<data::BusStat> bus_stat_;
         std::optional<data::StopStat> stop_stat_;
         std::optional<RawMapData> map_data_;
+        std::optional<RouteInfo> route_info_;
     };
 }
 
@@ -473,6 +582,7 @@ namespace transport_catalogue::io /* Interfaces */ {
         virtual void OnBaseRequest(std::vector<RawRequest>&& requests) = 0;
         virtual void OnStatRequest(std::vector<RawRequest>&& requests) = 0;
         virtual void OnRenderSettingsRequest(RawRequest&& requests) = 0;
+        virtual void OnRoutingSettingsRequest(RawRequest&& requests) = 0;
 
     protected:
         virtual ~IRequestObserver() = default;
@@ -489,6 +599,7 @@ namespace transport_catalogue::io /* Interfaces */ {
         virtual void NotifyBaseRequest(std::vector<RawRequest>&& requests) = 0;
         virtual void NotifyStatRequest(std::vector<RawRequest>&& requests) = 0;
         virtual void NotifyRenderSettingsRequest(RawRequest&& requests) = 0;
+        virtual void NotifyRoutingSettingsRequest(RawRequest&& requests) = 0;
     };
 
     class IStatResponseSender {
@@ -506,7 +617,11 @@ namespace transport_catalogue::io /* RequestHandler */ {
         RequestHandler(
             const data::ITransportStatDataReader& reader, const data::ITransportDataWriter& writer, const IStatResponseSender& response_sender,
             io::renderer::IRenderer& renderer)
-            : db_reader_{reader}, db_writer_{writer}, response_sender_{response_sender}, renderer_{renderer} {}
+            : db_reader_{reader},
+              db_writer_{writer},
+              response_sender_{response_sender},
+              renderer_{renderer},
+              router_({}, db_reader_.GetDataReader()) {}
 
         ~RequestHandler() {}
 
@@ -525,6 +640,8 @@ namespace transport_catalogue::io /* RequestHandler */ {
 
         void OnRenderSettingsRequest(RawRequest&& requests) override;
 
+        void OnRoutingSettingsRequest(RawRequest&& requests) override;
+
         /// Execute Basic (Insert) request
         void ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const;
 
@@ -540,6 +657,8 @@ namespace transport_catalogue::io /* RequestHandler */ {
         /// Execute RenderSettings (Set) request
         void ExecuteRequest(RenderSettingsRequest&& request);
 
+        void ExecuteRequest(RoutingSettingsRequest&& request);
+
         /// Send Stat Response
         void SendStatResponse(StatResponse&& response) const;
 
@@ -551,6 +670,7 @@ namespace transport_catalogue::io /* RequestHandler */ {
         const data::ITransportDataWriter& db_writer_;
         const IStatResponseSender& response_sender_;
         io::renderer::IRenderer& renderer_;
+        router::TransportRouter router_;
 
         bool PrepareMapRendererData();
     };
