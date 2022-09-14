@@ -106,4 +106,4 @@ namespace graph {
         return RouteInfo{weight, std::move(edges)};
     }
 
-}  // namespace graph
+}
