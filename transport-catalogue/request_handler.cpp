@@ -571,6 +571,10 @@ namespace transport_catalogue::io /* Response implementation */ {
         return command_ == RequestCommand::MAP;
     }
 
+    bool Response::IsRouteResponse() const {
+        return command_ == RequestCommand::ROUTE;
+    }
+
     bool Response::IsStatResponse() const {
         return false;
     }

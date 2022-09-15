@@ -533,6 +533,8 @@ namespace transport_catalogue::io /* Response */ {
 
         virtual bool IsMapResponse() const;
 
+        virtual bool IsRouteResponse() const;
+
         virtual bool IsStatResponse() const;
 
         virtual bool IsBaseResponse() const;
