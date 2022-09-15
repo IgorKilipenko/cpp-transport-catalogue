@@ -1,4 +1,5 @@
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -6,70 +7,70 @@
 
 struct Person {
     std::string name;
-    int age;
+    int age = 0;
 };
-class DBLogLevel {};
+
+enum class DBLogLevel;
+
 class DBQuery {
 public:
-    DBQuery(std::string&& query) : query_(std::move(query)) {}
-
-private:
-    std::string query_;
+    DBQuery(std::string&& query);
 };
 
 struct DBHandler {
-    bool IsOK() const {
-        return false;
-    }
-    std::string Quote(std::string_view) const {
-        return "";
-    }
+    bool IsOK() const;
+    std::string Quote(std::string_view) const;
 
     template <typename Key_, typename Value_>
-    std::vector<std::pair<Key_, Value_>> LoadRows(DBQuery) const {
-        return {};
-    }
+    std::vector<std::pair<Key_, Value_>> LoadRows(DBQuery) const;
+};
+
+struct DbConnectionConfig {
+    int db_connection_timeout;
+    bool db_allow_exceptions;
+    DBLogLevel db_log_level;
 };
 
 struct DBConnector {
     bool db_allow_exceptions = false;
     DBLogLevel db_log_level;
 
-    DBConnector(bool db_allow_exceptions, DBLogLevel db_log_level) : db_allow_exceptions(db_allow_exceptions), db_log_level(db_log_level){};
+    DBConnector(const DbConnectionConfig& config) : db_allow_exceptions(config.db_allow_exceptions), db_log_level(config.db_log_level){};
 
-    DBHandler ConnectTmp(std::string_view db_name, int db_connection_timeout) {
-        return {};
+    DBHandler Connect(std::string_view db_name) {
+        return db_name.starts_with("tmp.") ? ConnectTmp_(db_name) : Connect(db_name);
     }
-    DBHandler Connect(std::string_view db_name, int db_connection_timeout) {
-        return {};
-    }
+
+private:
+    DBHandler ConnectTmp_(std::string_view db_name);
+    DBHandler Connect_(std::string_view db_name);
 };
 
-std::vector<Person> LoadPersons(
-    std::string_view db_name, int db_connection_timeout, bool db_allow_exceptions, DBLogLevel db_log_level, int min_age, int max_age,
-    std::string_view name_filter) {
+struct Request {
+    int min_age = 0;
+    int max_age = std::numeric_limits<int>::max();
+    std::string_view name_filter;
+};
+
+std::vector<Person> LoadPersons(std::string_view db_name, const DbConnectionConfig& db_config, Request&& request) {
     using namespace std::string_literals;
-    DBConnector connector(db_allow_exceptions, db_log_level);
+    DBConnector connector(db_config);
     DBHandler db;
-    if (db_name.starts_with("tmp."s)) {
-        db = connector.ConnectTmp(db_name, db_connection_timeout);
-    } else {
-        db = connector.Connect(db_name, db_connection_timeout);
-    }
-    if (!db_allow_exceptions && !db.IsOK()) {
+    db = connector.Connect(db_name);
+    if (!connector.db_allow_exceptions && !db.IsOK()) {
         return {};
     }
 
     std::ostringstream query_str;
     query_str << "from Persons "s
               << "select Name, Age "s
-              << "where Age between "s << min_age << " and "s << max_age << " "s
-              << "and Name like '%"s << db.Quote(name_filter) << "%'"s;
+              << "where Age between "s << request.min_age << " and "s << request.max_age << " "s
+              << "and Name like '%"s << db.Quote(request.name_filter) << "%'"s;
     DBQuery query(query_str.str());
 
     std::vector<Person> persons;
     for (auto [name, age] : db.LoadRows<std::string, int>(query)) {
-        persons.push_back({move(name), age});
+        persons.emplace_back(move(name), age);
     }
     return persons;
 }
