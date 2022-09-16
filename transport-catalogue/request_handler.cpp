@@ -89,7 +89,7 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
     }
 
     void BaseRequest::Build() {
-        assert(!name_.empty());
+        assert(name_.has_value() && !name_.value().empty());
         assert(!args_.empty());
         assert(command_ == RequestCommand::BUS || command_ == RequestCommand::STOP);
 
@@ -149,7 +149,7 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
                 std::string to_stop = std::move(item.first);
                 double distance =
                     std::holds_alternative<int>(item.second) ? std::get<int>(std::move(item.second)) : std::holds_alternative<double>(item.second);
-                road_distances_.emplace_back(std::string(name_), std::move(to_stop), std::move(distance));
+                road_distances_.emplace_back(std::string(name_.value()), std::move(to_stop), std::move(distance));
             }
         }
     }
@@ -192,7 +192,7 @@ namespace transport_catalogue::io /* Request implementation */ {
 
     bool Request::IsValidRequest() const {
         return (IsBusCommand() || IsStopCommand() || IsMapCommand() || IsRouteCommand() || IsRenderSettingsRequest() || IsRenderSettingsRequest()) &&
-               !name_.empty();
+               (!(IsBusCommand() || IsStopCommand()) || (name_.has_value() && !name_->empty()));
     }
 
     RequestCommand& Request::GetCommand() {
@@ -203,11 +203,11 @@ namespace transport_catalogue::io /* Request implementation */ {
         return command_;
     }
 
-    std::string& Request::GetName() {
+    std::optional<std::string>& Request::GetName() {
         return name_;
     }
 
-    const std::string& Request::GetName() const {
+    const std::optional<std::string>& Request::GetName() const {
         return name_;
     }
 }
@@ -333,13 +333,13 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         assert(raw_req.IsValidRequest());
 
         if (raw_req.IsStopCommand()) {
-            db_writer_.AddStop(data::Stop{std::move(raw_req.GetName()), std::move(raw_req.GetCoordinates().value())});
+            db_writer_.AddStop(data::Stop{std::move(raw_req.GetName().value()), std::move(raw_req.GetCoordinates().value())});
             std::move(raw_req.GetroadDistances().begin(), raw_req.GetroadDistances().end(), std::back_inserter(out_distances));
 
         } else {
             bool is_roundtrip = raw_req.IsRoundtrip();
             raw_req.ConvertToRoundtrip();
-            db_writer_.AddBus(std::move(raw_req.GetName()), std::move(raw_req.GetStops()), is_roundtrip);
+            db_writer_.AddBus(std::move(raw_req.GetName().value()), std::move(raw_req.GetStops()), is_roundtrip);
         }
     }
 
@@ -376,13 +376,13 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
             bool is_map = request.IsMapCommand();
             bool is_router = request.IsRouteCommand();
 
-            std::string name = request.GetName();
+            std::string name = request.GetName().value_or("");
             std::optional<RouteSataRequest> route_request =
                 is_router ? std::optional<RouteSataRequest>{RouteSataRequest(std::move(request))} : std::nullopt;
 
             StatResponse resp(
-                std::move(!is_router ? request : route_request.value()), is_bus ? db_reader_.GetBusInfo(name) : std::nullopt, is_stop ? db_reader_.GetStopInfo(name) : std::nullopt,
-                is_map ? std::optional<RawMapData>(RenderMap()) : std::nullopt,
+                std::move(!is_router ? request : route_request.value()), is_bus ? db_reader_.GetBusInfo(name) : std::nullopt,
+                is_stop ? db_reader_.GetStopInfo(name) : std::nullopt, is_map ? std::optional<RawMapData>(RenderMap()) : std::nullopt,
                 is_router ? std::optional<RouteInfo>(router_.GetRouteInfo(route_request->GetFromStop().value(), route_request->GetToStop().value()))
                           : std::nullopt);
 
@@ -545,8 +545,8 @@ namespace transport_catalogue::io /* StatRequest implementation */ {
     }
 
     void StatRequest::Build() {
-        if (name_.empty()) {
-            name_ = "TransportLayer";   //! Need remove this in the future
+        if (!name_.has_value() || name_.value().empty()) {
+            name_ = "TransportLayer";  //! Need remove this in the future
         }
         request_id_ = args_.ExtractIf<int>(StatRequestFields::ID);
     }
@@ -602,7 +602,8 @@ namespace transport_catalogue::io /* StatResponse implementation */ {
         std::optional<RawMapData>&& map_data, std::optional<RouteInfo>&& route_info)
         : StatResponse(
               std::move((assert(request.IsValidRequest()), request.GetRequestId().value())), std::move(request.GetCommand()),
-              std::move(request.GetName()), std::move(bus_stat), std::move(stop_stat), std::move(map_data), std::move(route_info)) {}
+              request.GetName().has_value() ? std::move(request.GetName().value()) : "", std::move(bus_stat), std::move(stop_stat),
+              std::move(map_data), std::move(route_info)) {}
 
     std::optional<data::BusStat>& StatResponse::GetBusInfo() {
         return bus_stat_;

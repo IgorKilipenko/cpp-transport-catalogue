@@ -208,7 +208,7 @@ namespace transport_catalogue::io /* RawRequest */ {
 
 namespace transport_catalogue::io /* Request */ {
 
-    struct Request {
+    class Request {
     public: /* Aliases */
         using RequestArgsMap = RawRequest;
         using InnerArray = std::vector<RequestInnerArrayValueType>;
@@ -247,15 +247,15 @@ namespace transport_catalogue::io /* Request */ {
 
         const RequestCommand& GetCommand() const;
 
-        std::string& GetName();
+        std::optional<std::string>& GetName();
 
-        const std::string& GetName() const;
+        const std::optional<std::string>& GetName() const;
 
         virtual ~Request() = default;
 
     protected:
         RequestCommand command_ = RequestCommand::UNKNOWN;
-        std::string name_;
+        std::optional<std::string> name_;
         RequestArgsMap args_;
 
     protected:
@@ -268,7 +268,7 @@ namespace transport_catalogue::io /* Request */ {
 
         explicit Request(RawRequest&& raw_request);
         virtual void Build() {
-            assert(command_ != RequestCommand::MAP || !name_.empty());
+            assert((command_ != RequestCommand::MAP && command_ != RequestCommand::ROUTE) || (name_.has_value() && !name_->empty()));
         }
     };
 }
