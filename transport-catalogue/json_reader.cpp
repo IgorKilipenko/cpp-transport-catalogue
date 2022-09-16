@@ -215,7 +215,7 @@ namespace transport_catalogue::io /* JsonReader::Converter implementation */ {
 
 namespace transport_catalogue::io /* JsonResponseSender implementation */ {
     bool JsonResponseSender::Send(StatResponse&& response) const {
-        json::Document doc = BuildStatResponse({std::move(response)});
+        json::Document doc = BuildStatResponse_({std::move(response)});
         doc.Print(output_stream_);
         return true;
     }
@@ -224,12 +224,12 @@ namespace transport_catalogue::io /* JsonResponseSender implementation */ {
         if (responses.empty()) {
             return 0;
         }
-        json::Document doc = BuildStatResponse(std::move(responses));
+        json::Document doc = BuildStatResponse_(std::move(responses));
         doc.Print(output_stream_);
         return doc.GetRoot().AsArray().size();
     }
 
-    json::Dict JsonResponseSender::BuildStatMessage(StatResponse&& response) const {
+    json::Dict JsonResponseSender::BuildStatMessage_(StatResponse&& response) const {
         static const json::Dict::ItemType ERROR_MESSAGE_ITEM{StatFields::ERROR_MESSAGE, "not found"};
         json::Builder builder;
         auto dict_context = builder.StartDict().Key(StatFields::REQUEST_ID).Value(response.GetRequestId());
@@ -267,25 +267,7 @@ namespace transport_catalogue::io /* JsonResponseSender implementation */ {
             if (!route_info.has_value()) {
                 dict_context.Key(ERROR_MESSAGE_ITEM.first).Value(ERROR_MESSAGE_ITEM.second);
             } else {
-                dict_context.Key(StatFields::TOTAL_TIME).Value(static_cast<double>(route_info.value().total_time));
-                auto&& items = std::move(route_info.value().items);
-                json::Array items_json;
-                items_json.reserve(items.size());
-                std::for_each(std::make_move_iterator(items.begin()), std::make_move_iterator(items.end()), [&items_json](auto&& item) {
-                    if (std::holds_alternative<RouteInfo::WaitInfo>(item)) {
-                        RouteInfo::WaitInfo info = std::get<RouteInfo::WaitInfo>(std::move(item));
-                        items_json.emplace_back(
-                            json::Dict{{"stop_name", static_cast<std::string>(info.stop_name)}, {"time", static_cast<double>(info.time)}});
-                    } else {
-                        assert(std::holds_alternative<RouteInfo::BusInfo>(item));
-                        RouteInfo::BusInfo info = std::get<RouteInfo::BusInfo>(std::move(item));
-                        items_json.emplace_back(json::Dict{
-                            {"bus", static_cast<std::string>(info.bus)},
-                            {"span_count", static_cast<int>(info.span_count)},
-                            {"time", static_cast<double>(info.time)}});
-                    }
-                });
-                dict_context.Key(StatFields::ITEMS).Value(std::move(items_json));
+                BuildRouteMessage_(std::move(route_info.value()), dict_context);
             }
         } else {
             throw exceptions::ReadingException("Invalid response (Is not stat response). Response does not contain stat info");
@@ -295,10 +277,29 @@ namespace transport_catalogue::io /* JsonResponseSender implementation */ {
         return dict;
     }
 
-    json::Document JsonResponseSender::BuildStatResponse(std::vector<StatResponse>&& responses) const {
+    void JsonResponseSender::BuildRouteMessage_(RouteInfo&& route_info, json::Builder::KeyValueContext& dict_context) const {
+        dict_context.Key(StatFields::TOTAL_TIME).Value(static_cast<double>(route_info.total_time));
+        auto&& items = std::move(route_info.items);
+        json::Array items_json;
+        items_json.reserve(items.size());
+        std::for_each(std::make_move_iterator(items.begin()), std::make_move_iterator(items.end()), [&items_json](auto&& item) {
+            RouteInfo::WaitInfo wait_info = std::move(item.second);
+            items_json.emplace_back(
+                json::Dict{{"stop_name", static_cast<std::string>(wait_info.stop_name)}, {"time", static_cast<double>(wait_info.time)}});
+
+            RouteInfo::BusInfo info = std::move(item.first);
+            items_json.emplace_back(json::Dict{
+                {"bus", static_cast<std::string>(info.bus)},
+                {"span_count", static_cast<int>(info.span_count)},
+                {"time", static_cast<double>(info.time)}});
+        });
+        dict_context.Key(StatFields::ITEMS).Value(std::move(items_json));
+    }
+
+    json::Document JsonResponseSender::BuildStatResponse_(std::vector<StatResponse>&& responses) const {
         json::Array json_response;
         std::for_each(std::move_iterator(responses.begin()), std::move_iterator(responses.end()), [this, &json_response](StatResponse&& response) {
-            json::Dict resp_value = BuildStatMessage(std::move(response));
+            json::Dict resp_value = BuildStatMessage_(std::move(response));
             json_response.emplace_back(std::move(resp_value));
         });
         json::Document doc(std::move(json_response));

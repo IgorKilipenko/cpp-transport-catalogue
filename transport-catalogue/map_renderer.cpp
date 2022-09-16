@@ -203,7 +203,8 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable impl
 
         const std::string& name = db_record_->name;
         name_lables_.emplace_back(name, locations.front());
-
+        
+        //!! Need edit for mig to db_record_->GetLastStopOfRoute()
         if (locations.size() > 1 && !db_record_->is_roundtrip) {
             auto center = static_cast<size_t>(locations.size() / 2ul);
             if (db_record_->route[center]->name != db_record_->route.front()->name) {

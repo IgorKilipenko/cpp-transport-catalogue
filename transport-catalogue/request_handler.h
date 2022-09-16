@@ -381,6 +381,10 @@ namespace transport_catalogue::io /* RouteSataRequest */ {
         inline static const std::string NAME{"Route"};
 
     public:
+        RouteSataRequest(StatRequest && request) : StatRequest(std::move(request)) {
+            Build();
+        }
+
         bool IsValidRequest() const override {
             return StatRequest::IsValidRequest() && name_ == NAME && from_ != std::nullopt && to_ != std::nullopt;
         }
@@ -407,10 +411,11 @@ namespace transport_catalogue::io /* RouteSataRequest */ {
 
     private:
         void Build() override {
-            if (name_.empty()) {
+            /*if (name_.empty()) {
                 name_ = NAME;
-            }
-            StatRequest::Build();
+            }*/
+            name_ = NAME;   //! Need fix this in next version (ref - in StatRequest::Build -> name_ = "TransportLayer")
+            //StatRequest::Build();
             from_ = args_.ExtractIf<std::string>("from");
             to_ = args_.ExtractIf<std::string>("to");
         }

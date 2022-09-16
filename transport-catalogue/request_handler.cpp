@@ -377,10 +377,14 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
             bool is_router = request.IsRouteCommand();
 
             std::string name = request.GetName();
+            std::optional<RouteSataRequest> route_request =
+                is_router ? std::optional<RouteSataRequest>{RouteSataRequest(std::move(request))} : std::nullopt;
 
             StatResponse resp(
-                std::move(request), is_bus ? db_reader_.GetBusInfo(name) : std::nullopt, is_stop ? db_reader_.GetStopInfo(name) : std::nullopt,
-                is_map ? std::optional<RawMapData>(RenderMap()) : std::nullopt, is_router ? std::optional<RouteInfo>({}) : std::nullopt);
+                std::move(!is_router ? request : route_request.value()), is_bus ? db_reader_.GetBusInfo(name) : std::nullopt, is_stop ? db_reader_.GetStopInfo(name) : std::nullopt,
+                is_map ? std::optional<RawMapData>(RenderMap()) : std::nullopt,
+                is_router ? std::optional<RouteInfo>(router_.GetRouteInfo(route_request->GetFromStop().value(), route_request->GetToStop().value()))
+                          : std::nullopt);
 
             responses.emplace_back(std::move(resp));
         });
@@ -409,8 +413,6 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
     }
 
     bool RequestHandler::PrepareMapRendererData() {
-        // renderer_.ClearData();
-
         const data::DatabaseScheme::BusRoutesTable& buses_table = db_reader_.GetDataReader().GetBusRoutesTable();
         const data::DatabaseScheme::StopsTable& stops_table = db_reader_.GetDataReader().GetStopsTable();
         data::BusRecordSet sorted_busses;
@@ -544,7 +546,7 @@ namespace transport_catalogue::io /* StatRequest implementation */ {
 
     void StatRequest::Build() {
         if (name_.empty()) {
-            name_ = "TransportLayer";
+            name_ = "TransportLayer";   //! Need remove this in the future
         }
         request_id_ = args_.ExtractIf<int>(StatRequestFields::ID);
     }

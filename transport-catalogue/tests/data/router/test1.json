@@ -1,0 +1,75 @@
+{
+    "base_requests": [
+        {
+            "is_roundtrip": true,
+            "name": "297",
+            "stops": [
+                "Biryulyovo Zapadnoye",
+                "Biryulyovo Tovarnaya",
+                "Universam",
+                "Biryulyovo Zapadnoye"
+            ],
+            "type": "Bus"
+        },
+        {
+            "is_roundtrip": false,
+            "name": "635",
+            "stops": ["Biryulyovo Tovarnaya", "Universam", "Prazhskaya"],
+            "type": "Bus"
+        },
+        {
+            "latitude": 55.574371,
+            "longitude": 37.6517,
+            "name": "Biryulyovo Zapadnoye",
+            "road_distances": {
+                "Biryulyovo Tovarnaya": 2600
+            },
+            "type": "Stop"
+        },
+        {
+            "latitude": 55.587655,
+            "longitude": 37.645687,
+            "name": "Universam",
+            "road_distances": {
+                "Biryulyovo Tovarnaya": 1380,
+                "Biryulyovo Zapadnoye": 2500,
+                "Prazhskaya": 4650
+            },
+            "type": "Stop"
+        },
+        {
+            "latitude": 55.592028,
+            "longitude": 37.653656,
+            "name": "Biryulyovo Tovarnaya",
+            "road_distances": {
+                "Universam": 890
+            },
+            "type": "Stop"
+        },
+        {
+            "latitude": 55.611717,
+            "longitude": 37.603938,
+            "name": "Prazhskaya",
+            "road_distances": {},
+            "type": "Stop"
+        }
+    ],
+    "routing_settings": {
+        "bus_velocity": 40,
+        "bus_wait_time": 6
+    },
+    "stat_requests": [
+        {
+            "from": "Biryulyovo Zapadnoye",
+            "id": 4,
+            "to": "Universam",
+            "type": "Route"
+        },
+        {
+            "from": "Biryulyovo Zapadnoye",
+            "id": 5,
+            "to": "Prazhskaya",
+            "type": "Route"
+        }
+    ]
+}
