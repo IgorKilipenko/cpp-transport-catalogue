@@ -145,6 +145,18 @@ namespace transport_catalogue::data /* Db objects (ORM) */ {
         bool operator==(const Bus& rhs) const noexcept;
 
         bool operator!=(const Bus& rhs) const noexcept;
+
+        /// If IsRoundtrip is true return first Stop of route. Else return center point (for non-roundtrip route)
+        /// Calling on an empty route is undefined
+        const Route::value_type& GetLastStopOfRoute() const {
+            assert(!route.empty());
+
+            if (route.size() > 1 && !is_roundtrip) {
+                auto center = static_cast<size_t>(route.size() / 2ul);
+                return route[center];
+            }
+            return route.front();
+        }
     };
 
     struct ByNameCompare {
