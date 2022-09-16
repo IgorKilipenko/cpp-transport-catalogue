@@ -23,6 +23,7 @@
 #include "detail/type_traits.h"
 #include "domain.h"
 #include "json.h"
+#include "json_builder.h"
 #include "request_handler.h"
 
 namespace transport_catalogue::exceptions {
@@ -81,9 +82,9 @@ namespace transport_catalogue::io /* JsonResponseSender */ {
         std::ostream& output_stream_;
 
     private:
-        json::Dict BuildStatMessage(StatResponse&& response) const;
-
-        json::Document BuildStatResponse(std::vector<StatResponse>&& responses) const;
+        json::Dict BuildStatMessage_(StatResponse&& response) const;
+        void BuildRouteMessage_(RouteInfo&& route_info, json::Builder::KeyValueContext& dict_context) const;
+        json::Document BuildStatResponse_(std::vector<StatResponse>&& responses) const;
     };
 
 }
@@ -108,7 +109,7 @@ namespace transport_catalogue::io /* JsonReader */ {
         void NotifyStatRequest(std::vector<RawRequest>&& requests) override;
 
         void NotifyRenderSettingsRequest(RawRequest&& requests) override;
-        
+
         void NotifyRoutingSettingsRequest(RawRequest&& requests) override;
 
         bool HasObserver() const override;
