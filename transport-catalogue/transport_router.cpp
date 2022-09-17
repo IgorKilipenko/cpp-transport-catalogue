@@ -48,16 +48,16 @@ namespace transport_catalogue::router {
             route.insert(route.end(), last_it,  bus.route.end());
         }*/
 
-        const  data::Route& route = bus.route;
+        const data::Route& route = bus.route;
 
-        for (size_t i = 0; i + 1 < route.size()-1; ++i) {
+        for (size_t i = 0; i < route.size() - 1ul; ++i) {
             size_t span = 1;
             double total_travel_time = settings_.bus_wait_time_min;  //! waigth
             const data::StopRecord& from_stop_ptr = route[i];
             for (size_t j = i + 1; j < route.size(); ++j) {
                 const data::StopRecord& current_stop_ptr = route[j - 1];
                 const data::StopRecord& next_stop_ptr = route[j];
-                if (from_stop_ptr == next_stop_ptr /*|| current_stop_ptr == next_stop_ptr*/) {  //! Сомнительно!)
+                if (from_stop_ptr == next_stop_ptr) {  //! Сомнительно!)
                     continue;
                 }
 

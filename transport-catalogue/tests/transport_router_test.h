@@ -77,7 +77,7 @@ namespace transport_catalogue::tests {
 
         void Test2() const {
             std::string result = ReadDocument(DATA_PATH / "test2.json");
-            std::cerr << result << std::endl;
+            //!std::cerr << result << std::endl;
             std::string expected_str = transport_catalogue::detail::io::FileReader::Read(DATA_PATH / "test2_output.json");
             assert(!result.empty());
 
