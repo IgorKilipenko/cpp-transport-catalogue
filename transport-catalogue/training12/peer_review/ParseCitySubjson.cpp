@@ -2,7 +2,7 @@
 #include <vector>
 
 using namespace std;
-
+/*
 // Дана функция ParseCitySubjson, обрабатывающая JSON-объект со списком городов конкретной страны:
 void ParseCitySubjson(const vector<City>& cities, const Json& json, const Country& country) {
     for (const auto& city_json : json.AsList()) {
@@ -31,3 +31,4 @@ void ParseCountryJson(vector<Country>& countries, vector<City>& cities, const Js
         ParseCitySubjson(cities, country_obj["cities"s], country);
     }
 }
+*/
