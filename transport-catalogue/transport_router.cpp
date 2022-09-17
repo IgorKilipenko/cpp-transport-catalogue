@@ -42,21 +42,28 @@ namespace transport_catalogue::router {
         }
 
         const auto& last_stop_of_route = bus.GetLastStopOfRoute();
+        /*auto last_it = std::find(bus.route.begin(), bus.route.end(), last_stop_of_route);
+        data::Route route{bus.route.begin(), !bus.is_roundtrip ? std::next(last_it) : bus.route.end()};
+        if (!bus.is_roundtrip) {
+            route.insert(route.end(), last_it,  bus.route.end());
+        }*/
 
-        for (size_t i = 0; i + 1 < bus.route.size(); ++i) {
+        const  data::Route& route = bus.route;
+
+        for (size_t i = 0; i + 1 < route.size()-1; ++i) {
             size_t span = 1;
-            double total_travel_time = 0.;  //! waigth
-            const data::StopRecord& from_stop_ptr = bus.route[i];
-            for (size_t j = i + 1; j < bus.route.size(); ++j) {
-                const data::StopRecord& current_stop_ptr = bus.route[j - 1];
-                const data::StopRecord& next_stop_ptr = bus.route[j];
-                if (from_stop_ptr == next_stop_ptr) { //! Сомнительно!)
+            double total_travel_time = settings_.bus_wait_time_min;  //! waigth
+            const data::StopRecord& from_stop_ptr = route[i];
+            for (size_t j = i + 1; j < route.size(); ++j) {
+                const data::StopRecord& current_stop_ptr = route[j - 1];
+                const data::StopRecord& next_stop_ptr = route[j];
+                if (from_stop_ptr == next_stop_ptr /*|| current_stop_ptr == next_stop_ptr*/) {  //! Сомнительно!)
                     continue;
                 }
 
                 auto it = db_reader_.GetDistanceBetweenStops(current_stop_ptr, next_stop_ptr);
                 total_travel_time += it.measured_distance / 1000.0 / settings_.bus_velocity_kmh * 60.0 +
-                          (last_stop_of_route == current_stop_ptr ? settings_.bus_wait_time_min : 0.);
+                                     (!bus.is_roundtrip && last_stop_of_route == current_stop_ptr ? settings_.bus_wait_time_min : 0.);
 
                 auto ege_id = graph_.AddEdge({index_mapper_.GetAt(from_stop_ptr), index_mapper_.GetAt(next_stop_ptr), total_travel_time});
 
@@ -64,7 +71,7 @@ namespace transport_catalogue::router {
                     .bus_name = bus.name,
                     .bus_wait_time_min = settings_.bus_wait_time_min,
                     .bus_travel_time = total_travel_time - settings_.bus_wait_time_min,
-                    .travel_items_count = span, // Number of distances between stops (aka span count)
+                    .travel_items_count = span,  // Number of distances between stops (aka span count)
                     .from_stop = from_stop_ptr->name,
                     .next_stop = next_stop_ptr->name,
                     .current_stop = current_stop_ptr->name};
