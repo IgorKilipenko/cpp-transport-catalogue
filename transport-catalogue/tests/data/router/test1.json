@@ -14,7 +14,11 @@
         {
             "is_roundtrip": false,
             "name": "635",
-            "stops": ["Biryulyovo Tovarnaya", "Universam", "Prazhskaya"],
+            "stops": [
+                "Biryulyovo Tovarnaya",
+                "Universam",
+                "Prazhskaya"
+            ],
             "type": "Bus"
         },
         {
@@ -54,11 +58,59 @@
             "type": "Stop"
         }
     ],
+    "render_settings": {
+        "bus_label_font_size": 20,
+        "bus_label_offset": [
+            7,
+            15
+        ],
+        "color_palette": [
+            "green",
+            [
+                255,
+                160,
+                0
+            ],
+            "red"
+        ],
+        "height": 200,
+        "line_width": 14,
+        "padding": 30,
+        "stop_label_font_size": 20,
+        "stop_label_offset": [
+            7,
+            -3
+        ],
+        "stop_radius": 5,
+        "underlayer_color": [
+            255,
+            255,
+            255,
+            0.85
+        ],
+        "underlayer_width": 3,
+        "width": 200
+    },
     "routing_settings": {
         "bus_velocity": 40,
         "bus_wait_time": 6
     },
     "stat_requests": [
+        {
+            "id": 1,
+            "name": "297",
+            "type": "Bus"
+        },
+        {
+            "id": 2,
+            "name": "635",
+            "type": "Bus"
+        },
+        {
+            "id": 3,
+            "name": "Universam",
+            "type": "Stop"
+        },
         {
             "from": "Biryulyovo Zapadnoye",
             "id": 4,
