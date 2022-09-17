@@ -21,12 +21,14 @@ namespace transport_catalogue::router {
     class RouteInfo {
     public:
         struct BusInfo {
+            inline static const std::string TYPE_NAME = "Bus";
             std::string_view bus{""};
             size_t span_count = 0;
             double time = 0;
         };
 
         struct WaitInfo {
+            inline static const std::string TYPE_NAME = "Wait";
             std::string_view stop_name{""};
             double time = 0;
         };

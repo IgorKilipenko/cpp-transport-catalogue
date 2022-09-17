@@ -284,14 +284,15 @@ namespace transport_catalogue::io /* JsonResponseSender implementation */ {
         items_json.reserve(items.size());
         std::for_each(std::make_move_iterator(items.begin()), std::make_move_iterator(items.end()), [&items_json](auto&& item) {
             RouteInfo::WaitInfo wait_info = std::move(item.second);
-            items_json.emplace_back(
-                json::Dict{{"stop_name", static_cast<std::string>(wait_info.stop_name)}, {"time", static_cast<double>(wait_info.time)}});
-
-            RouteInfo::BusInfo info = std::move(item.first);
             items_json.emplace_back(json::Dict{
-                {"bus", static_cast<std::string>(info.bus)},
-                {"span_count", static_cast<int>(info.span_count)},
-                {"time", static_cast<double>(info.time)}});
+                {"type", wait_info.TYPE_NAME}, {"stop_name", static_cast<std::string>(wait_info.stop_name)}, {"time", static_cast<double>(wait_info.time)}});
+
+            RouteInfo::BusInfo bus_info = std::move(item.first);
+            items_json.emplace_back(json::Dict{
+                {"type", bus_info.TYPE_NAME},
+                {"bus", static_cast<std::string>(bus_info.bus)},
+                {"span_count", static_cast<int>(bus_info.span_count)},
+                {"time", static_cast<double>(bus_info.time)}});
         });
         dict_context.Key(StatFields::ITEMS).Value(std::move(items_json));
     }

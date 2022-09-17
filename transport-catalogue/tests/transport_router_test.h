@@ -4,6 +4,7 @@
 #include <cassert>
 #include <filesystem>
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include <string_view>
 #include <vector>
@@ -47,7 +48,61 @@ namespace transport_catalogue::tests {
 
         void Test1() const {
             std::string result = ReadDocument(DATA_PATH / "test1.json");
+            std::string expected_str = transport_catalogue::detail::io::FileReader::Read(DATA_PATH / "test1_output.json");
+            assert(!result.empty());
+
+            json::Document doc = json::Document::Load(std::stringstream{result});
+            assert(doc.GetRoot().IsArray());
+            json::Array response = doc.GetRoot().AsArray();
+            json::Array expected_response = json::Node::LoadNode(std::stringstream{expected_str}).AsArray();
+
+            assert(expected_response.size() >= response.size());
+
+            for (auto result_it = response.begin(), expected_it = expected_response.begin(); result_it != response.end();
+                 ++result_it, ++expected_it) {
+                if (expected_it->IsMap() && expected_it->AsMap().count("items")) {
+                    if (*result_it != *expected_it) {
+                        std::cerr << "Test result:" << std::endl;
+                        result_it->Print(std::cerr);
+                        std::cerr << std::endl;
+
+                        std::cerr << std::endl << "Test expected result:" << std::endl;
+                        expected_it->Print(std::cerr);
+
+                        assert(false);
+                    }
+                }
+            }
+        }
+
+        void Test2() const {
+            std::string result = ReadDocument(DATA_PATH / "test2.json");
             std::cerr << result << std::endl;
+            std::string expected_str = transport_catalogue::detail::io::FileReader::Read(DATA_PATH / "test2_output.json");
+            assert(!result.empty());
+
+            json::Document doc = json::Document::Load(std::stringstream{result});
+            assert(doc.GetRoot().IsArray());
+            json::Array response = doc.GetRoot().AsArray();
+            json::Array expected_response = json::Node::LoadNode(std::stringstream{expected_str}).AsArray();
+
+            assert(expected_response.size() >= response.size());
+
+            for (auto result_it = response.begin(), expected_it = expected_response.begin(); result_it != response.end();
+                 ++result_it, ++expected_it) {
+                if (expected_it->IsMap() && expected_it->AsMap().count("items")) {
+                    if (*result_it != *expected_it) {
+                        std::cerr << "Test result:" << std::endl;
+                        result_it->Print(std::cerr);
+                        std::cerr << std::endl;
+
+                        std::cerr << std::endl << "Test expected result:" << std::endl;
+                        expected_it->Print(std::cerr);
+
+                        assert(false);
+                    }
+                }
+            }
         }
 
         void RunTests() const {
@@ -55,6 +110,9 @@ namespace transport_catalogue::tests {
 
             Test1();
             std::cerr << prefix << "Test1 : Done." << std::endl;
+
+            Test2();
+            std::cerr << prefix << "Test2 : Done." << std::endl;
 
             std::cerr << std::endl << "All TransportRouter Tests : Done." << std::endl << std::endl;
         }
