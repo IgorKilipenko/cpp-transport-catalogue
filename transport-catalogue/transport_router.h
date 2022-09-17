@@ -116,7 +116,7 @@ namespace transport_catalogue::router {
                 RoutingItemInfo raw_info = edges_.at(edge_id);
                 RouteInfo::WaitInfo wait_info{.stop_name = raw_info.from_stop, .time = raw_info.bus_wait_time_min};
                 RouteInfo::BusInfo bus_info{
-                    .bus = raw_info.bus_name, .span_count = raw_info.travel_items_count, .time = edge_info->weight - raw_info.bus_wait_time_min};
+                    .bus = raw_info.bus_name, .span_count = raw_info.travel_items_count, .time = raw_info.bus_travel_time};
                 items.emplace_back(std::move(bus_info), std::move(wait_info));
             }
             return RouteInfo{.total_time = edge_info->weight, .items = std::move(items)};
