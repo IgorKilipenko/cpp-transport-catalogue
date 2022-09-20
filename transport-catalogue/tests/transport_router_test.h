@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <cassert>
 #include <filesystem>
+#include <functional>
 #include <iostream>
+#include <numeric>
 #include <sstream>
 #include <stdexcept>
 #include <string_view>
@@ -56,19 +58,56 @@ namespace transport_catalogue::tests {
             json::Array response = doc.GetRoot().AsArray();
             json::Array expected_response = json::Node::LoadNode(std::stringstream{expected_str}).AsArray();
 
-            assert(expected_response.size() >= response.size());
+            assert(expected_response.size() == response.size());
+
+            const auto calc_time = [](const json::Array& arr) -> double {
+                double result = 0.;
+                std::for_each(arr.begin(), arr.end(), [&result](const json::Node& node) {
+                    result += node.AsMap().at("time").AsDouble();
+                });
+                return result;
+            };
 
             for (auto result_it = response.begin(), expected_it = expected_response.begin(); result_it != response.end();
                  ++result_it, ++expected_it) {
                 if (expected_it->IsMap() && expected_it->AsMap().count("items")) {
                     json::Dict res_map = result_it->AsMap();
-                    json::Dict expected_map = result_it->AsMap();
+                    json::Dict expected_map = expected_it->AsMap();
 
                     assert(res_map.count("request_id") && expected_map.count("request_id"));
                     assert(res_map.count("total_time") && expected_map.count("total_time"));
 
-                    if (res_map != expected_map ||
-                        (res_map.at("request_id") != expected_map.at("request_id") && res_map.at("total_time") != expected_map.at("total_time"))) {
+                    if (res_map != expected_map) {
+                        double tt1 = calc_time(res_map.at("items").AsArray());
+                        double tt2 = calc_time(expected_map.at("items").AsArray());
+                        if (res_map.at("request_id") != expected_map.at("request_id") || std::abs(tt1 - tt2) > 0.011 /*|| tt1 != res_map.at("total_time") ||
+                            tt2 != expected_map.at("total_time") */
+                            || std::abs(res_map.at("total_time").AsDouble() - expected_map.at("total_time").AsDouble()) > 0.011   /*||
+                            res_map.at("items").AsArray().size() != expected_map.at("items").AsArray().size()*/) {
+                            std::cerr << "Test result:" << std::endl;
+                            result_it->Print(std::cerr);
+                            std::cerr << std::endl;
+
+                            std::cerr << std::endl << "Test expected result:" << std::endl;
+                            expected_it->Print(std::cerr);
+                            std::cerr << std::endl;
+
+                            // assert(false);
+                        }
+                    }
+                }
+            }
+
+            /*for (auto result_it = response.begin(), expected_it = expected_response.begin(); result_it != response.end();
+                 ++result_it, ++expected_it) {
+                if (expected_it->IsMap() && expected_it->AsMap().count("items")) {
+                    json::Dict res_map = result_it->AsMap();
+                    json::Dict expected_map = expected_it->AsMap();
+
+                    assert(res_map.count("request_id") && expected_map.count("request_id"));
+                    assert(res_map.count("total_time") && expected_map.count("total_time"));
+
+                    if (res_map != expected_map) {
                         std::cerr << "Test result:" << std::endl;
                         result_it->Print(std::cerr);
                         std::cerr << std::endl;
@@ -76,10 +115,12 @@ namespace transport_catalogue::tests {
                         std::cerr << std::endl << "Test expected result:" << std::endl;
                         expected_it->Print(std::cerr);
 
-                        assert(false);
+                        //assert(false);
                     }
                 }
-            }
+            }*/
+
+            // CheckResultsExtend(std::move(expected_response), std::move(response));
 
             /*if (response != expected_response) {
                 std::cerr << "Test result:" << std::endl;

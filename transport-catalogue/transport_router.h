@@ -116,12 +116,11 @@ namespace transport_catalogue::router {
             items.reserve(edge_info->edges.size());
             for (graph::EdgeId edge_id : edge_info->edges) {
                 RoutingItemInfo raw_info = edges_.at(edge_id);
-                RouteInfo::WaitInfo wait_info{.stop_name = raw_info.from_stop, .time = raw_info.bus_wait_time_min};
-                RouteInfo::BusInfo bus_info{
-                    .bus = raw_info.bus_name, .span_count = raw_info.travel_items_count, .time = raw_info.bus_travel_time};
+                RouteInfo::WaitInfo wait_info{raw_info.from_stop, raw_info.bus_wait_time_min};
+                RouteInfo::BusInfo bus_info{raw_info.bus_name, raw_info.travel_items_count, raw_info.bus_travel_time};
                 items.emplace_back(std::move(bus_info), std::move(wait_info));
             }
-            return RouteInfo{.total_time = edge_info->weight, .items = std::move(items)};
+            return RouteInfo{edge_info->weight, std::move(items)};
         }
 
         void Build();

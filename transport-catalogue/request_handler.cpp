@@ -378,11 +378,11 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
 
             std::string name = request.GetName().value_or("");
             std::optional<RouteSataRequest> route_request =
-                is_router ? std::optional<RouteSataRequest>{RouteSataRequest(std::move(request))} : std::nullopt;
+                is_router ? std::optional<RouteSataRequest>{RouteSataRequest(StatRequest(request))} : std::nullopt;
 
             StatResponse resp(
-                std::move(!is_router ? request : route_request.value()), is_bus ? db_reader_.GetBusInfo(name) : std::nullopt,
-                is_stop ? db_reader_.GetStopInfo(name) : std::nullopt, is_map ? std::optional<RawMapData>(RenderMap()) : std::nullopt,
+                std::move(request), is_bus ? db_reader_.GetBusInfo(name) : std::nullopt, is_stop ? db_reader_.GetStopInfo(name) : std::nullopt,
+                is_map ? std::optional<RawMapData>(RenderMap()) : std::nullopt,
                 is_router ? std::optional<RouteInfo>(router_.GetRouteInfo(route_request->GetFromStop().value(), route_request->GetToStop().value()))
                           : std::nullopt);
 
@@ -601,8 +601,8 @@ namespace transport_catalogue::io /* StatResponse implementation */ {
         StatRequest&& request, std::optional<data::BusStat>&& bus_stat, std::optional<data::StopStat>&& stop_stat,
         std::optional<RawMapData>&& map_data, std::optional<RouteInfo>&& route_info)
         : StatResponse(
-              std::move((assert(request.IsValidRequest()), request.GetRequestId().value())), std::move(request.GetCommand()),
-              request.GetName().has_value() ? std::move(request.GetName().value()) : "", std::move(bus_stat), std::move(stop_stat),
+              std::move((request.GetRequestId().value())), std::move(request.GetCommand()),
+              request.GetName().has_value() ? std::move(request.GetName().value()) : std::string{}, std::move(bus_stat), std::move(stop_stat),
               std::move(map_data), std::move(route_info)) {}
 
     std::optional<data::BusStat>& StatResponse::GetBusInfo() {
