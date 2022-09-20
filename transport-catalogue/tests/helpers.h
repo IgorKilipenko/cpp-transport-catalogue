@@ -77,7 +77,7 @@ namespace transport_catalogue::tests {
 
     inline void CheckResultsExtend(json::Array &&expected_result, json::Array &&result) {
         assert(expected_result.size() == result.size());
-        for (int i = 0; i < expected_result.size(); ++i) {
+        for (size_t i = 0; i < expected_result.size(); ++i) {
             CheckResults(expected_result[i], result[i]);
         }
     }
