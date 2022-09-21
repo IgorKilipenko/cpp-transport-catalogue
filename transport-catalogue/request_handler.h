@@ -247,28 +247,22 @@ namespace transport_catalogue::io /* Request */ {
 
         const RequestCommand& GetCommand() const;
 
-        std::optional<std::string>& GetName();
-
-        const std::optional<std::string>& GetName() const;
-
         virtual ~Request() = default;
 
     protected:
         RequestCommand command_ = RequestCommand::UNKNOWN;
-        std::optional<std::string> name_;
         RequestArgsMap args_;
 
     protected:
         inline static const RequestEnumConverter converter{};
         Request() = default;
-        Request(RequestCommand type, std::string&& name, RequestArgsMap&& args)
-            : command_{std::move(type)}, name_{std::move(name)}, args_{std::move(args)} {}
+        Request(RequestCommand type, RequestArgsMap&& args) : command_{std::move(type)}, args_{std::move(args)} {}
 
-        Request(std::string&& type, std::string&& name, RequestArgsMap&& args);
+        Request(std::string&& type, RequestArgsMap&& args);
 
         explicit Request(RawRequest&& raw_request);
         virtual void Build() {
-            assert((command_ != RequestCommand::MAP && command_ != RequestCommand::ROUTE) || (name_.has_value() && !name_->empty()));
+            assert((command_ != RequestCommand::MAP && command_ != RequestCommand::ROUTE));
         }
     };
 }
@@ -276,7 +270,8 @@ namespace transport_catalogue::io /* Request */ {
 namespace transport_catalogue::io /* BaseRequest */ {
     class BaseRequest : public Request {
     public:
-        BaseRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args) : Request(std::move(type), std::move(name), std::move(args)) {
+        BaseRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args)
+            : Request(std::move(type), std::move(args)), name_(std::move(name)) {
             Build();
         }
         explicit BaseRequest(RawRequest&& raw_request) : Request(std::move(raw_request)) {
@@ -314,10 +309,15 @@ namespace transport_catalogue::io /* BaseRequest */ {
 
         static void ConvertToRoundtrip(std::vector<std::string>& stops);
 
+        std::string& GetName();
+
+        const std::string& GetName() const;
+
     protected:
         void Build() override;
 
     private:
+        std::string name_;
         std::vector<std::string> stops_;
         std::optional<bool> is_roundtrip_;
         std::optional<data::Coordinates> coordinates_;
@@ -325,17 +325,17 @@ namespace transport_catalogue::io /* BaseRequest */ {
         bool is_converted_to_roundtrip_ = false;
 
     private:
-        void FillBus();
+        void FillBus_();
 
-        void FillStop();
+        void FillStop_();
 
-        void FillStops();
+        void FillStops_();
 
-        void FillRoundtrip();
+        void FillRoundtrip_();
 
-        void FillCoordinates();
+        void FillCoordinates_();
 
-        void FillRoadDistances();
+        void FillRoadDistances_();
     };
 }
 
@@ -349,7 +349,7 @@ namespace transport_catalogue::io /* StatRequest */ {
 
     class StatRequest : public Request, public IStatRequest {
     public:
-        StatRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args) : Request(std::move(type), std::move(name), std::move(args)) {
+        StatRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args) : Request(std::move(type), std::move(args)), name_{std::move(name)} {
             Build();
         }
         explicit StatRequest(RawRequest&& raw_request) : Request(std::move(raw_request)) {
@@ -366,11 +366,16 @@ namespace transport_catalogue::io /* StatRequest */ {
 
         virtual std::optional<int>& GetRequestId() override;
 
+        virtual std::optional<std::string>& GetName();
+
+        virtual const std::optional<std::string>& GetName() const;
+
     protected:
         virtual void Build() override;
 
     private:
         std::optional<int> request_id_;
+        std::optional<std::string> name_;
     };
 }
 
@@ -378,15 +383,15 @@ namespace transport_catalogue::io /* RouteSataRequest */ {
 
     class RouteSataRequest final : public StatRequest {
         using StatRequest::StatRequest;
-        inline static const std::string NAME{"Route"};
+        //! inline static const std::string NAME{"Route"};
 
     public:
-        RouteSataRequest(StatRequest && request) : StatRequest(std::move(request)) {
+        RouteSataRequest(StatRequest&& request) : StatRequest(std::move(request)) {
             Build();
         }
 
         bool IsValidRequest() const override {
-            return StatRequest::IsValidRequest() && name_ == NAME && from_ != std::nullopt && to_ != std::nullopt;
+            return StatRequest::IsValidRequest() /*&& name_ == NAME*/ && from_ != std::nullopt && to_ != std::nullopt;
         }
 
         const std::optional<std::string>& GetFromStop() const {
@@ -411,11 +416,6 @@ namespace transport_catalogue::io /* RouteSataRequest */ {
 
     private:
         void Build() override {
-            /*if (name_.empty()) {
-                name_ = NAME;
-            }*/
-            name_ = NAME;   //! Need fix this in next version (ref - in StatRequest::Build -> name_ = "TransportLayer")
-            //StatRequest::Build();
             from_ = args_.ExtractIf<std::string>("from");
             to_ = args_.ExtractIf<std::string>("to");
         }
@@ -431,11 +431,12 @@ namespace transport_catalogue::io /* RenderSettingsRequest */ {
 
     public:
         RenderSettingsRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args)
-            : Request(std::move(type), std::move(name), std::move(args)) {
+            : Request(std::move(type), std::move(args)) {
             Build();
         }
 
-        explicit RenderSettingsRequest(RawRequest&& raw_request) : RenderSettingsRequest(RequestCommand::SET_RENDER_SETTINGS, "", std::move(raw_request)) {}
+        explicit RenderSettingsRequest(RawRequest&& raw_request)
+            : RenderSettingsRequest(RequestCommand::SET_RENDER_SETTINGS, "", std::move(raw_request)) {}
 
         bool IsBaseRequest() const override;
 
@@ -484,7 +485,7 @@ namespace transport_catalogue::io /* RoutingSettingsRequest */ {
     class RoutingSettingsRequest : public Request {
     public:
         RoutingSettingsRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args)
-            : Request(std::move(type), std::move(name), std::move(args)) {
+            : Request(std::move(type), std::move(args)) {
             Build();
         }
 
