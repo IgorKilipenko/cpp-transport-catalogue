@@ -628,6 +628,7 @@ namespace transport_catalogue::io /* StatResponse implementation */ {
 }
 
 namespace transport_catalogue::io /* RenderSettingsRequest implementation */ {
+
     bool RenderSettingsRequest::IsBaseRequest() const {
         return false;
     }
@@ -690,5 +691,37 @@ namespace transport_catalogue::io /* RenderSettingsRequest implementation */ {
         underlayer_color_ = args_.ExtractColorValueIf(RenderSettingsRequestFields::UNDERLAYER_COLOR);
         underlayer_width_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::UNDERLAYER_WIDTH);
         color_palette_ = args_.ExtractColorPaletteIf(RenderSettingsRequestFields::COLOR_PALETTE);
+    }
+}
+
+namespace transport_catalogue::io /* RouteSataRequest implementation */ {
+
+    RouteSataRequest::RouteSataRequest(StatRequest&& request) : StatRequest(std::move(request)) {
+        Build();
+    }
+
+    bool RouteSataRequest::IsValidRequest() const {
+        return StatRequest::IsValidRequest() && from_ != std::nullopt && to_ != std::nullopt;
+    }
+
+    const std::optional<std::string>& RouteSataRequest::GetFromStop() const {
+        return from_;
+    }
+
+    std::optional<std::string>& RouteSataRequest::GetFromStop() {
+        return from_;
+    }
+
+    const std::optional<std::string>& RouteSataRequest::GetToStop() const {
+        return to_;
+    }
+
+    std::optional<std::string>& RouteSataRequest::GetToStop() {
+        return to_;
+    }
+
+    void RouteSataRequest::Build() {
+        from_ = args_.ExtractIf<std::string>("from");
+        to_ = args_.ExtractIf<std::string>("to");
     }
 }

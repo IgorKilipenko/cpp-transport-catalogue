@@ -383,42 +383,26 @@ namespace transport_catalogue::io /* RouteSataRequest */ {
 
     class RouteSataRequest final : public StatRequest {
         using StatRequest::StatRequest;
-        //! inline static const std::string NAME{"Route"};
 
     public:
-        RouteSataRequest(StatRequest&& request) : StatRequest(std::move(request)) {
-            Build();
-        }
+        RouteSataRequest(StatRequest&& request) ;
 
-        bool IsValidRequest() const override {
-            return StatRequest::IsValidRequest() /*&& name_ == NAME*/ && from_ != std::nullopt && to_ != std::nullopt;
-        }
+        bool IsValidRequest() const override ;
 
-        const std::optional<std::string>& GetFromStop() const {
-            return from_;
-        }
+        const std::optional<std::string>& GetFromStop() const;
 
-        std::optional<std::string>& GetFromStop() {
-            return from_;
-        }
+        std::optional<std::string>& GetFromStop();
 
-        const std::optional<std::string>& GetToStop() const {
-            return to_;
-        }
+        const std::optional<std::string>& GetToStop() const ;
 
-        std::optional<std::string>& GetToStop() {
-            return to_;
-        }
+        std::optional<std::string>& GetToStop() ;
 
     private:
         std::optional<std::string> from_;
         std::optional<std::string> to_;
 
     private:
-        void Build() override {
-            from_ = args_.ExtractIf<std::string>("from");
-            to_ = args_.ExtractIf<std::string>("to");
-        }
+        void Build() override;
     };
 }
 
