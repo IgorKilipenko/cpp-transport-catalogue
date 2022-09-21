@@ -64,7 +64,8 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
     }
 
     bool BaseRequest::IsValidRequest() const {
-        return Request::IsValidRequest() && ((IsBusCommand() && is_roundtrip_.has_value()) || (IsStopCommand() && coordinates_.has_value()));
+        return Request::IsValidRequest() && !name_.empty() &&
+               ((IsBusCommand() && is_roundtrip_.has_value()) || (IsStopCommand() && coordinates_.has_value()));
     }
 
     void BaseRequest::ConvertToRoundtrip() {
