@@ -101,7 +101,10 @@ namespace json /* Builder::Context */ {
         using ContextBase::StartDict;
 
     public:
-        ValueContext Value(Node value);
+        template <
+            typename NodeType_,
+            detail::EnableIf<detail::IsConvertibleV<NodeType_, Node> || detail::IsConvertibleV<NodeType_, Node::ValueType>> = true>
+        ValueContext Value(NodeType_&& value);
     };
 
     class Builder::KeyValueContext : public ContextBase {
@@ -115,7 +118,7 @@ namespace json /* Builder::Context */ {
     class Builder::ValueContext : public ContextBase {
         using ContextBase::ContextBase;
 
-    public:
+    public: /* Base class methods */
         using ContextBase::Build;
         using ContextBase::EndArray;
         using ContextBase::EndDict;
@@ -208,7 +211,7 @@ namespace json /* Builder template implementation */ {
 
 }
 
-namespace json /* Builder::ContextBase template implementation */ {
+namespace json /* Builder::Context template implementation */ {
 
     template <typename KeyType_, detail::EnableIf<detail::IsConvertibleV<KeyType_, std::string>>>
     Builder::KeyContext Builder::ContextBase::Key(KeyType_&& key) {
@@ -225,5 +228,10 @@ namespace json /* Builder::ContextBase template implementation */ {
     Builder::ArrayContext Builder::ArrayContext::Value(NodeType_&& value) {
         builder_.Value(std::forward<NodeType_>(value));
         return builder_;
+    }
+
+    template <typename NodeType_, detail::EnableIf<detail::IsConvertibleV<NodeType_, Node> || detail::IsConvertibleV<NodeType_, Node::ValueType>>>
+    Builder::ValueContext Builder::Context::Value(NodeType_&& value) {
+        return builder_.Value(std::forward<NodeType_>(value));
     }
 }

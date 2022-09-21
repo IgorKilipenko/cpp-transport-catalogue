@@ -22,6 +22,7 @@
 
 #include "domain.h"
 #include "json.h"
+#include "json_builder.h"
 #include "request_handler.h"
 
 namespace transport_catalogue::exceptions {
@@ -66,6 +67,8 @@ namespace transport_catalogue::io /* JsonResponseSender */ {
             inline static const std::string UNIQUE_STOP_COUNT{"unique_stop_count"};
             inline static const std::string BUSES{"buses"};
             inline static const std::string MAP{"map"};
+            inline static const std::string TOTAL_TIME{"total_time"};
+            inline static const std::string ITEMS{"items"};
         };
 
         JsonResponseSender(std::ostream& output_stream) : output_stream_(output_stream) {}
@@ -78,9 +81,9 @@ namespace transport_catalogue::io /* JsonResponseSender */ {
         std::ostream& output_stream_;
 
     private:
-        json::Dict BuildStatMessage(StatResponse&& response) const;
-
-        json::Document BuildStatResponse(std::vector<StatResponse>&& responses) const;
+        json::Dict BuildStatMessage_(StatResponse&& response) const;
+        void BuildRouteMessage_(RouteInfo&& route_info, json::Builder::KeyValueContext& dict_context) const;
+        json::Document BuildStatResponse_(std::vector<StatResponse>&& responses) const;
     };
 
 }
@@ -105,6 +108,8 @@ namespace transport_catalogue::io /* JsonReader */ {
         void NotifyStatRequest(std::vector<RawRequest>&& requests) override;
 
         void NotifyRenderSettingsRequest(RawRequest&& requests) override;
+
+        void NotifyRoutingSettingsRequest(RawRequest&& requests) override;
 
         bool HasObserver() const override;
 
@@ -133,6 +138,7 @@ namespace transport_catalogue::io /* JsonReader */ {
         constexpr static const std::string_view BASE_REQUESTS_LITERAL = "base_requests"sv;
         constexpr static const std::string_view STAT_REQUESTS_LITERAL = "stat_requests"sv;
         constexpr static const std::string_view RENDER_SETTINGS_REQUESTS_LITERAL = "render_settings"sv;
+        constexpr static const std::string_view ROUTING_SETTINGS_REQUESTS_LITERAL = "routing_settings"sv;
     };
 }
 

@@ -67,7 +67,7 @@ namespace transport_catalogue::obsolete::io {
 
     std::vector<std::string> Reader::ReadLines(size_t count) const {
         std::vector<std::string> result{count};
-        int idx = 0;
+        size_t idx = 0;
         for (std::string line; idx < count && std::getline(in_stream_, line); ++idx) {
             result[idx] = line;
         }

@@ -41,6 +41,10 @@ namespace transport_catalogue /* TransportCatalogue < ITransportDataReader imple
         return db_reader_.GetStopsTable();
     }
 
+    const data::DatabaseScheme::BusRoutesTable& TransportCatalogue::GetBusRoutesTable() const {
+        return db_reader_.GetBusRoutesTable();
+    }
+
     const data::BusRecordSet& TransportCatalogue::GetBuses(data::StopRecord stop) const {
         return db_reader_.GetBuses(stop);
     }
