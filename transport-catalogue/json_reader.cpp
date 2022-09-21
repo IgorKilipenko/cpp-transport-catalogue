@@ -93,6 +93,7 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
             json::Dict dict = render_settings_req_ptr->second.ExtractMap();
             NotifyRenderSettingsRequest(Converter::JsonToRequest(std::move(dict)));
         }
+        //! Routing configuration must be done before requesting statistics
         if (routing_settings_req_ptr != end && routing_settings_req_ptr->second.IsMap()) {
             json::Dict dict = routing_settings_req_ptr->second.ExtractMap();
             NotifyRoutingSettingsRequest(Converter::JsonToRequest(std::move(dict)));
