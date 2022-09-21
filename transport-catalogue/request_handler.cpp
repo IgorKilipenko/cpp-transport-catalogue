@@ -398,9 +398,8 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
     }
 
     void RequestHandler::ExecuteRequest(RoutingSettingsRequest&& request) {
-        //! throw std::runtime_error("Not implemented");
-        router_.SetWaitTime(request.GetBusWaitTimeMin().value_or(0));
-        router_.SetVelocity(request.GetBusVelocityKmh().value_or(0));
+        router_.SetSettings(
+            {static_cast<double>(request.GetBusWaitTimeMin().value_or(0)), static_cast<double>(request.GetBusVelocityKmh().value_or(0))});
         router_.Build();
     }
 
