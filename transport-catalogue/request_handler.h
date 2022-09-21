@@ -57,11 +57,8 @@ namespace transport_catalogue::io /* Requests aliases */ {
         using Offset = std::array<double, 2>;
 
         bool IsArray() const;
-
         bool IsDictionary() const;
-
         std::optional<double> ExtractNumericIf();
-
         std::optional<Color> ExtractColorIf();
 
         template <typename... Args>
@@ -140,11 +137,9 @@ namespace transport_catalogue::io /* RequestEnumConverter */ {
         inline static std::string InvalidValue{"Invalid enum value"};
 
         std::string_view operator()(RequestCommand enum_value) const;
-
         std::string_view operator()(RequestType enum_value) const;
 
         RequestType ToRequestType(std::string_view enum_name) const;
-
         RequestCommand ToRequestCommand(std::string_view enum_name) const;
     };
 }
@@ -227,24 +222,12 @@ namespace transport_catalogue::io /* Request */ {
         virtual bool IsRoutingSettingsRequest() const;
         virtual bool IsValidRequest() const;
 
-        virtual bool IsStopCommand() const {
-            return command_ == RequestCommand::STOP;
-        }
-
-        virtual bool IsBusCommand() const {
-            return command_ == RequestCommand::BUS;
-        }
-
-        virtual bool IsMapCommand() const {
-            return command_ == RequestCommand::MAP;
-        }
-
-        virtual bool IsRouteCommand() const {
-            return command_ == RequestCommand::ROUTE;
-        }
+        virtual bool IsStopCommand() const;
+        virtual bool IsBusCommand() const;
+        virtual bool IsMapCommand() const;
+        virtual bool IsRouteCommand() const;
 
         RequestCommand& GetCommand();
-
         const RequestCommand& GetCommand() const;
 
         virtual ~Request() = default;
@@ -284,33 +267,18 @@ namespace transport_catalogue::io /* BaseRequest */ {
         BaseRequest& operator=(BaseRequest&& other) = default;
 
         const std::vector<std::string>& GetStops() const;
-
         std::vector<std::string>& GetStops();
-
         bool IsRoundtrip() const;
-
-        bool IsConvertedToRoundtrip() const {
-            return is_converted_to_roundtrip_;
-        }
-
+        bool IsConvertedToRoundtrip() const;
         const std::optional<data::Coordinates>& GetCoordinates() const;
-
         std::optional<data::Coordinates>& GetCoordinates();
-
         const std::vector<data::MeasuredRoadDistance>& GetroadDistances() const;
-
         std::vector<data::MeasuredRoadDistance>& GetroadDistances();
-
         bool IsBaseRequest() const override;
-
         bool IsValidRequest() const override;
-
         void ConvertToRoundtrip();
-
         static void ConvertToRoundtrip(std::vector<std::string>& stops);
-
         std::string& GetName();
-
         const std::string& GetName() const;
 
     protected:
@@ -326,15 +294,10 @@ namespace transport_catalogue::io /* BaseRequest */ {
 
     private:
         void FillBus_();
-
         void FillStop_();
-
         void FillStops_();
-
         void FillRoundtrip_();
-
         void FillCoordinates_();
-
         void FillRoadDistances_();
     };
 }
@@ -358,17 +321,11 @@ namespace transport_catalogue::io /* StatRequest */ {
         }
 
         virtual bool IsBaseRequest() const override;
-
         virtual bool IsStatRequest() const override;
-
         virtual bool IsValidRequest() const override;
-
         virtual const std::optional<int>& GetRequestId() const override;
-
         virtual std::optional<int>& GetRequestId() override;
-
         virtual std::optional<std::string>& GetName();
-
         virtual const std::optional<std::string>& GetName() const;
 
     protected:
@@ -389,13 +346,9 @@ namespace transport_catalogue::io /* RouteSataRequest */ {
         RouteSataRequest(StatRequest&& request);
 
         bool IsValidRequest() const override;
-
         const std::optional<std::string>& GetFromStop() const;
-
         std::optional<std::string>& GetFromStop();
-
         const std::optional<std::string>& GetToStop() const;
-
         std::optional<std::string>& GetToStop();
 
     private:
@@ -423,9 +376,7 @@ namespace transport_catalogue::io /* RenderSettingsRequest */ {
             : RenderSettingsRequest(RequestCommand::SET_RENDER_SETTINGS, "", std::move(raw_request)) {}
 
         bool IsBaseRequest() const override;
-
         bool IsStatRequest() const override;
-
         bool IsValidRequest() const override;
 
         std::optional<double>& GetWidth();
@@ -497,19 +448,13 @@ namespace transport_catalogue::io /* Response */ {
             : request_id_{std::move(request_id)}, command_{std::move(command)}, name_{std::move(name)} {}
 
         int& GetRequestId();
-
         int GetRequestId() const;
 
         virtual bool IsBusResponse() const;
-
         virtual bool IsStopResponse() const;
-
         virtual bool IsMapResponse() const;
-
         virtual bool IsRouteResponse() const;
-
         virtual bool IsStatResponse() const;
-
         virtual bool IsBaseResponse() const;
 
     protected:
@@ -532,14 +477,9 @@ namespace transport_catalogue::io /* Response */ {
             std::optional<RawMapData>&& map_data = std::nullopt, std::optional<RouteInfo>&& route_info = std::nullopt);
 
         std::optional<data::BusStat>& GetBusInfo();
-
         std::optional<data::StopStat>& GetStopInfo();
-
         std::optional<RawMapData>& GetMapData();
-
-        std::optional<RouteInfo>& GetRouteInfo() {
-            return route_info_;
-        }
+        std::optional<RouteInfo>& GetRouteInfo();
 
         bool IsStatResponse() const override;
 
@@ -610,11 +550,8 @@ namespace transport_catalogue::io /* RequestHandler */ {
         std::vector<svg::Document*> RenderMapByLayers(bool force_prepare_data = false);
 
         void OnBaseRequest(std::vector<RawRequest>&& requests) override;
-
         void OnStatRequest(std::vector<RawRequest>&& requests) override;
-
         void OnRenderSettingsRequest(RawRequest&& requests) override;
-
         void OnRoutingSettingsRequest(RawRequest&& requests) override;
 
         /// Execute Basic (Insert) request

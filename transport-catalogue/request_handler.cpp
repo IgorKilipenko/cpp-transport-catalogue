@@ -43,6 +43,10 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
         return is_roundtrip_.value_or(false);
     }
 
+    bool BaseRequest::IsConvertedToRoundtrip() const {
+        return is_converted_to_roundtrip_;
+    }
+
     const std::optional<data::Coordinates>& BaseRequest::GetCoordinates() const {
         return coordinates_;
     }
@@ -208,6 +212,22 @@ namespace transport_catalogue::io /* Request implementation */ {
 
     const RequestCommand& Request::GetCommand() const {
         return command_;
+    }
+
+    bool Request::IsStopCommand() const {
+        return command_ == RequestCommand::STOP;
+    }
+
+    bool Request::IsBusCommand() const {
+        return command_ == RequestCommand::BUS;
+    }
+
+    bool Request::IsMapCommand() const {
+        return command_ == RequestCommand::MAP;
+    }
+
+    bool Request::IsRouteCommand() const {
+        return command_ == RequestCommand::ROUTE;
     }
 }
 
@@ -620,6 +640,10 @@ namespace transport_catalogue::io /* StatResponse implementation */ {
 
     std::optional<RawMapData>& StatResponse::GetMapData() {
         return map_data_;
+    }
+
+    std::optional<RouteInfo>& StatResponse::GetRouteInfo() {
+        return route_info_;
     }
 
     bool StatResponse::IsStatResponse() const {
