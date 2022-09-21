@@ -752,13 +752,12 @@ namespace transport_catalogue::io /* RouteSataRequest implementation */ {
 
 namespace transport_catalogue::io /* RoutingSettingsRequest implementation */ {
 
-    RoutingSettingsRequest::RoutingSettingsRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args)
-        : Request(std::move(type), std::move(args)) {
+    RoutingSettingsRequest::RoutingSettingsRequest(RequestCommand type, RequestArgsMap&& args) : Request(std::move(type), std::move(args)) {
         Build();
     }
 
     RoutingSettingsRequest::RoutingSettingsRequest(RawRequest&& raw_request)
-        : RoutingSettingsRequest(RequestCommand::SET_RENDER_SETTINGS, "", std::move(raw_request)) {}
+        : RoutingSettingsRequest(RequestCommand::SET_RENDER_SETTINGS, std::move(raw_request)) {}
 
     const std::optional<uint16_t>& RoutingSettingsRequest::GetBusWaitTimeMin() const {
         return bus_wait_time_min_;

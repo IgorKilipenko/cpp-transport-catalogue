@@ -368,12 +368,12 @@ namespace transport_catalogue::io /* RenderSettingsRequest */ {
         using Offset = RawRequest::Offset;
 
     public:
-        RenderSettingsRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args) : Request(std::move(type), std::move(args)) {
+        RenderSettingsRequest(RequestCommand type, RequestArgsMap&& args) : Request(std::move(type), std::move(args)) {
             Build();
         }
 
         explicit RenderSettingsRequest(RawRequest&& raw_request)
-            : RenderSettingsRequest(RequestCommand::SET_RENDER_SETTINGS, "", std::move(raw_request)) {}
+            : RenderSettingsRequest(RequestCommand::SET_RENDER_SETTINGS, std::move(raw_request)) {}
 
         bool IsBaseRequest() const override;
         bool IsStatRequest() const override;
@@ -419,7 +419,7 @@ namespace transport_catalogue::io /* RoutingSettingsRequest */ {
 
     class RoutingSettingsRequest : public Request {
     public:
-        RoutingSettingsRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args);
+        RoutingSettingsRequest(RequestCommand type, RequestArgsMap&& args);
         explicit RoutingSettingsRequest(RawRequest&& raw_request);
 
         const std::optional<uint16_t>& GetBusWaitTimeMin() const;
