@@ -349,7 +349,8 @@ namespace transport_catalogue::io /* StatRequest */ {
 
     class StatRequest : public Request, public IStatRequest {
     public:
-        StatRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args) : Request(std::move(type), std::move(args)), name_{std::move(name)} {
+        StatRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args)
+            : Request(std::move(type), std::move(args)), name_{std::move(name)} {
             Build();
         }
         explicit StatRequest(RawRequest&& raw_request) : Request(std::move(raw_request)) {
@@ -385,17 +386,17 @@ namespace transport_catalogue::io /* RouteSataRequest */ {
         using StatRequest::StatRequest;
 
     public:
-        RouteSataRequest(StatRequest&& request) ;
+        RouteSataRequest(StatRequest&& request);
 
-        bool IsValidRequest() const override ;
+        bool IsValidRequest() const override;
 
         const std::optional<std::string>& GetFromStop() const;
 
         std::optional<std::string>& GetFromStop();
 
-        const std::optional<std::string>& GetToStop() const ;
+        const std::optional<std::string>& GetToStop() const;
 
-        std::optional<std::string>& GetToStop() ;
+        std::optional<std::string>& GetToStop();
 
     private:
         std::optional<std::string> from_;
@@ -414,8 +415,7 @@ namespace transport_catalogue::io /* RenderSettingsRequest */ {
         using Offset = RawRequest::Offset;
 
     public:
-        RenderSettingsRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args)
-            : Request(std::move(type), std::move(args)) {
+        RenderSettingsRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args) : Request(std::move(type), std::move(args)) {
             Build();
         }
 
@@ -468,32 +468,15 @@ namespace transport_catalogue::io /* RoutingSettingsRequest */ {
 
     class RoutingSettingsRequest : public Request {
     public:
-        RoutingSettingsRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args)
-            : Request(std::move(type), std::move(args)) {
-            Build();
-        }
+        RoutingSettingsRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args);
+        explicit RoutingSettingsRequest(RawRequest&& raw_request);
 
-        explicit RoutingSettingsRequest(RawRequest&& raw_request)
-            : RoutingSettingsRequest(RequestCommand::SET_RENDER_SETTINGS, "", std::move(raw_request)) {}
-
-        const std::optional<uint16_t>& GetBusWaitTimeMin() const {
-            return bus_wait_time_min_;
-        }
-
-        const std::optional<uint16_t>& GetBusVelocityKmh() const {
-            return bus_velocity_kmh_;
-        }
-
-        bool IsRoutingSettingsRequest() const override {
-            return true;
-        }
+        const std::optional<uint16_t>& GetBusWaitTimeMin() const;
+        const std::optional<uint16_t>& GetBusVelocityKmh() const;
+        bool IsRoutingSettingsRequest() const override;
 
     protected:
-        void Build() override {
-            bus_wait_time_min_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::WIDTH);
-            bus_wait_time_min_ = args_.ExtractNumberValueIf(RoutingSettingsRequestFields::BUS_WAIT_TIME);
-            bus_velocity_kmh_ = args_.ExtractNumberValueIf(RoutingSettingsRequestFields::BUS_VELOCITY);
-        }
+        void Build() override;
 
     private:
         std::optional<uint16_t> bus_wait_time_min_;

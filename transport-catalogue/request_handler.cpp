@@ -725,3 +725,32 @@ namespace transport_catalogue::io /* RouteSataRequest implementation */ {
         to_ = args_.ExtractIf<std::string>("to");
     }
 }
+
+namespace transport_catalogue::io /* RoutingSettingsRequest implementation */ {
+
+    RoutingSettingsRequest::RoutingSettingsRequest(RequestCommand type, std::string&& name, RequestArgsMap&& args)
+        : Request(std::move(type), std::move(args)) {
+        Build();
+    }
+
+    RoutingSettingsRequest::RoutingSettingsRequest(RawRequest&& raw_request)
+        : RoutingSettingsRequest(RequestCommand::SET_RENDER_SETTINGS, "", std::move(raw_request)) {}
+
+    const std::optional<uint16_t>& RoutingSettingsRequest::GetBusWaitTimeMin() const {
+        return bus_wait_time_min_;
+    }
+
+    const std::optional<uint16_t>& RoutingSettingsRequest::GetBusVelocityKmh() const {
+        return bus_velocity_kmh_;
+    }
+
+    bool RoutingSettingsRequest::IsRoutingSettingsRequest() const {
+        return true;
+    }
+
+    void RoutingSettingsRequest::Build() {
+        bus_wait_time_min_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::WIDTH);
+        bus_wait_time_min_ = args_.ExtractNumberValueIf(RoutingSettingsRequestFields::BUS_WAIT_TIME);
+        bus_velocity_kmh_ = args_.ExtractNumberValueIf(RoutingSettingsRequestFields::BUS_VELOCITY);
+    }
+}
