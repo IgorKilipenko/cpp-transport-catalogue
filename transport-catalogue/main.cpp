@@ -1,16 +1,35 @@
-#include <cstdint>
 #include <iostream>
-#include <limits>
+#include <string_view>
+#include <unordered_set>
+#include <string>
 
 using namespace std;
 
-int main() {
-    int64_t a;
-    int64_t b;
-    cin >> a >> b;
-    if ((a > 0 && b > 0 && INT64_MAX - a < b) || (a < 0 && b < 0 && INT64_MIN - a > b)) {
-        cout << "Overflow!" << endl;
-    } else {
-        cout << a + b << endl;
+
+// clang-format off
+
+const unordered_set<string_view> PLANETS {
+        "Mercury"sv, "Venus"sv, "Earth"sv,
+        "Mars"sv, "Jupiter"sv, "Saturn"sv,
+        "Uranus"sv, "Neptune"sv
+};
+
+// clang-format on
+
+bool IsPlanet(string_view name) {
+    if (PLANETS.count(name)) {
+        return true;
     }
+    return false;
+}
+
+void Test(string_view name) {
+    cout << name << " is " << (IsPlanet(name) ? ""sv : "NOT "sv)
+         << "a planet"sv << endl;
+}
+
+int main() {
+    string planet;
+    getline(cin, planet);
+    Test(planet);
 }
