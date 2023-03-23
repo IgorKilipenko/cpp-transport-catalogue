@@ -1,15 +1,68 @@
 #include <iostream>
-#include <limits>
+#include <set>
+#include <string_view>
+
+using namespace std;
+
+// clang-format off
+
+const std::set<std::string_view> PLANETS = {
+    "Mercury"sv, "Venus"sv, "Earth"sv,
+    "Mars"sv, "Jupiter"sv, "Saturn"sv,
+    "Uranus"sv, "Neptune"sv
+};
+
+// clang-format on
+
+bool IsPlanet(string_view name) {
+    return PLANETS.count(name);
+}
+
+void Test(string_view name) {
+    cout << name << " is " << (IsPlanet(name) ? ""sv : "NOT "sv) << "a planet"sv << endl;
+}
 
 int main() {
-    int64_t a, b;
-    std::cin >> a >> b;
-    const int64_t min = std::numeric_limits<int64_t>::min();
-    const int64_t max = std::numeric_limits<int64_t>::max();
+    std::string str;
+    std::getline(std::cin, str);
 
-    if ((a > 0 && b > 0 && max - a < b) || (a < 0 && b < 0 && min - a > b)) {
-        std::cout << "Overflow!" << std::endl;
-    } else {
-        std::cout << a + b << std::endl;
-    }
+    Test(str);
 }
+
+/*
+#include <iostream>
+#include <string>
+#include <string_view>
+#include <unordered_set>
+
+using namespace std;
+
+
+// clang-format off
+
+const unordered_set<string_view> PLANETS {
+        "Mercury"sv, "Venus"sv, "Earth"sv,
+        "Mars"sv, "Jupiter"sv, "Saturn"sv,
+        "Uranus"sv, "Neptune"sv
+};
+
+// clang-format on
+
+bool IsPlanet(string_view name) {
+    if (PLANETS.count(name)) {
+        return true;
+    }
+    return false;
+}
+
+void Test(string_view name) {
+    cout << name << " is " << (IsPlanet(name) ? ""sv : "NOT "sv)
+         << "a planet"sv << endl;
+}
+
+int main() {
+    string planet;
+    getline(cin, planet);
+    Test(planet);
+}
+*/
