@@ -353,13 +353,9 @@ namespace /* Vector impl */ {
             size_t capacity_tmp = 0;
             size_ == 0 ? capacity_tmp += 1 : capacity_tmp += size_ * 2;
 
-            RawMemory<T> new_data(capacity_tmp);
-            new (new_data + size_) T(std::forward<Args>(args)...);
-            if constexpr (std::is_nothrow_move_constructible_v<T> || !std::is_copy_constructible_v<T>) {
-                std::uninitialized_move_n(data_.GetAddress(), size_, new_data.GetAddress());
-            } else {
-                std::uninitialized_copy_n(data_.GetAddress(), size_, new_data.GetAddress());
-            }
+            RawMemory<T> new_data = CopyData_(size_ == 0 ? 1 : size_ * 2, [size = size_, &args...](RawMemory<T>& data) {
+                new (data + size) T(std::forward<Args>(args)...);
+            });
 
             std::destroy_n(data_.GetAddress(), size_);
             data_.Swap(new_data);
