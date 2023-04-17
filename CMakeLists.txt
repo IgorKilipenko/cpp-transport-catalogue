@@ -4,10 +4,12 @@ set(PROJECT_NAME "cpp-advanced-vector")
 project(${PROJECT_NAME} CXX)
 
 set(SRC_DIR ./src)
+set(TESTS_DIR ${SRC_DIR}/tests)
 set(MAIN_FILE ${SRC_DIR}/main.cpp )
 
 set(LIBS 
     ${MAIN_FILE}
+    ${TESTS_DIR}/vector_test.cpp
 )
 
 set(CFLAGS -Wall -Werror -pedantic)
@@ -19,18 +21,6 @@ set(LDLIBS tbb pthread)
 if (DEFINED CMAKE_BUILD_TYPE AND CMAKE_BUILD_TYPE STREQUAL "Debug") 
     message("Debug mode.")
     list(APPEND DEFS -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC -D_LIBCPP_DEBUG=1 -DDEBUG)
-    if (DEFINED TRACE AND TRACE)
-        list(APPEND DEFS -DTRACE=1)
-        if (DEFINED JSONLIB_TRACE)
-            list(APPEND DEFS -DJSONLIB_TRACE=${JSONLIB_TRACE})
-        endif()
-        if (DEFINED REQUEST_TRACE)
-            list(APPEND DEFS -DREQUEST_TRACE=${REQUEST_TRACE})
-        endif()
-        if (DEFINED TRACE_CTR)
-            list(APPEND DEFS -DTRACE_CTR=${TRACE_CTR})
-        endif()
-    endif()
     message("Debug flags: " ${DEFS})
     if (DEFINED FSANITIZE_DEBUG AND FSANITIZE_DEBUG)
         list(APPEND CFLAGS -fsanitize=address -fsanitize=leak -O1 -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=undefined)
