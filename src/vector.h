@@ -350,9 +350,6 @@ namespace /* Vector impl */ {
     template <typename... Args>
     T& Vector<T>::EmplaceBack(Args&&... args) {
         if (size_ == Capacity()) {
-            size_t capacity_tmp = 0;
-            size_ == 0 ? capacity_tmp += 1 : capacity_tmp += size_ * 2;
-
             RawMemory<T> new_data = CopyData_(size_ == 0 ? 1 : size_ * 2, [size = size_, &args...](RawMemory<T>& data) {
                 new (data + size) T(std::forward<Args>(args)...);
             });
