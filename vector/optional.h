@@ -106,32 +106,65 @@ public:
 
     // Операторы * и -> не должны делать никаких проверок на пустоту Optional.
     // Эти проверки остаются на совести программиста
-    T& operator*() {
+    T& operator*() & {
         return *ptr_;
     }
-    const T& operator*() const {
+
+    const T& operator*() const& {
         return *ptr_;
     }
+
+    T&& operator*() && {
+        return std::move(*ptr_);
+    }
+
+    const T&& operator*() const&& {
+        return std::move(*ptr_);
+    }
+
     T* operator->() {
         return ptr_;
     }
+
     const T* operator->() const {
         return ptr_;
     }
 
     // Метод Value() генерирует исключение BadOptionalAccess, если Optional пуст
-    T& Value() {
+    T& Value() & {
         if (!is_initialized_) {
             throw BadOptionalAccess();
         }
-        return *ptr_;
+        return this->operator*();
     }
 
-    const T& Value() const {
+    const T& Value() const& {
         if (!is_initialized_) {
             throw BadOptionalAccess();
         }
-        return *ptr_;
+        return this->operator*();
+    }
+
+    T&& Value() && {
+        if (!is_initialized_) {
+            throw BadOptionalAccess();
+        }
+        return std::move(this->operator*());
+        ;
+    }
+
+    const T&& Value() const&& {
+        if (!is_initialized_) {
+            throw BadOptionalAccess();
+        }
+        return std::move(this->operator*());
+    }
+
+    template <typename... Types>
+    void Emplace(Types&&... values) {
+        Reset();
+        ptr_ = new (&data_[0]) T(std::forward<Types>(values)...);
+        is_initialized_ = true;
     }
 
     void Reset() {
