@@ -1,6 +1,7 @@
 #pragma once
 #include <cassert>
 #include <cstdlib>
+#include <memory>
 #include <new>
 #include <utility>
 
@@ -84,56 +85,27 @@ public:
     }
 
     explicit Vector(size_t n = 0) : data_(n), size_(n) {
-        size_t i = 0;
-        try {
-            for (; i != n; ++i) {
-                Construct(data_ + i);
-            }
-        } catch (...) {
-            for (size_t j = 0; j != i; ++j) {
-                Destroy(data_ + j);
-            }
-            throw;
-        }
+        std::uninitialized_value_construct_n(data_.GetAddress(), n);
     }
 
     Vector(const Vector& other) : data_(other.size_), size_(other.size_) {
-        size_t i = 0;
-        try {
-            for (; i != other.size_; ++i) {
-                Construct(data_ + i, other.data_[i]);
-            }
-        } catch (...) {
-            for (size_t j = 0; j != i; ++j) {
-                Destroy(data_ + j);
-            }
-            throw;
-        }
+        std::uninitialized_copy_n(other.data_.GetAddress(), other.size_, data_.GetAddress());
     }
     ~Vector() {
-        for (size_t i = 0; i != size_; ++i) {
-            Destroy(data_ + i);
-        }
+        std::destroy_n(data_.GetAddress(), Size());
     }
 
-    void Reserve(size_t n) {
-        if (n > data_.Capacity()) {
-            RawMemory<T> data2(n);
-            size_t i = 0;
-            try {
-                for (; i != size_; ++i) {
-                    Construct(data2 + i, std::move(data_[i]));
-                }
-            } catch (...) {
-                for (size_t j = 0; j != i; ++j) {
-                    Destroy(data2 + j);
-                }
-                throw;
+    void Reserve(size_t new_capacity) {
+        if (new_capacity > data_.Capacity()) {
+            RawMemory<T> new_data(new_capacity);
+
+            if constexpr (std::is_nothrow_move_constructible_v<T> || !std::is_copy_constructible_v<T>) {
+                std::uninitialized_move_n(data_.GetAddress(), size_, new_data.GetAddress());
+            } else {
+                std::uninitialized_copy_n(data_.GetAddress(), size_, new_data.GetAddress());
             }
-            for (size_t i = 0; i != size_; ++i) {
-                Destroy(data_ + i);
-            }
-            data_.Swap(data2);
+            std::destroy_n(data_.GetAddress(), Size());
+            data_.Swap(new_data);
         }
     }
 
