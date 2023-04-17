@@ -5,13 +5,8 @@
         "TRACE_DEBUG": "1",
         "FSANITIZE_DEBUG": "1", // Enable SANITIZE
         "WARNINGS_AS_ERRORS" : "ON",
-        //"TRANSPORT_CURL" : "OFF",
         "UNIT_TESTING" : "ON",
-        //"UNIT_TESTING_MOCKS" : "OFF",
-        //"TRANSPORT_PAHO" : "ON",
-        //"PRECONDITIONS" : "ON",
         "LOGGING" : "ON",
-        // DEBUG TRACEING
         "TRACE" : 1,
         "JSONLIB_TRACE" : 0,
         "REQUEST_TRACE" : 1, 
@@ -27,5 +22,4 @@
     "cSpell.words": [
         "cbefore",
     ]
-    //"C_Cpp.errorSquiggles": "Disabled"
 }

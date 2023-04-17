@@ -1,37 +1,14 @@
 cmake_minimum_required(VERSION 3.14)
 set(CMAKE_VERBOSE_MAKEFILE ON)
-set(PROJECT_NAME "cpp-vector")
+set(PROJECT_NAME "cpp-advanced-vector")
 project(${PROJECT_NAME} CXX)
 
-set(SRC_DIR ./vector)
+set(SRC_DIR ./src)
 set(MAIN_FILE ${SRC_DIR}/main.cpp )
-
-if (DEFINED TESTS AND TESTS)
-    set(TESTS_DIR ${SRC_DIR}/tests)
-    set(MAIN_FILE ${TESTS_DIR}/run_tests.cpp )
-endif()
 
 set(LIBS 
     ${MAIN_FILE}
-    #${SRC_DIR}/transport_catalogue.cpp
-    #${SRC_DIR}/input_reader.cpp
-    #${SRC_DIR}/stat_reader.cpp
-    #${SRC_DIR}/json_builder.cpp
-    #${SRC_DIR}/svg.cpp
-    #${SRC_DIR}/json.cpp
-    #${SRC_DIR}/domain.cpp
-    #${SRC_DIR}/geo.cpp
-    #${SRC_DIR}/json_reader.cpp
-    #${SRC_DIR}/map_renderer.cpp
-    #${SRC_DIR}/request_handler.cpp
-    #${SRC_DIR}/transport_router.cpp
 )
-
-if (DEFINED TESTS AND TESTS)
-    list(APPEND LIBS 
-        ${TESTS_DIR}/simple_vector_test.cpp
-    )
-endif()
 
 set(CFLAGS -Wall -Werror -pedantic)
 set(DEFS)
@@ -61,12 +38,6 @@ if (DEFINED CMAKE_BUILD_TYPE AND CMAKE_BUILD_TYPE STREQUAL "Debug")
         message("FSANITIZE_DEBUG" enabled)
     endif()
 endif()
-
-set(TESTS_DIR ${PROJECT_SOURCE_DIR}/transport-catalogue/tests)
-set(TESTS_DATA_DIR ${TESTS_DIR}/data)
-set(TESTS_DATA_FILES ${TESTS_DATA_DIR}/json_requests/)
-
-file(COPY ${TESTS_DATA_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 add_executable(${PROJECT_NAME} ${LIBS})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
