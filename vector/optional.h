@@ -15,6 +15,7 @@ template <typename T>
 class Optional {
 public:
     Optional() = default;
+    
     Optional(const T& value) {
         if (is_initialized_) {
             *ptr_ = value;
