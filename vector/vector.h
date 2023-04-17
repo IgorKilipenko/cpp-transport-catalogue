@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
+#include <iterator>
 #include <memory>
 #include <new>
 #include <utility>
@@ -233,25 +234,25 @@ public:
 
     template <typename... Args>
     T& EmplaceBack(Args&&... args) {
-        if (this->size_ == this->Capacity()) {
+        if (size_ == Capacity()) {
             size_t capacity_tmp = 0;
-            this->size_ == 0 ? capacity_tmp += 1 : capacity_tmp += this->size_ * 2;
+            size_ == 0 ? capacity_tmp += 1 : capacity_tmp += size_ * 2;
 
             RawMemory<T> new_data(capacity_tmp);
-            new (new_data + this->size_) T(std::forward<Args>(args)...);
+            new (new_data + size_) T(std::forward<Args>(args)...);
             if constexpr (std::is_nothrow_move_constructible_v<T> || !std::is_copy_constructible_v<T>) {
-                std::uninitialized_move_n(this->data_.GetAddress(), this->size_, new_data.GetAddress());
+                std::uninitialized_move_n(data_.GetAddress(), size_, new_data.GetAddress());
             } else {
-                std::uninitialized_copy_n(this->data_.GetAddress(), this->size_, new_data.GetAddress());
+                std::uninitialized_copy_n(data_.GetAddress(), size_, new_data.GetAddress());
             }
 
-            std::destroy_n(this->data_.GetAddress(), this->size_);
-            this->data_.Swap(new_data);
+            std::destroy_n(data_.GetAddress(), size_);
+            data_.Swap(new_data);
         } else {
-            new (this->data_ + this->size_) T(std::forward<Args>(args)...);
+            new (data_ + size_) T(std::forward<Args>(args)...);
         }
-        this->size_++;
-        return this->data_[this->size_ - 1];
+        size_++;
+        return data_[size_ - 1];
     }
 
 private:
@@ -274,3 +275,86 @@ private:
         buf->~T();
     }
 };
+
+template <typename T>
+typename Vector<T>::iterator Vector<T>::begin() noexcept {
+    return const_cast<iterator>(cbegin());
+}
+
+template <typename T>
+typename Vector<T>::const_iterator Vector<T>::begin() const noexcept {
+    return cbegin();
+}
+
+template <typename T>
+typename Vector<T>::const_iterator Vector<T>::cbegin() const noexcept {
+    return data_.GetAddress();
+}
+
+template <typename T>
+typename Vector<T>::iterator Vector<T>::end() noexcept {
+    return const_cast<iterator>(cend());
+}
+
+template <typename T>
+typename Vector<T>::const_iterator Vector<T>::end() const noexcept {
+    return cend();
+}
+
+template <typename T>
+typename Vector<T>::const_iterator Vector<T>::cend() const noexcept {
+    return (data_.GetAddress() + size_);
+}
+
+template <typename T>
+typename Vector<T>::iterator Vector<T>::Insert(const_iterator pos, const T& value) {
+    return Emplace(pos, value);
+}
+
+template <typename T>
+typename Vector<T>::iterator Vector<T>::Insert(const_iterator pos, T&& value) {
+    return Emplace(pos, std::move(value));
+}
+
+template <typename T>
+template <typename... Args>
+typename Vector<T>::iterator Vector<T>::Emplace(const_iterator pos, Args&&... args) {
+    const auto insert = [this](size_t index, T&& item) {
+        new (data_ + size_) T(std::move(data_[size_ - 1u]));
+        std::move_backward(data_.GetAddress() + index, end() - 1, end());
+        data_[index] = std::move(item);
+        size_++;
+    };
+
+    size_t index = std::distance(cbegin(), pos);
+    if (size_ == index) {
+        EmplaceBack(std::forward<Args>(args)...);
+    } else if (size_ < Capacity()) {
+        insert(index, T(std::forward<Args>(args)...));
+    } else {
+        RawMemory<T> new_data(size_ * 2);
+        new (new_data + index) T(std::forward<Args>(args)...);
+
+        if constexpr (std::is_nothrow_move_constructible_v<T> || !std::is_copy_constructible_v<T>) {
+            std::uninitialized_move_n(data_.GetAddress(), index, new_data.GetAddress());
+            std::uninitialized_move_n(data_.GetAddress() + index, size_ - index, new_data.GetAddress() + index + 1);
+        } else {
+            std::uninitialized_copy_n(data_.GetAddress(), index, new_data.GetAddress());
+            std::uninitialized_copy_n(data_.GetAddress() + index, size_ - index, new_data.GetAddress() + index + 1);
+        }
+
+        std::destroy_n(data_.GetAddress(), size_);
+        data_.Swap(new_data);
+        size_++;
+    }
+
+    return (data_.GetAddress() + index);
+}
+
+template <typename T>
+typename Vector<T>::iterator Vector<T>::Erase(const_iterator pos) {
+    iterator pos_it = const_cast<iterator>(pos);
+    std::move(pos_it + 1, end(), pos_it);
+    std::destroy_n(data_.GetAddress() + (--size_), 1);
+    return pos_it;
+}
