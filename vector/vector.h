@@ -5,6 +5,65 @@
 #include <utility>
 
 template <typename T>
+class RawMemory {
+public:
+    RawMemory() = default;
+
+    RawMemory(size_t capacity) : buffer_(Allocate(capacity)), capacity_(capacity) {}
+
+    ~RawMemory() {
+        Deallocate(buffer_);
+    }
+
+    static T* Allocate(size_t n) {
+        return n != 0 ? static_cast<T*>(operator new(n * sizeof(T))) : nullptr;
+    }
+
+    static void Deallocate(T* buffer_) noexcept {
+        operator delete(buffer_);
+    }
+
+    T* operator+(size_t offset) {
+        assert(offset <= capacity_);
+        return buffer_ + offset;
+    }
+
+    const T* operator+(size_t offset) const noexcept {
+        return const_cast<RawMemory&>(*this) + offset;
+    }
+
+    const T& operator[](size_t index) const noexcept {
+        return const_cast<RawMemory&>(*this)[index];
+    }
+
+    T& operator[](size_t index) noexcept {
+        assert(index < capacity_);
+        return buffer_[index];
+    }
+
+    void Swap(RawMemory& other) noexcept {
+        std::swap(buffer_, other.buffer_);
+        std::swap(capacity_, other.capacity_);
+    }
+
+    const T* GetAddress() const noexcept {
+        return buffer_;
+    }
+
+    T* GetAddress() noexcept {
+        return buffer_;
+    }
+
+    size_t Capacity() const {
+        return capacity_;
+    }
+
+private:
+    T* buffer_ = nullptr;
+    size_t capacity_ = 0;
+};
+
+template <typename T>
 class Vector {
 public:
     size_t Size() const noexcept {
@@ -12,7 +71,7 @@ public:
     }
 
     size_t Capacity() const noexcept {
-        return capacity_;
+        return data_.Capacity();
     }
 
     const T& operator[](size_t index) const noexcept {
@@ -24,7 +83,7 @@ public:
         return data_[index];
     }
 
-    explicit Vector(size_t n = 0) : data_(Allocate(n)), capacity_(n), size_(n) {
+    explicit Vector(size_t n = 0) : data_(n), size_(n) {
         size_t i = 0;
         try {
             for (; i != n; ++i) {
@@ -34,12 +93,11 @@ public:
             for (size_t j = 0; j != i; ++j) {
                 Destroy(data_ + j);
             }
-            Deallocate(data_);
             throw;
         }
     }
 
-    Vector(const Vector& other) : data_(Allocate(other.size_)), capacity_(other.size_), size_(other.size_) {
+    Vector(const Vector& other) : data_(other.size_), size_(other.size_) {
         size_t i = 0;
         try {
             for (; i != other.size_; ++i) {
@@ -49,7 +107,6 @@ public:
             for (size_t j = 0; j != i; ++j) {
                 Destroy(data_ + j);
             }
-            Deallocate(data_);
             throw;
         }
     }
@@ -57,12 +114,11 @@ public:
         for (size_t i = 0; i != size_; ++i) {
             Destroy(data_ + i);
         }
-        Deallocate(data_);
     }
 
     void Reserve(size_t n) {
-        if (n > capacity_) {
-            auto data2 = Allocate(n);
+        if (n > data_.Capacity()) {
+            RawMemory<T> data2(n);
             size_t i = 0;
             try {
                 for (; i != size_; ++i) {
@@ -72,30 +128,18 @@ public:
                 for (size_t j = 0; j != i; ++j) {
                     Destroy(data2 + j);
                 }
-                Deallocate(data2);
                 throw;
             }
             for (size_t i = 0; i != size_; ++i) {
                 Destroy(data_ + i);
             }
-            Deallocate(data_);
-            data_ = data2;
-            capacity_ = n;
+            data_.Swap(data2);
         }
     }
 
 private:
-    T* data_ = nullptr;
-    size_t capacity_ = 0;
+    RawMemory<T> data_;
     size_t size_ = 0;
-
-    static T* Allocate(size_t n) {
-        return static_cast<T*>(operator new(n * sizeof(T)));
-    }
-
-    static void Deallocate(T* buf) {
-        operator delete(buf);
-    }
 
     static void Construct(void* buf) {
         new (buf) T();
