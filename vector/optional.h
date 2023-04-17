@@ -134,13 +134,6 @@ public:
         return *ptr_;
     }
 
-    template <typename... Types>
-    void Emplace(Types&&... values) {
-        Reset();
-        ptr_ = new (&data_[0]) T(std::forward<Types>(values)...);
-        is_initialized_ = true;
-    }
-
     void Reset() {
         if (is_initialized_) {
             ptr_->~T();
