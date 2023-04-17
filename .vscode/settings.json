@@ -23,6 +23,9 @@
         "editor.suggest.shareSuggestSelections": true,
         "editor.inlayHints.enabled": "offUnlessPressed",
         "editor.suggest.showSnippets": true
-    }
+    },
+    "cSpell.words": [
+        "генерироватся"
+    ]
     //"C_Cpp.errorSquiggles": "Disabled"
 }
