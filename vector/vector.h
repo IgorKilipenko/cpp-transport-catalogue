@@ -215,6 +215,29 @@ public:
         --size_;
     }
 
+    template <typename... Args>
+    T& EmplaceBack(Args&&... args) {
+        if (this->size_ == this->Capacity()) {
+            size_t capacity_tmp = 0;
+            this->size_ == 0 ? capacity_tmp += 1 : capacity_tmp += this->size_ * 2;
+
+            RawMemory<T> new_data(capacity_tmp);
+            new (new_data + this->size_) T(std::forward<Args>(args)...);
+            if constexpr (std::is_nothrow_move_constructible_v<T> || !std::is_copy_constructible_v<T>) {
+                std::uninitialized_move_n(this->data_.GetAddress(), this->size_, new_data.GetAddress());
+            } else {
+                std::uninitialized_copy_n(this->data_.GetAddress(), this->size_, new_data.GetAddress());
+            }
+
+            std::destroy_n(this->data_.GetAddress(), this->size_);
+            this->data_.Swap(new_data);
+        } else {
+            new (this->data_ + this->size_) T(std::forward<Args>(args)...);
+        }
+        this->size_++;
+        return this->data_[this->size_ - 1];
+    }
+
 private:
     RawMemory<T> data_;
     size_t size_ = 0;
