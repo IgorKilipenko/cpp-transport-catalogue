@@ -2,9 +2,11 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
+#include <functional>
 #include <iterator>
 #include <memory>
 #include <new>
+#include <optional>
 #include <utility>
 
 namespace /* template type helpers */ {
@@ -149,9 +151,11 @@ namespace /* Vector */ {
         size_t size_ = 0;
 
     private:
-        [[nodiscard]] RawMemory<T> CopyData_(size_t count) {
+        [[nodiscard]] RawMemory<T> CopyData_(size_t count, std::optional<std::function<void(RawMemory<T>&)>> execBefore = std::nullopt) {
             RawMemory<T> new_data(count);
-
+            if (execBefore.has_value()) {
+                execBefore.value()(new_data);
+            }
             if constexpr (std::is_nothrow_move_constructible_v<T> || !std::is_copy_constructible_v<T>) {
                 std::uninitialized_move_n(data_.GetAddress(), size_, new_data.GetAddress());
             } else {
@@ -324,13 +328,10 @@ namespace /* Vector impl */ {
     template <typename TItem, EnableIfSame<TItem, T>>
     void Vector<T>::PushBack(TItem&& value) {
         if (size_ == Capacity()) {
-            RawMemory<T> new_data(size_ == 0 ? 1 : size_ * 2);
-            new (new_data + size_) T(std::forward<TItem>(value));
-            if constexpr (std::is_nothrow_move_constructible_v<T> || !std::is_copy_constructible_v<T>) {
-                std::uninitialized_move_n(data_.GetAddress(), size_, new_data.GetAddress());
-            } else {
-                std::uninitialized_copy_n(data_.GetAddress(), size_, new_data.GetAddress());
-            }
+            RawMemory<T> new_data = CopyData_(size_ == 0 ? 1 : size_ * 2, [size = size_, &value](RawMemory<T>& data) {
+                new (data + size) T(std::forward<TItem>(value));
+            });
+
             std::destroy_n(data_.GetAddress(), size_);
             data_.Swap(new_data);
         } else {
