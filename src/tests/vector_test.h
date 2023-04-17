@@ -1,5 +1,7 @@
 #pragma once
 #include <string>
+#include <iostream>
+#include <stdexcept>
 
 #include "../vector.h"
 
@@ -94,6 +96,12 @@ namespace tests {
         static inline int num_moved = 0;
         static inline int num_destroyed = 0;
     };
+
+    void Test1();
+    void Test2();
+    void Test3();
+    void Test4();
+    void Test5();
 
     void run();
 }

@@ -1,8 +1,5 @@
 #include "vector_test.h"
 
-#include <iostream>
-#include <stdexcept>
-
 namespace tests {
 
     void Test1() {
@@ -292,6 +289,7 @@ namespace tests {
             Test3();
             Test4();
             Test5();
+            std::cout << "All tests complete." << std::endl;
         } catch (const std::exception& e) {
             std::cerr << e.what() << std::endl;
         }
