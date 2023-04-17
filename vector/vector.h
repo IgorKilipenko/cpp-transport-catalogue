@@ -1,14 +1,29 @@
 #pragma once
+#include <algorithm>
 #include <cassert>
 #include <cstdlib>
 #include <memory>
 #include <new>
 #include <utility>
 
+//-Создали класс для работы с сырой памятью-//
 template <typename T>
 class RawMemory {
 public:
     RawMemory() = default;
+
+    RawMemory(const RawMemory&) = delete;
+
+    RawMemory& operator=(const RawMemory&) = delete;
+
+    RawMemory& operator=(RawMemory&& other) noexcept {
+        Swap(other);
+        return *this;
+    }
+
+    RawMemory(RawMemory&& other) noexcept {
+        Swap(other);
+    }
 
     RawMemory(size_t capacity) : buffer_(Allocate(capacity)), capacity_(capacity) {}
 
@@ -84,15 +99,51 @@ public:
         return data_[index];
     }
 
-    explicit Vector(size_t n = 0) : data_(n), size_(n) {
+    Vector() = default;
+
+    explicit Vector(size_t n) : data_(n), size_(n) {
         std::uninitialized_value_construct_n(data_.GetAddress(), n);
     }
 
     Vector(const Vector& other) : data_(other.size_), size_(other.size_) {
         std::uninitialized_copy_n(other.data_.GetAddress(), other.size_, data_.GetAddress());
     }
+
+    void Swap(Vector& other) noexcept {
+        data_.Swap(other.data_);
+        std::swap(size_, other.size_);
+    }
+
+    Vector(Vector&& other) {
+        Swap(other);
+    }
+
     ~Vector() {
         std::destroy_n(data_.GetAddress(), Size());
+    }
+
+    Vector& operator=(const Vector& other) {
+        if (other.Size() > data_.Capacity()) {
+            Vector tmp(other);
+            Swap(tmp);
+            return *this;
+        } else {
+            for (size_t i = 0; i < Size() && i < other.Size(); ++i) {
+                data_[i] = other[i];
+            }
+            if (Size() < other.Size()) {
+                std::uninitialized_copy_n(other.data_.GetAddress() + Size(), other.Size() - Size(), data_.GetAddress() + Size());
+            } else if (Size() > other.Size()) {
+                std::destroy_n(data_.GetAddress() + other.Size(), Size() - other.Size());
+            }
+            size_ = other.Size();
+        }
+        return *this;
+    }
+
+    Vector& operator=(Vector&& other) noexcept {
+        Swap(other);
+        return *this;
     }
 
     void Reserve(size_t new_capacity) {
