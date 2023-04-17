@@ -151,15 +151,27 @@ namespace /* Vector */ {
         size_t size_ = 0;
 
     private:
-        [[nodiscard]] RawMemory<T> CopyData_(size_t count, std::optional<std::function<void(RawMemory<T>&)>> execBefore = std::nullopt) {
+        [[nodiscard]] RawMemory<T> CopyData_(
+            size_t count, std::optional<std::function<void(RawMemory<T>&)>> execBefore = std::nullopt,
+            std::optional<size_t> splitIndex = std::nullopt) {
             RawMemory<T> new_data(count);
+
             if (execBefore.has_value()) {
                 execBefore.value()(new_data);
             }
+
             if constexpr (std::is_nothrow_move_constructible_v<T> || !std::is_copy_constructible_v<T>) {
-                std::uninitialized_move_n(data_.GetAddress(), size_, new_data.GetAddress());
+                std::uninitialized_move_n(data_.GetAddress(), splitIndex.has_value() ? splitIndex.value() : size_, new_data.GetAddress());
+                if (splitIndex.has_value()) {
+                    std::uninitialized_move_n(
+                        data_.GetAddress() + splitIndex.value(), size_ - splitIndex.value(), new_data.GetAddress() + splitIndex.value() + 1);
+                }
             } else {
-                std::uninitialized_copy_n(data_.GetAddress(), size_, new_data.GetAddress());
+                std::uninitialized_copy_n(data_.GetAddress(), splitIndex.has_value() ? splitIndex.value() : size_, new_data.GetAddress());
+                if (splitIndex.has_value()) {
+                    std::uninitialized_copy_n(
+                        data_.GetAddress() + splitIndex.value(), size_ - splitIndex.value(), new_data.GetAddress() + splitIndex.value() + 1);
+                }
             }
 
             return new_data;
@@ -220,16 +232,12 @@ namespace /* Vector impl */ {
         } else if (size_ < Capacity()) {
             insert(index, T(std::forward<Args>(args)...));
         } else {
-            RawMemory<T> new_data(size_ * 2);
-            new (new_data + index) T(std::forward<Args>(args)...);
-
-            if constexpr (std::is_nothrow_move_constructible_v<T> || !std::is_copy_constructible_v<T>) {
-                std::uninitialized_move_n(data_.GetAddress(), index, new_data.GetAddress());
-                std::uninitialized_move_n(data_.GetAddress() + index, size_ - index, new_data.GetAddress() + index + 1);
-            } else {
-                std::uninitialized_copy_n(data_.GetAddress(), index, new_data.GetAddress());
-                std::uninitialized_copy_n(data_.GetAddress() + index, size_ - index, new_data.GetAddress() + index + 1);
-            }
+            RawMemory<T> new_data = CopyData_(
+                size_ * 2,
+                [index, size = size_, &args...](RawMemory<T>& data) {
+                    new (data + index) T(std::forward<Args>(args)...);
+                },
+                index);
 
             std::destroy_n(data_.GetAddress(), size_);
             data_.Swap(new_data);
