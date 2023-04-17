@@ -327,17 +327,7 @@ namespace /* Vector impl */ {
     template <typename T>
     template <typename TItem, EnableIfSame<TItem, T>>
     void Vector<T>::PushBack(TItem&& value) {
-        if (size_ == Capacity()) {
-            RawMemory<T> new_data = CopyData_(size_ == 0 ? 1 : size_ * 2, [size = size_, &value](RawMemory<T>& data) {
-                new (data + size) T(std::forward<TItem>(value));
-            });
-
-            std::destroy_n(data_.GetAddress(), size_);
-            data_.Swap(new_data);
-        } else {
-            new (data_ + size_) T(std::forward<TItem>(value));
-        }
-        ++size_;
+        EmplaceBack(std::forward<TItem>(value));
     }
 
     template <typename T>
