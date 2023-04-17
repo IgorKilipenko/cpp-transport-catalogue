@@ -1,4 +1,5 @@
 #include <cassert>
+#include <memory>
 
 #include "optional.h"
 
@@ -113,12 +114,12 @@ void TestAssignment() {
         o2 = o1;
         assert(C::copy_ctor == 1 && C::copy_assign == 0 && C::dtor == 0);
     }
-    {  // Assign non empty to non-empty
+    {  // Assign non-empty to non-empty
         C::Reset();
         o2 = o1;
         assert(C::copy_ctor == 0 && C::copy_assign == 1 && C::dtor == 0);
     }
-    {  // Assign empty to non empty
+    {  // Assign empty to non-empty
         C::Reset();
         Optional<C> empty;
         o1 = empty;
@@ -142,14 +143,14 @@ void TestMoveAssignment() {
         o1 = std::move(o2);
         assert(C::move_ctor == 1 && C::move_assign == 0 && C::dtor == 0);
     }
-    {  // Assign non empty to non-empty
+    {  // Assign non-empty to non-empty
         Optional<C> o1{C{}};
         Optional<C> o2{C{}};
         C::Reset();
         o2 = std::move(o1);
         assert(C::copy_ctor == 0 && C::move_assign == 1 && C::dtor == 0);
     }
-    {  // Assign empty to non empty
+    {  // Assign empty to non-empty
         Optional<C> o1{C{}};
         C::Reset();
         Optional<C> empty;
@@ -191,6 +192,28 @@ void TestReset() {
     }
 }
 
+void TestEmplace() {
+    struct S {
+        S(int i, std::unique_ptr<int>&& p)
+            : i(i),
+              p(std::move(p))  //
+        {}
+        int i;
+        std::unique_ptr<int> p;
+    };
+
+    Optional<S> o;
+    o.Emplace(1, std::make_unique<int>(2));
+    assert(o.HasValue());
+    assert(o->i == 1);
+    assert(*(o->p) == 2);
+
+    o.Emplace(3, std::make_unique<int>(4));
+    assert(o.HasValue());
+    assert(o->i == 3);
+    assert(*(o->p) == 4);
+}
+
 int main() {
     try {
         TestInitialization();
@@ -198,6 +221,7 @@ int main() {
         TestMoveAssignment();
         TestValueAccess();
         TestReset();
+        TestEmplace();
     } catch (...) {
         assert(false);
     }
