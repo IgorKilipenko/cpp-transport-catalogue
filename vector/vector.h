@@ -82,6 +82,22 @@ private:
 template <typename T>
 class Vector {
 public:
+    using iterator = T*;
+    using const_iterator = const T*;
+
+    iterator begin() noexcept;
+    iterator end() noexcept;
+    const_iterator begin() const noexcept;
+    const_iterator end() const noexcept;
+    const_iterator cbegin() const noexcept;
+    const_iterator cend() const noexcept;
+
+    template <typename... Args>
+    iterator Emplace(const_iterator pos, Args&&... args);
+    iterator Erase(const_iterator pos) /*noexcept(std::is_nothrow_move_assignable_v<T>)*/;
+    iterator Insert(const_iterator pos, const T& value);
+    iterator Insert(const_iterator pos, T&& value);
+
     size_t Size() const noexcept {
         return size_;
     }
