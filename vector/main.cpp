@@ -1,15 +1,14 @@
-// apply-to-many.cpp
-
 #include <cassert>
 #include <memory>
 #include <string>
 
-// Шаблон ApplyToMany применяет функцию f (первый аргумент) последовательно к каждому из остальных своих аргументов
-/*
-    template <???>
-    void ApplyToMany(???) {
-    }
-*/
+template <typename Func>
+void ApplyToMany(Func func) {}
+
+template <typename Foo, typename... Args>
+void ApplyToMany(Foo& F, Args&&... args) {
+    (F(std::forward<Args>(args)), ...);
+}
 
 void TestSum() {
     int x;
