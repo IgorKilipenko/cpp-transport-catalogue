@@ -24,20 +24,34 @@ public:
         return data_[index];
     }
 
-    explicit Vector(size_t n = 0) {
-        data_ = Allocate(n);
-        for (size_t i = 0; i != n; ++i) {
-            Construct(data_ + i);
+    explicit Vector(size_t n = 0) : data_(Allocate(n)), capacity_(n), size_(n) {
+        size_t i = 0;
+        try {
+            for (; i != n; ++i) {
+                Construct(data_ + i);
+            }
+        } catch (...) {
+            for (size_t j = 0; j != i; ++j) {
+                Destroy(data_ + j);
+            }
+            Deallocate(data_);
+            throw;
         }
-        capacity_ = size_ = n;
     }
 
-    Vector(const Vector& other) {
-        data_ = Allocate(other.size_);
-        for (size_t i = 0; i != other.size_; ++i) {
-            Construct(data_ + i, other[i]);
+    Vector(const Vector& other) : data_(Allocate(other.size_)), capacity_(other.size_), size_(other.size_) {
+        size_t i = 0;
+        try {
+            for (; i != other.size_; ++i) {
+                Construct(data_ + i, other.data_[i]);
+            }
+        } catch (...) {
+            for (size_t j = 0; j != i; ++j) {
+                Destroy(data_ + j);
+            }
+            Deallocate(data_);
+            throw;
         }
-        capacity_ = size_ = other.size_;
     }
     ~Vector() {
         for (size_t i = 0; i != size_; ++i) {
@@ -49,8 +63,19 @@ public:
     void Reserve(size_t n) {
         if (n > capacity_) {
             auto data2 = Allocate(n);
+            size_t i = 0;
+            try {
+                for (; i != size_; ++i) {
+                    Construct(data2 + i, std::move(data_[i]));
+                }
+            } catch (...) {
+                for (size_t j = 0; j != i; ++j) {
+                    Destroy(data2 + j);
+                }
+                Deallocate(data2);
+                throw;
+            }
             for (size_t i = 0; i != size_; ++i) {
-                Construct(data2 + i, std::move(data_[i]));
                 Destroy(data_ + i);
             }
             Deallocate(data_);
