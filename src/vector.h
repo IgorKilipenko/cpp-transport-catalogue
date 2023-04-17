@@ -138,7 +138,8 @@ namespace /* Vector */ {
 
         size_t Size() const noexcept;
         size_t Capacity() const noexcept;
-        void Swap(Vector& other) noexcept;
+        template <typename TVector, EnableIfSame<TVector, Vector> = true>
+        void Swap(TVector&& other) noexcept;
         void Reserve(size_t new_capacity);
         void Resize(size_t new_size);
 
@@ -266,7 +267,8 @@ namespace /* Vector impl */ {
     }
 
     template <typename T>
-    void Vector<T>::Swap(Vector& other) noexcept {
+    template <typename TVector, EnableIfSame<TVector, Vector<T>>>
+    void Vector<T>::Swap(TVector&& other) noexcept {
         data_.Swap(other.data_);
         std::swap(size_, other.size_);
     }
@@ -283,30 +285,35 @@ namespace /* Vector impl */ {
     }
 
     template <typename T>
-    Vector<T>& Vector<T>::operator=(const Vector& other) {
-        if (other.Size() > data_.Capacity()) {
-            Vector tmp(other);
-            Swap(tmp);
-            return *this;
-        }
-
-        else {
-            for (size_t i = 0; i < Size() && i < other.Size(); ++i) {
-                data_[i] = other[i];
+    Vector<T>& Vector<T>::operator=(const Vector& rhs) {
+        if (this != &rhs) {
+            if (rhs.size_ > data_.Capacity()) {
+                Swap(Vector(rhs));
+            } else {
+                if (rhs.size_ < size_) {
+                    for (size_t i = 0; i < rhs.size_; ++i) {
+                        data_[i] = rhs.data_[i];
+                    }
+                    std::destroy_n(data_.GetAddress() + rhs.size_, size_ - rhs.size_);
+                } else {
+                    for (size_t i = 0; i < size_; ++i) {
+                        data_[i] = rhs.data_[i];
+                    }
+                    std::uninitialized_copy_n(rhs.data_.GetAddress() + size_, rhs.size_ - size_, data_.GetAddress() + size_);
+                }
+                size_ = rhs.size_;
             }
-            if (Size() < other.Size()) {
-                std::uninitialized_copy_n(other.data_.GetAddress() + Size(), other.Size() - Size(), data_.GetAddress());
-            } else if (Size() > other.Size()) {
-                std::destroy_n(data_.GetAddress() + other.Size(), Size() - other.Size());
-            }
-            size_ = other.Size();
         }
         return *this;
     }
 
     template <typename T>
-    Vector<T>& Vector<T>::operator=(Vector&& other) noexcept {
-        Swap(other);
+    Vector<T>& Vector<T>::operator=(Vector&& rhs) noexcept {
+        if (this != &rhs) {
+            data_ = std::move(rhs.data_);
+            size_ = rhs.size_;
+            rhs.size_ = 0;
+        }
         return *this;
     }
 
