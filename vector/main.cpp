@@ -1,25 +1,110 @@
-// equals_to_one_of.cpp
+// apply-to-many.cpp
 
 #include <cassert>
+#include <memory>
 #include <string>
-#include <string_view>
 
-/* Напишите вашу реализацию EqualsToOneOf здесь*/
-template <typename... T>
-bool EqualsToOneOf(const T&... values) {
-    if (sizeof...(values) == 1) {
-        return false;
+// Шаблон ApplyToMany применяет функцию f (первый аргумент) последовательно к каждому из остальных своих аргументов
+/*
+    template <???>
+    void ApplyToMany(???) {
     }
+*/
+
+void TestSum() {
+    int x;
+    auto lambda = [&x](int y) {
+        x += y;
+    };
+
+    x = 0;
+    ApplyToMany(lambda, 1);
+    assert(x == 1);
+
+    x = 0;
+    ApplyToMany(lambda, 1, 2, 3, 4, 5);
+    assert(x == 15);
 }
 
-template <typename T1, typename T2, typename... Ts>
-bool EqualsToOneOf(const T1& first, const T2& second, const Ts&... args) {
-    return (first == second) || EqualsToOneOf(first, args...);
+void TestConcatenate() {
+    using namespace std::literals;
+    std::string s;
+    auto lambda = [&s](const auto& t) {
+        if (!s.empty()) {
+            s += " ";
+        }
+        s += t;
+    };
+
+    ApplyToMany(lambda, "cyan"s, "magenta"s, "yellow"s, "black"s);
+    assert(s == "cyan magenta yellow black"s);
+}
+
+void TestIncrement() {
+    auto increment = [](int& x) {
+        ++x;
+    };
+
+    int a = 0;
+    int b = 3;
+    int c = 43;
+
+    ApplyToMany(increment, a, b, c);
+    assert(a == 1);
+    assert(b == 4);
+    assert(c == 44);
+}
+
+void TestArgumentForwarding() {
+    struct S {
+        int call_count = 0;
+        int i = 0;
+        std::unique_ptr<int> p;
+        void operator()(int i) {
+            this->i = i;
+            ++call_count;
+        }
+        void operator()(std::unique_ptr<int>&& p) {
+            this->p = std::move(p);
+            ++call_count;
+        }
+    };
+
+    S s;
+
+    ApplyToMany(s, 1, std::make_unique<int>(42));
+    assert(s.call_count == 2);
+    assert(s.i == 1);
+    assert(s.p != nullptr && *s.p == 42);
+}
+
+void TestArgumentForwardingToConstFunction() {
+    struct S {
+        mutable int call_count = 0;
+        mutable int i = 0;
+        mutable std::unique_ptr<int> p;
+        void operator()(int i) const {
+            this->i = i;
+            ++call_count;
+        }
+        void operator()(std::unique_ptr<int>&& p) const {
+            this->p = std::move(p);
+            ++call_count;
+        }
+    };
+
+    const S s;
+    ApplyToMany(s, 1, std::make_unique<int>(42));
+    assert(s.call_count == 2);
+    assert(s.i == 1);
+    assert(s.p != nullptr && *s.p == 42);
 }
 
 int main() {
-    using namespace std::literals;
-    assert(EqualsToOneOf("hello"sv, "hi"s, "hello"s));
-    assert(!EqualsToOneOf(1, 10, 2, 3, 6));
-    assert(!EqualsToOneOf(8));
+    TestSum();
+    TestConcatenate();
+    TestIncrement();
+    TestArgumentForwarding();
+    TestArgumentForwardingToConstFunction();
+    return 0;
 }
