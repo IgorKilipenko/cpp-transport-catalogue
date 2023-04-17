@@ -2,8 +2,8 @@
     "cmake.configureSettings": {
         "CMAKE_BUILD_TYPE": "Debug",
         "TESTS": "0",
-        "TRACE_DEBUG": "1",
-        "FSANITIZE_DEBUG": "1", // Enable SANITIZE
+        "TRACE_DEBUG": "0",
+        "FSANITIZE_DEBUG": "0", // Enable SANITIZE
         "WARNINGS_AS_ERRORS" : "ON",
         "UNIT_TESTING" : "ON",
         "LOGGING" : "ON",
