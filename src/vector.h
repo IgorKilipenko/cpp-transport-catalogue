@@ -7,6 +7,11 @@
 #include <new>
 #include <utility>
 
+namespace /* template type helpers */ {
+    template <typename FromType, typename ToType>
+    using EnableIfSame = std::enable_if_t<std::is_same_v<std::decay_t<FromType>, ToType>, bool>;
+}
+
 namespace /* RawMemory */ {
     template <typename T>
     class RawMemory {
@@ -122,10 +127,12 @@ namespace /* Vector */ {
         Vector& operator=(Vector&& other) noexcept;
 
         iterator Erase(const_iterator pos);
-        iterator Insert(const_iterator pos, const T& value);
+        template <typename TItem, EnableIfSame<TItem, T> = true>
         iterator Insert(const_iterator pos, T&& value);
         template <typename... Args>
         iterator Emplace(const_iterator pos, Args&&... args);
+        template <typename... Args>
+        T& EmplaceBack(Args&&... args);
 
         size_t Size() const noexcept;
         size_t Capacity() const noexcept;
@@ -133,12 +140,9 @@ namespace /* Vector */ {
         void Reserve(size_t new_capacity);
         void Resize(size_t new_size);
 
-        void PushBack(const T& value);
-        void PushBack(T&& value);
+        template <typename TItem, EnableIfSame<TItem, T> = true>
+        void PushBack(TItem&& value);
         void PopBack();
-
-        template <typename... Args>
-        T& EmplaceBack(Args&&... args);
 
     private:
         RawMemory<T> data_;
@@ -178,13 +182,9 @@ namespace /* Vector impl */ {
     }
 
     template <typename T>
-    typename Vector<T>::iterator Vector<T>::Insert(const_iterator pos, const T& value) {
-        return Emplace(pos, value);
-    }
-
-    template <typename T>
+    template <typename TItem, EnableIfSame<TItem, T>>
     typename Vector<T>::iterator Vector<T>::Insert(const_iterator pos, T&& value) {
-        return Emplace(pos, std::move(value));
+        return Emplace(pos, std::forward<TItem>(value));
     }
 
     template <typename T>
@@ -314,10 +314,11 @@ namespace /* Vector impl */ {
     }
 
     template <typename T>
-    void Vector<T>::PushBack(const T& value) {
+    template <typename TItem, EnableIfSame<TItem, T>>
+    void Vector<T>::PushBack(TItem&& value) {
         if (size_ == Capacity()) {
             RawMemory<T> new_data(size_ == 0 ? 1 : size_ * 2);
-            new (new_data + size_) T(value);
+            new (new_data + size_) T(std::forward<TItem>(value));
             if constexpr (std::is_nothrow_move_constructible_v<T> || !std::is_copy_constructible_v<T>) {
                 std::uninitialized_move_n(data_.GetAddress(), size_, new_data.GetAddress());
             } else {
@@ -326,25 +327,7 @@ namespace /* Vector impl */ {
             std::destroy_n(data_.GetAddress(), size_);
             data_.Swap(new_data);
         } else {
-            new (data_ + size_) T(value);
-        }
-        ++size_;
-    }
-
-    template <typename T>
-    void Vector<T>::PushBack(T&& value) {
-        if (size_ == Capacity()) {
-            RawMemory<T> new_data(size_ == 0 ? 1 : size_ * 2);
-            new (new_data + size_) T(std::move(value));
-            if constexpr (std::is_nothrow_move_constructible_v<T> || !std::is_copy_constructible_v<T>) {
-                std::uninitialized_move_n(data_.GetAddress(), size_, new_data.GetAddress());
-            } else {
-                std::uninitialized_copy_n(data_.GetAddress(), size_, new_data.GetAddress());
-            }
-            std::destroy_n(data_.GetAddress(), size_);
-            data_.Swap(new_data);
-        } else {
-            new (data_ + size_) T(std::move(value));
+            new (data_ + size_) T(std::forward<TItem>(value));
         }
         ++size_;
     }
