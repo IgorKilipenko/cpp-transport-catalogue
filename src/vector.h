@@ -290,15 +290,12 @@ namespace /* Vector impl */ {
             if (rhs.size_ > data_.Capacity()) {
                 Swap(Vector(rhs));
             } else {
+                for (size_t i = 0; i < std::min(rhs.size_, size_); ++i) {
+                    data_[i] = rhs.data_[i];
+                }
                 if (rhs.size_ < size_) {
-                    for (size_t i = 0; i < rhs.size_; ++i) {
-                        data_[i] = rhs.data_[i];
-                    }
                     std::destroy_n(data_.GetAddress() + rhs.size_, size_ - rhs.size_);
                 } else {
-                    for (size_t i = 0; i < size_; ++i) {
-                        data_[i] = rhs.data_[i];
-                    }
                     std::uninitialized_copy_n(rhs.data_.GetAddress() + size_, rhs.size_ - size_, data_.GetAddress() + size_);
                 }
                 size_ = rhs.size_;
@@ -310,9 +307,7 @@ namespace /* Vector impl */ {
     template <typename T>
     Vector<T>& Vector<T>::operator=(Vector&& rhs) noexcept {
         if (this != &rhs) {
-            data_ = std::move(rhs.data_);
-            size_ = rhs.size_;
-            rhs.size_ = 0;
+            Swap(std::move(rhs));
         }
         return *this;
     }
