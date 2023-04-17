@@ -128,7 +128,7 @@ namespace /* Vector */ {
 
         iterator Erase(const_iterator pos);
         template <typename TItem, EnableIfSame<TItem, T> = true>
-        iterator Insert(const_iterator pos, T&& value);
+        iterator Insert(const_iterator pos, TItem&& value);
         template <typename... Args>
         iterator Emplace(const_iterator pos, Args&&... args);
         template <typename... Args>
@@ -147,6 +147,19 @@ namespace /* Vector */ {
     private:
         RawMemory<T> data_;
         size_t size_ = 0;
+
+    private:
+        [[nodiscard]] RawMemory<T> CopyData_(size_t count) {
+            RawMemory<T> new_data(count);
+
+            if constexpr (std::is_nothrow_move_constructible_v<T> || !std::is_copy_constructible_v<T>) {
+                std::uninitialized_move_n(data_.GetAddress(), size_, new_data.GetAddress());
+            } else {
+                std::uninitialized_copy_n(data_.GetAddress(), size_, new_data.GetAddress());
+            }
+
+            return new_data;
+        }
     };
 }
 
@@ -183,7 +196,7 @@ namespace /* Vector impl */ {
 
     template <typename T>
     template <typename TItem, EnableIfSame<TItem, T>>
-    typename Vector<T>::iterator Vector<T>::Insert(const_iterator pos, T&& value) {
+    typename Vector<T>::iterator Vector<T>::Insert(const_iterator pos, TItem&& value) {
         return Emplace(pos, std::forward<TItem>(value));
     }
 
@@ -288,13 +301,7 @@ namespace /* Vector impl */ {
     template <typename T>
     void Vector<T>::Reserve(size_t new_capacity) {
         if (new_capacity > data_.Capacity()) {
-            RawMemory<T> new_data(new_capacity);
-
-            if constexpr (std::is_nothrow_move_constructible_v<T> || !std::is_copy_constructible_v<T>) {
-                std::uninitialized_move_n(data_.GetAddress(), size_, new_data.GetAddress());
-            } else {
-                std::uninitialized_copy_n(data_.GetAddress(), size_, new_data.GetAddress());
-            }
+            RawMemory<T> new_data = CopyData_(new_capacity);
 
             std::destroy_n(data_.GetAddress(), Size());
             data_.Swap(new_data);
