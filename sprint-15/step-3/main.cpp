@@ -1,7 +1,7 @@
-#include "ppm_image.h"
-
 #include <iostream>
 #include <string_view>
+
+#include "ppm_image.h"
 
 using namespace std;
 
