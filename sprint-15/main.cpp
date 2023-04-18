@@ -7,6 +7,7 @@
 #include "international_driving_licence.h"
 #include "passport.h"
 #include "travel_pack.h"
+
 using namespace std;
 
 void PrintInfo(const IdentityDocument& doc) {
@@ -64,4 +65,5 @@ int main() {
     cout << "Test5"sv << endl;
     Passport pass2;
     pass2.PrintUniqueIDCount();
+    return 0;
 }
