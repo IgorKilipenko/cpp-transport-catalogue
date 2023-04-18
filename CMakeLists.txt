@@ -1,15 +1,15 @@
 cmake_minimum_required(VERSION 3.14)
 set(CMAKE_VERBOSE_MAKEFILE ON)
-set(PROJECT_NAME "cpp-advanced-vector")
+set(PROJECT_NAME "cpp-sprint-15-trainings")
 project(${PROJECT_NAME} CXX)
 
-set(SRC_DIR ./src)
-set(TESTS_DIR ${SRC_DIR}/tests)
+set(SRC_DIR ./sprint-15)
+#set(TESTS_DIR ${SRC_DIR}/tests)
 set(MAIN_FILE ${SRC_DIR}/main.cpp )
 
 set(LIBS 
     ${MAIN_FILE}
-    ${TESTS_DIR}/vector_test.cpp
+    # ${TESTS_DIR}/vector_test.cpp
 )
 
 set(CFLAGS -Wall -Werror -pedantic)
