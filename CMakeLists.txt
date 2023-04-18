@@ -10,6 +10,7 @@ set(MAIN_FILE ${SRC_DIR}/main.cpp )
 set(LIBS 
     ${MAIN_FILE}
     ${SRC_DIR}/ppm_image.cpp
+    ${SRC_DIR}/img_lib.cpp
     # ${TESTS_DIR}/vector_test.cpp
 )
 
