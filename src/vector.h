@@ -24,8 +24,8 @@ namespace /* RawMemory */ {
 
         RawMemory& operator=(const RawMemory&) = delete;
 
-        RawMemory& operator=(RawMemory&& other) noexcept {
-            Swap(other);
+        RawMemory& operator=(RawMemory&& rhl) noexcept {
+            Swap(rhl);
             return *this;
         }
 
@@ -125,8 +125,8 @@ namespace /* Vector */ {
 
         const T& operator[](size_t index) const noexcept;
         T& operator[](size_t index) noexcept;
-        Vector& operator=(const Vector& other);
-        Vector& operator=(Vector&& other) noexcept;
+        Vector& operator=(const Vector&);
+        Vector& operator=(Vector&&) noexcept;
 
         iterator Erase(const_iterator pos);
         template <typename TItem, EnableIfSame<TItem, T> = true>
