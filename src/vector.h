@@ -227,7 +227,10 @@ namespace /* Vector impl */ {
             size_++;
         };
 
+        assert(pos >= cbegin() && pos <= cend());
+
         size_t index = std::distance(cbegin(), pos);
+
         if (size_ == index) {
             EmplaceBack(std::forward<Args>(args)...);
         } else if (size_ < Capacity()) {
@@ -250,6 +253,7 @@ namespace /* Vector impl */ {
 
     template <typename T>
     typename Vector<T>::iterator Vector<T>::Erase(const_iterator pos) {
+        assert(pos >= cbegin() && pos < cend());
         iterator pos_it = const_cast<iterator>(pos);
         std::move(pos_it + 1, end(), pos_it);
         std::destroy_n(data_.GetAddress() + (--size_), 1);
@@ -342,6 +346,7 @@ namespace /* Vector impl */ {
 
     template <typename T>
     void Vector<T>::PopBack() {
+        assert(size_ > 0);
         std::destroy_at(data_.GetAddress() + size_ - 1);
         --size_;
     }
