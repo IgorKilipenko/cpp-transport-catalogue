@@ -1,3 +1,5 @@
+#include <time.h>
+
 #include <array>
 #include <iostream>
 #include <string>
@@ -39,14 +41,13 @@ int main() {
     PrintInfo(3).PrintID();
 
     cout << "Test2"sv << endl;
-    array<IdentityDocument*, 3> docs = {
-        (IdentityDocument*)(new Passport()), (IdentityDocument*)(new DrivingLicence()), (IdentityDocument*)(new Passport())};
+    array<IdentityDocument*, 3> docs = {new Passport(), new DrivingLicence(), new Passport()};
     for (const auto* doc : docs) {
         doc->PrintID();
     }
 
     for (size_t i = 0; i < docs.size(); ++i) {
-        docs[i]->Delete();
+        delete docs[i];
     }
 
     cout << "Test3"sv << endl;
