@@ -6,6 +6,7 @@
 using namespace std;
 
 int main(int argc, const char** argv) {
+    setlocale(LC_ALL, "Ru");
     if (argc != 3) {
         cerr << "Usage: "sv << argv[0] << " <input image> <output image>"sv << endl;
         return 1;

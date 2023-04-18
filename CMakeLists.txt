@@ -9,6 +9,7 @@ set(MAIN_FILE ${SRC_DIR}/main.cpp )
 
 set(LIBS 
     ${MAIN_FILE}
+    ${SRC_DIR}/ppm_image.cpp
     # ${TESTS_DIR}/vector_test.cpp
 )
 

@@ -12,11 +12,31 @@ namespace img_lib {
     static const int PPM_MAX = 255;
 
     // реализуйте эту функцию самостоятельно
-    bool SavePPM(const Path& file, const Image& image);
+    bool SavePPM(const Path& file, const Image& image) {
+        ofstream ofs(file, ios::binary);
+
+        if (!ofs) {
+            return false;
+        }
+
+        ofs << PPM_SIG << '\n' << image.GetWidth() << ' ' << image.GetHeight() << '\n' << PPM_MAX << '\n';
+
+        std::vector<char> buff(image.GetWidth() * 3);
+
+        for (int y = 0; y < image.GetHeight(); ++y) {
+            for (int x = 0; x < image.GetWidth(); ++x) {
+                buff[x * 3 + 0] = static_cast<char>(image.GetPixel(x, y).r);
+                buff[x * 3 + 1] = static_cast<char>(image.GetPixel(x, y).g);
+                buff[x * 3 + 2] = static_cast<char>(image.GetPixel(x, y).b);
+            }
+            ofs.write(buff.data(), image.GetWidth() * 3);
+        }
+        return true;
+    }
 
     Image LoadPPM(const Path& file) {
         // открываем поток с флагом ios::binary
-        // поскольку будем читать даные в двоичном формате
+        // поскольку будем читать данные в двоичном формате
         ifstream ifs(file, ios::binary);
         std::string sign;
         int w, h, color_max;
