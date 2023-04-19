@@ -1,16 +1,6 @@
 {
     "cmake.configureSettings": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "TESTS": "0",
-        "TRACE_DEBUG": "0",
-        "FSANITIZE_DEBUG": "0", // Enable SANITIZE
-        "WARNINGS_AS_ERRORS" : "ON",
-        "UNIT_TESTING" : "ON",
-        "LOGGING" : "ON",
-        "TRACE" : 1,
-        "JSONLIB_TRACE" : 0,
-        "REQUEST_TRACE" : 1, 
-        "TRACE_CTR" : 1
     },
     "[cpp]": {
         "editor.suggestSelection": "recentlyUsedByPrefix",

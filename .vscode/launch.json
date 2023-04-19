@@ -6,16 +6,17 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
-            "args": [],
+            "args": ["kitty-1-cypher.ppm", "kitty-1-cypher-cer.jpg", "123"],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
+            //"cwd": "${workspaceFolder}/sprint-15/step-3",
+            "cwd": "${command:cmake.launchTargetDirectory}",
             "environment": [
                 {
                     "name": "PATH",
                     "value": "$PATH:${command:cmake.launchTargetDirectory}"
                 }
             ],
-            "externalConsole": false,
+            "externalConsole": true,
             "MIMode": "gdb",
             "setupCommands": [
                 {
