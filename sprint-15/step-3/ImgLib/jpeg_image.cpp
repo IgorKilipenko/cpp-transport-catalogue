@@ -1,3 +1,5 @@
+// clang-format off
+
 #include "ppm_image.h"
 
 #include <array>
@@ -6,6 +8,8 @@
 #include <setjmp.h>
 
 #include <jpeglib.h>
+
+// clang-format on
 
 using namespace std;
 
