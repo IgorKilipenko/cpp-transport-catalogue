@@ -35,3 +35,6 @@ build
 
 #.vscode/settings.*
 .cache
+
+**/libs/jpegsrc.v9e
+!**/libs/libjpeg/lib/**/*.a
