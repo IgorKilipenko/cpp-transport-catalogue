@@ -60,9 +60,6 @@ namespace format_interfaces {
 
 const ImageFormatInterface* GetFormatInterface(const img_lib::Path& path) {
     Format format = GetFormatByExtension(path);
-    if (format == Format::UNKNOWN) {
-        return nullptr;
-    }
 
     static const format_interfaces::PPM ppmInterface;
     static const format_interfaces::JPEG jpegInterface;
@@ -87,8 +84,8 @@ int main(int argc, const char** argv) {
         return 1;
     }
 
-    img_lib::Path in_path = argv[1];
-    img_lib::Path out_path = argv[2];
+    img_lib::Path in_path(argv[1]);
+    img_lib::Path out_path(argv[2]);
 
     const ImageFormatInterface* in_format_interface = GetFormatInterface(in_path);
     if (!in_format_interface) {
@@ -102,13 +99,13 @@ int main(int argc, const char** argv) {
         return 3;
     }
 
-    img_lib::Image image = img_lib::LoadPPM(in_path);
+    img_lib::Image image = in_format_interface->LoadImage(in_path);
     if (!image) {
         cerr << "Loading failed"sv << endl;
         return 4;
     }
 
-    if (!img_lib::SaveJPEG(out_path, image)) {
+    if (!in_format_interface->SaveImage(out_path, image)) {
         cerr << "Saving failed"sv << endl;
         return 5;
     }

@@ -6,7 +6,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
-            "args": ["kitty-1-cypher.ppm", "kitty-1-cypher-cer.jpg", "123"],
+            "args": ["./images/reading_dog_2/reading_dog.jpg", "./images/reading_dog_2/out/reading_dog_out.ppm"],
             "stopAtEntry": false,
             //"cwd": "${workspaceFolder}/sprint-15/step-3",
             "cwd": "${command:cmake.launchTargetDirectory}",
