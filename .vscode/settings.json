@@ -1,6 +1,7 @@
 {
     "cmake.configureSettings": {
         "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_PREFIX_PATH": "sprint-15/step-4/third_party/protobuf/package"
     },
     "[cpp]": {
         "editor.suggestSelection": "recentlyUsedByPrefix",

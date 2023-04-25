@@ -9,4 +9,5 @@ else()
     set(SYSTEM_LIBS)
 endif()
 
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/src/ImgConverter")
+#add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/src/ImgConverter")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/src/person")

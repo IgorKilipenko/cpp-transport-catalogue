@@ -4,7 +4,6 @@ set(PROJECT_NAME "cpp-sprint-15-step-4")
 project(${PROJECT_NAME} CXX)
 
 set(CFLAGS -Wall -Werror -pedantic)
-set(DEFS)
 set(LINK_OPTS)
 set(LDLIBS tbb pthread)
 
