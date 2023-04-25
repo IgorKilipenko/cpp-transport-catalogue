@@ -6,10 +6,10 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
-            "args": ["./images/reading_dog_2/reading_dog.jpg", "./images/reading_dog_2/out/reading_dog_out.ppm"],
+            "args": ["./src/images/reading_dog_2/reading_dog.jpg", "./src/images/reading_dog_2/out/reading_dog_out.ppm"],
             "stopAtEntry": false,
-            //"cwd": "${workspaceFolder}/sprint-15/step-3",
-            "cwd": "${command:cmake.launchTargetDirectory}",
+            "cwd": "${workspaceFolder}/sprint-15/step-4",
+            //"cwd": "${command:cmake.launchTargetDirectory}",
             "environment": [
                 {
                     "name": "PATH",

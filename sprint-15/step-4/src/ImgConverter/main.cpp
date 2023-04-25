@@ -1,5 +1,3 @@
-// clang-format off
-
 #include <bmp_image.h>
 #include <jpeg_image.h>
 #include <ppm_image.h>
@@ -7,8 +5,6 @@
 #include <filesystem>
 #include <iostream>
 #include <string_view>
-
-// clang-format on
 
 using namespace std;
 
