@@ -38,3 +38,6 @@ build
 
 **/libs/jpegsrc.v9e
 !**/libs/libjpeg/lib/**/*.a
+
+**/third_party/protobuf/*
+!**/third_party/protobuf/package/
