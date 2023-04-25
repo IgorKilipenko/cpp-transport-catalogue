@@ -1,11 +1,56 @@
+#include <algorithm>
 #include <cassert>
+#include <compare>
+#include <cstddef>
 #include <map>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "saveload.h"
 
 using namespace std;
+
+void TestSerializeString() {
+    std::stringstream ss;
+    const std::string str("Привет Игорь!");
+    Serialize(str, ss);
+
+    std::string serialize_res = ss.str();
+    assert(serialize_res.length() == str.length() + sizeof(size_t));
+}
+
+void TestDeserializeString() {
+    std::stringstream ss;
+    const std::string str("Привет Игорь!");
+    Serialize(str, ss);
+    
+    std::string serializes_str = ss.str();
+
+    std::string res;
+    Deserialize(ss, res);
+    assert(res == str);
+}
+
+void TestFloat() {
+    std::stringstream ss;
+    const float val = 123.;
+    Serialize(val, ss);
+
+    float res;
+    Deserialize(ss, res);
+    assert(res == val);
+}
+
+void TestVector() {
+    std::stringstream ss;
+    const std::vector<string> val{"hello", " world", "!"};
+    Serialize(val, ss);
+
+    std::vector<string> res;
+    Deserialize(ss, res);
+    assert(res == val);
+}
 
 void TestSaveLoad() {
     map<uint32_t, string> m = {
@@ -79,5 +124,10 @@ void TestSaveLoad() {
 }
 
 int main() {
+    TestSerializeString();
+    TestDeserializeString();
+    TestFloat();
+    TestVector();
     TestSaveLoad();
+    std::cout << "All tests passed." << std::endl;
 }

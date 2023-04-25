@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.11)
 
 set(PROJECT_NAME "cpp-sprint-15-step-4-less-2")
 project(${PROJECT_NAME} CXX)
-set(CMAKE_CXX_STANDARD 17)
 
 if (CMAKE_SYSTEM_NAME MATCHES "^MINGW")
     set(SYSTEM_LIBS -lstdc++)
