@@ -1,7 +1,9 @@
+#include <person.pb.h>
 
 #include <iostream>
 
-int main(int argc, const char** argv) {
-    std::cout << "Usage: " << argv[0] << std::endl;
-    return 0;
+int main() {
+    Address addr;
+    addr.set_building(15);
+    std::cout << addr.building() << std::endl;
 }

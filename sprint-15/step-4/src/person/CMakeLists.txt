@@ -13,7 +13,7 @@ find_package(Threads REQUIRED)
 # Команда вызова protoc. 
 # Ей переданы названия переменных, в которые будут сохранены 
 # списки сгенерированных файлов, а также сам proto-файл.
-protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS person.proto)
+protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS person.proto address.proto)
 
 # добавляем цель - person_test
 add_executable(person_test ${PROTO_SRCS} ${PROTO_HDRS} main.cpp)

@@ -1,5 +1,14 @@
 syntax = "proto3";
 
+import "address.proto";
+
+message Person {
+    string name = 1;
+    int32 age = 2;
+    Address address = 3;
+    repeated string phone_number = 4;
+} 
+
 message Author {
 	string first_name = 1;
 	string last_name = 2;
