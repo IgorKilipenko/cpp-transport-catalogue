@@ -378,7 +378,7 @@ namespace transport_catalogue::tests {
             TestRenderStopMarkersFull();
         }
 
-        void TestRenderStopMarkerLables1() const {
+        void TestRenderStopMarkerLabels1() const {
             std::filesystem::path test_dir = DATA_PATH / "stop_markers";
 
             std::string json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / "test_1.json");
@@ -397,7 +397,7 @@ namespace transport_catalogue::tests {
             CheckResults(std::move(expected_result), std::move(map_result));
         }
 
-        void TestRenderStopMarkerLablesFull() const {
+        void TestRenderStopMarkerLabelsFull() const {
             std::filesystem::path test_dir = DATA_PATH / "stop_markers";
 
             std::string json_file = transport_catalogue::detail::io::FileReader::Read(test_dir / "test_full.json");
@@ -439,9 +439,9 @@ namespace transport_catalogue::tests {
             CheckResults(std::move(expected_result), std::move(map_result));
         }
 
-        void TestRenderStopMarkerLables() const {
-            TestRenderStopMarkerLables1();
-            TestRenderStopMarkerLablesFull();
+        void TestRenderStopMarkerLabels() const {
+            TestRenderStopMarkerLabels1();
+            TestRenderStopMarkerLabelsFull();
         }
 
         void TestRenderMap1() const {
@@ -530,8 +530,8 @@ namespace transport_catalogue::tests {
             TestRenderStopMarkers();
             std::cerr << prefix << "TestRenderStopMarkers : Done." << std::endl;
 
-            TestRenderStopMarkerLables();
-            std::cerr << prefix << "TestRenderStopMarkerLables : Done." << std::endl;
+            TestRenderStopMarkerLabels();
+            std::cerr << prefix << "TestRenderStopMarkerLabels : Done." << std::endl;
 
             TestRenderMap();
             std::cerr << prefix << "TestRenderMap : Done." << std::endl;

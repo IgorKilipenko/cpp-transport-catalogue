@@ -18,11 +18,23 @@
     //"C_Cpp.errorSquiggles": "Disabled"
     "cmake.sourceDirectory": "${workspaceFolder}",
     "cSpell.words": [
+        "Biryulyovo",
+        "Biryusinka",
         "Jsonlib",
         "KEYVAL",
+        "Marushkino",
+        "Passazhirskaya",
         "Polyline",
+        "Prazhskaya",
+        "Rasskazovka",
+        "Rossoshanskaya",
         "subarray",
         "Svglib",
+        "Tolstopaltsevo",
+        "Tovarnaya",
+        "ulitsa",
+        "Universam",
+        "Zapadnoye",
         "Парсим"
     ],
 }

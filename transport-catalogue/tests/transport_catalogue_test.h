@@ -22,7 +22,7 @@ namespace transport_catalogue::tests {
     class TransportCatalogueTester {
     public:
         void Test1() const {
-            std::stringstream mainn_stream;
+            std::stringstream main_stream;
 
             std::vector<std::string> input_add_queries{
                 "Stop Tolstopaltsevo: 55.611087, 37.20829, 3900m to Marushkino",
@@ -57,23 +57,23 @@ namespace transport_catalogue::tests {
                                           R"(Stop Biryulyovo Zapadnoye: buses 256 828)"
                                           "\n"s;
 
-            mainn_stream << input_add_queries.size() << '\n';
+            main_stream << input_add_queries.size() << '\n';
             std::for_each(input_add_queries.begin(), input_add_queries.end(), [&](const std::string_view line) {
-                mainn_stream << line << '\n';
+                main_stream << line << '\n';
             });
 
-            mainn_stream << input_get_queries.size() << '\n';
+            main_stream << input_get_queries.size() << '\n';
             std::for_each(input_get_queries.begin(), input_get_queries.end(), [&](const std::string_view line) {
-                mainn_stream << line << '\n';
+                main_stream << line << '\n';
             });
 
             std::ostringstream output;
             TransportCatalogue catalog;
-            const obsolete::io::Reader reader(catalog.GetDataWriter(), mainn_stream);
+            const obsolete::io::Reader reader(catalog.GetDataWriter(), main_stream);
             const obsolete::io::StatReader stat_reader(catalog.GetStatDataReader(), reader, output);
 
-            reader.PorcessRequests();
-            stat_reader.PorcessRequests();
+            reader.ProcessRequests();
+            stat_reader.ProcessRequests();
 
             std::string result = output.str();
             CheckResults(expected_result, result);
@@ -275,7 +275,7 @@ namespace transport_catalogue::tests {
                       << std::endl;
         }
 
-        void NodeToRequsetConvertBenchmark(size_t size = 10000) const {
+        void NodeToRequestConvertBenchmark(size_t size = 10000) const {
             // json::Dict node{
             //     {"type", "Bus"}, {"name", "L9CbY13GWJohpUqsVkPI"}, {"stops", json::Array(2, "L9CbY13GWJohpUqsVkPI")}, {"is_roundtrip", true}};
             json::Dict node{
@@ -350,11 +350,11 @@ namespace transport_catalogue::tests {
 #endif
 
 #if (!DEBUG)
-            NodeToRequsetConvertBenchmark(1000000);
+            NodeToRequestConvertBenchmark(1000000);
 #else
-            NodeToRequsetConvertBenchmark();
+            NodeToRequestConvertBenchmark();
 #endif
-            std::cerr << prefix << "NodeToRequsetConvertBenchmark : Done." << std::endl;
+            std::cerr << prefix << "NodeToRequestConvertBenchmark : Done." << std::endl;
 
             std::cerr << std::endl << "All TransportCatalogue Tests : Done." << std::endl << std::endl;
         }
