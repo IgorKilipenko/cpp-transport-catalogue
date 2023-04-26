@@ -140,6 +140,7 @@ namespace transport_catalogue::io /* JsonReader */ {
         constexpr static const std::string_view STAT_REQUESTS_LITERAL = "stat_requests"sv;
         constexpr static const std::string_view RENDER_SETTINGS_REQUESTS_LITERAL = "render_settings"sv;
         constexpr static const std::string_view ROUTING_SETTINGS_REQUESTS_LITERAL = "routing_settings"sv;
+        constexpr static const std::string_view SERIALIZATION_SETTINGS_LITERAL = "serialization_settings"sv;
     };
 }
 
