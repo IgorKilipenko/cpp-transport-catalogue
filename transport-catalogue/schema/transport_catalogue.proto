@@ -1,12 +1,6 @@
 syntax = "proto3";
 
-package tc_data_schema;
-
-
-enum BusType {
-    ORDINARY = 0;
-    CYCLED = 1;
-}
+package proto_data_schema;
 
 message Coordinates {
     double lat = 1;
@@ -14,89 +8,13 @@ message Coordinates {
 }
 
 message Stop {
-    int32 id = 1;
-    string name = 2;
-    Coordinates coordinates = 3;
-} 
+    string name = 1;
+    Coordinates coords = 2;
+    map<string, uint32 > road_distances = 3;
+}
 
 message Bus {
-    int32 id = 1;
-    string name = 2;
-    repeated int32 stops = 3;
-    bool bus_type_cycled = 4;    
-}
-
-message StopToBuses {
-    int32 stop_id = 1;
-    repeated int32 bus_id = 2;
-}
-
-message IntervalToDistance {
-    int32 from_id = 1;
-    int32 to_id = 2;
-    int64 distance = 3;
-}
-
-message TransportCatalogue {
-    repeated Stop stops = 1;
-    repeated Bus buses = 2;
-    repeated StopToBuses stops_to_buses = 3;
-    repeated IntervalToDistance intervals_to_distance = 4;
-}
-
-message Point {
-    double x = 1;
-    double y = 2;
-}
-
-message Rgb {
-    int32 red = 1;
-    int32 green = 2;
-    int32 blue = 3;
-}
-
-message Rgba {
-    int32 red = 1;
-    int32 green = 2;
-    int32 blue = 3;
-    double opacity = 4;
-}
-
-message Color {
-
-    Rgb rgb_color = 1;
-    Rgba rgba_color = 2;
-    string string_color = 3;
-    bool is_initialized = 4;
-}
-
-message RenderSettings {
-    double width = 1;
-    double height = 2;
-    double padding = 3;
-
-    double line_width = 4;
-    double stop_radius = 5;
-
-    int32 bus_label_font_size = 6;
-    Point bus_label_offset = 7;
-
-    int32 stop_label_font_size = 8;
-    Point stop_label_offset = 9;
-
-    Color underlayer_color = 10;
-    double underlayer_width = 11;
-
-    repeated Color color_palette = 12;
-}
-
-message RoutingSettings {
-    double bus_wait_time = 1;
-    double bus_velocity = 2;    
-}
-
-message TransportBase {
-    TransportCatalogue cat = 1;
-    RoutingSettings routing_settings = 2;
-    RenderSettings rendder_settings = 3;
+    string name = 1;
+    repeated string route = 2;
+    bool is_roundtrip = 3;
 }
