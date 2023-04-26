@@ -10,4 +10,4 @@ else()
 endif()
 
 #add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/src/ImgConverter")
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/src/person")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/src/phone-book-serialize")

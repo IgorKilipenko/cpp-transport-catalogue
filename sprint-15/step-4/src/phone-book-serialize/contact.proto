@@ -1,0 +1,3 @@
+# напишите proto-файл с тремя сообщениями:
+# Date, Contact, ContactList.
+# Они должны располагаться в пакете phone_book_serialize.
