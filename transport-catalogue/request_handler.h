@@ -185,7 +185,7 @@ namespace transport_catalogue::io /* RawRequest */ {
         std::optional<double> ExtractNumberValueIf(KeyType_&& key);
 
         template <typename KeyType_>
-        std::optional<Offset> ExtractOffestValueIf(KeyType_&& key);
+        std::optional<Offset> ExtractOffsetValueIf(KeyType_&& key);
 
         template <typename KeyType_>
         std::optional<Color> ExtractColorValueIf(KeyType_&& key);
@@ -272,8 +272,8 @@ namespace transport_catalogue::io /* BaseRequest */ {
         bool IsConvertedToRoundtrip() const;
         const std::optional<data::Coordinates>& GetCoordinates() const;
         std::optional<data::Coordinates>& GetCoordinates();
-        const std::vector<data::MeasuredRoadDistance>& GetroadDistances() const;
-        std::vector<data::MeasuredRoadDistance>& GetroadDistances();
+        const std::vector<data::MeasuredRoadDistance>& GetRoadDistances() const;
+        std::vector<data::MeasuredRoadDistance>& GetRoadDistances();
         bool IsBaseRequest() const override;
         bool IsValidRequest() const override;
         void ConvertToRoundtrip();
@@ -337,13 +337,13 @@ namespace transport_catalogue::io /* StatRequest */ {
     };
 }
 
-namespace transport_catalogue::io /* RouteSataRequest */ {
+namespace transport_catalogue::io /* RouteStatRequest */ {
 
-    class RouteSataRequest final : public StatRequest {
+    class RouteStatRequest final : public StatRequest {
         using StatRequest::StatRequest;
 
     public:
-        RouteSataRequest(StatRequest&& request);
+        RouteStatRequest(StatRequest&& request);
 
         bool IsValidRequest() const override;
         const std::optional<std::string>& GetFromStop() const;
@@ -542,7 +542,7 @@ namespace transport_catalogue::io /* RequestHandler */ {
 
         class SettingsBuilder;
 
-        //* Is non-const for use cahce in next versions
+        //* Is non-const for use cache in next versions
         std::string RenderMap();
 
         /// Build (or if force_prepare_data = false get pre-builded) map and return non-rendered layers (as svg documents).
@@ -794,7 +794,7 @@ namespace transport_catalogue::io /* RawRequest template implementation */ {
     }
 
     template <typename KeyType_>
-    std::optional<RawRequest::Offset> RawRequest::ExtractOffestValueIf(KeyType_&& key) {
+    std::optional<RawRequest::Offset> RawRequest::ExtractOffsetValueIf(KeyType_&& key) {
         std::optional<Array> array = ExtractIf<Array>(std::forward<KeyType_>(key));
         if (!array.has_value() || (assert(array->size() == 2), array->size() != 2)) {
             return std::nullopt;

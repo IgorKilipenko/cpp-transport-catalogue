@@ -44,13 +44,13 @@ namespace transport_catalogue::obsolete::io {
         struct StopRequest {
             std::string_view name;
             Coordinates coordinates;
-            std::vector<DistanceBetween> measured_distancies;
+            std::vector<DistanceBetween> measured_distances;
 
             StopRequest() = default;
 
             template <typename StringView, typename Coordinates, typename DistanceBetweenContainer>
             StopRequest(StringView&& name, Coordinates&& coordinates, DistanceBetweenContainer&& measured_distancies)
-                : name{std::move(name)}, coordinates(std::move(coordinates)), measured_distancies(std::move(measured_distancies)) {}
+                : name{std::move(name)}, coordinates(std::move(coordinates)), measured_distances(std::move(measured_distancies)) {}
         };
 
         struct RawRequest {
@@ -96,7 +96,7 @@ namespace transport_catalogue::obsolete::io {
 
         bool IsGetRequest(const std::string_view req) const;
 
-        std::vector<DistanceBetween> ParseMeasuredDistancies(const std::string_view str, const std::string_view from_stop) const;
+        std::vector<DistanceBetween> ParseMeasuredDistances(const std::string_view str, const std::string_view from_stop) const;
 
     private:
         static const char ROUNDTRIP_ROUTE_SEPARATOR = '>';
@@ -117,9 +117,9 @@ namespace transport_catalogue::obsolete::io {
 
         void ExecuteRequest(const Parser::RawRequest& raw_req, std::vector<Parser::DistanceBetween>& out_distances) const;
 
-        void PorcessRequests(size_t n) const;
+        void ProcessRequests(size_t n) const;
 
-        void PorcessRequests() const;
+        void ProcessRequests() const;
 
         const Parser& GetParser() const {
             return parser_;

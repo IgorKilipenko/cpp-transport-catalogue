@@ -22,7 +22,7 @@ namespace json /* Builder */ {
             nodes_stack_.pop_back();
             return *this;
         }
-        throw std::logic_error("Buid dictionary error");
+        throw std::logic_error("Build dictionary error");
     }
 
     Builder::ArrayContext Builder::StartArray() {

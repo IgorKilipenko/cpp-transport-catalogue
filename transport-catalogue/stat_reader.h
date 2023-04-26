@@ -18,9 +18,9 @@ namespace transport_catalogue::obsolete::io {
 
         void PrintStopInfo(const std::string_view stop_name) const;
 
-        void PorcessRequests(size_t n) const;
+        void ProcessRequests(size_t n) const;
 
-        void PorcessRequests() const;
+        void ProcessRequests() const;
 
         void ExecuteRequest(const Parser::RawRequest &raw_req) const;
 

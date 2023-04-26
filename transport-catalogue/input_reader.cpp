@@ -81,7 +81,7 @@ namespace transport_catalogue::obsolete::io {
         if (parser_.IsStopRequest(raw_req.command)) {
             auto stop = parser_.ParseStop(raw_req);
             db_writer_.AddStop(data::Stop{static_cast<std::string>(stop.name), std::move(stop.coordinates)});
-            std::move(stop.measured_distancies.begin(), stop.measured_distancies.end(), std::back_inserter(out_distances));
+            std::move(stop.measured_distances.begin(), stop.measured_distances.end(), std::back_inserter(out_distances));
 
         } else if (parser_.IsRouteRequest(raw_req.command)) {
             auto [name, route, is_roundtrip] = parser_.ParseBusRoute(raw_req);
@@ -89,7 +89,7 @@ namespace transport_catalogue::obsolete::io {
         }
     }
 
-    void Reader::PorcessRequests(size_t n) const {
+    void Reader::ProcessRequests(size_t n) const {
         auto lines = ReadLines(n);
         std::vector<Parser::RawRequest> requests;
         requests.reserve(n);
@@ -115,8 +115,8 @@ namespace transport_catalogue::obsolete::io {
         });
     }
 
-    void Reader::PorcessRequests() const {
-        PorcessRequests(Read<size_t>());
+    void Reader::ProcessRequests() const {
+        ProcessRequests(Read<size_t>());
     }
 }
 
@@ -127,12 +127,12 @@ namespace transport_catalogue::obsolete::io {
         auto args = detail::SplitIntoWords(req.args, ARGS_SEPARATOR, 3);
         assert(args.size() >= 2);
 
-        std::vector<DistanceBetween> distancies;
+        std::vector<DistanceBetween> distances;
         if (args.size() > 2) {
-            distancies = ParseMeasuredDistancies(args.back(), req.value);
+            distances = ParseMeasuredDistances(args.back(), req.value);
         }
 
-        return {req.value, ParseLatLng(args[0], args[1]), std::move(distancies)};
+        return {req.value, ParseLatLng(args[0], args[1]), std::move(distances)};
     }
 
     Parser::RouteRequest Parser::ParseBusRoute(const RawRequest& req) const {
@@ -202,17 +202,17 @@ namespace transport_catalogue::obsolete::io {
         return {std::stod(static_cast<std::string>(lat_str)), std::stod(static_cast<std::string>(lng_str))};
     }
 
-    std::vector<Parser::DistanceBetween> Parser::ParseMeasuredDistancies(const std::string_view str, const std::string_view from_stop) const {
-        auto distancies = detail::SplitIntoWords(str, ARGS_SEPARATOR);
-        if (distancies.empty()) {
+    std::vector<Parser::DistanceBetween> Parser::ParseMeasuredDistances(const std::string_view str, const std::string_view from_stop) const {
+        auto distances = detail::SplitIntoWords(str, ARGS_SEPARATOR);
+        if (distances.empty()) {
             return {};
         }
 
         std::vector<Parser::DistanceBetween> dists_btw;
-        dists_btw.reserve(distancies.size());
+        dists_btw.reserve(distances.size());
 
         std::for_each(
-            std::make_move_iterator(distancies.begin()), std::make_move_iterator(distancies.end()),
+            std::make_move_iterator(distances.begin()), std::make_move_iterator(distances.end()),
             [&dists_btw, from_stop](const std::string_view str) {
                 static const std::string_view sep = " to "sv;
                 size_t idx = str.find(sep);

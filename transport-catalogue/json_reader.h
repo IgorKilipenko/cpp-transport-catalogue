@@ -39,18 +39,18 @@ namespace transport_catalogue::detail::io /* FileReader */ {
     public:
         template <typename Path = std::filesystem::path>
         static std::string Read(Path&& path) {
-            std::ifstream istrm;
-            istrm.open(path, std::ios::in);
-            if (!istrm.is_open()) {
+            std::ifstream in;
+            in.open(path, std::ios::in);
+            if (!in.is_open()) {
                 throw exceptions::ReadingException("failed to open " /*+ filename*/);
             }
             std::string result;
             char ch;
-            while (istrm.get(ch)) {
+            while (in.get(ch)) {
                 result.push_back(ch);
             }
 
-            istrm.close();
+            in.close();
             return result;
         }
     };

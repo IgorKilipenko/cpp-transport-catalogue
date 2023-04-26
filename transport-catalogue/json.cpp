@@ -167,7 +167,7 @@ namespace json /* Parser implementation */ {
             if (!input_.good()) {
                 throw ParsingError("Dict parsing error. Not found dictionary key/value separator character : ["s + Token::KEYVAL_SEPARATOR + "]"s);
             }
-            result.emplace(move(key), Parse());
+            result.emplace(std::move(key), Parse());
         }
 
         if (ch != Token::END_OBJ) {

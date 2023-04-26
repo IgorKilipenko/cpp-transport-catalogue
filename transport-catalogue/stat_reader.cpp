@@ -47,7 +47,7 @@ namespace transport_catalogue::obsolete::io {
         out_stream_ << std::endl;
     }
 
-    void StatReader::PorcessRequests(size_t n) const {
+    void StatReader::ProcessRequests(size_t n) const {
         auto lines = reader_.ReadLines(n);
         const Parser& parser_ = reader_.GetParser();
         std::for_each(std::make_move_iterator(lines.begin()), std::make_move_iterator(lines.end()), [this, &parser_](const std::string_view str) {
@@ -72,7 +72,7 @@ namespace transport_catalogue::obsolete::io {
         }
     }
 
-    void StatReader::PorcessRequests() const {
-        PorcessRequests(reader_.Read<size_t>());
+    void StatReader::ProcessRequests() const {
+        ProcessRequests(reader_.Read<size_t>());
     }
 }

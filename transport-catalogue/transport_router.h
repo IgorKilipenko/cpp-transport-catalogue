@@ -15,7 +15,7 @@
 #include "router.h"
 #include "transport_catalogue.h"
 
-namespace transport_catalogue::router /* RouteInfo */{
+namespace transport_catalogue::router /* RouteInfo */ {
 
     class RouteInfo {
     public:
