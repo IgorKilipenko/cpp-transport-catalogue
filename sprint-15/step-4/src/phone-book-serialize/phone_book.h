@@ -1,5 +1,7 @@
 #pragma once
 
+#include <contact.pb.h>
+
 #include <optional>
 #include <sstream>
 #include <string>
@@ -24,13 +26,17 @@ public:
 
     // Корректный тип итератора определите сами.
     // Можно и нужно поменять этот using:
-    using Iterator = const Contact*;
+    using Iterator = std::vector<Contact>::iterator;
+    using ConstIterator = std::vector<Contact>::const_iterator;
 
-    using ContactRange = IteratorRange<Iterator>;
+    using ContactRange = IteratorRange<ConstIterator>;
 
     ContactRange FindByNamePrefix(std::string_view name_prefix) const;
 
     void SaveTo(std::ostream& output) const;
+
+private:
+    std::vector<Contact> contacts_;
 };
 
 PhoneBook DeserializePhoneBook(std::istream& input);
