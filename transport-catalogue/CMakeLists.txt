@@ -63,6 +63,7 @@ message(STATE ${PROJECT_SOURCE_DIR})
 file(COPY ${TESTS_DATA_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 add_executable(${PROJECT_NAME} ${PROTO_SRCS} ${PROTO_HDRS} ${LIBS})
+
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 target_compile_options(${PROJECT_NAME} PRIVATE ${CFLAGS})
 target_compile_definitions(${PROJECT_NAME} PRIVATE ${DEFS})
@@ -75,4 +76,4 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 string(REPLACE "protobuf.lib" "protobufd.lib" "Protobuf_LIBRARY_DEBUG" "${Protobuf_LIBRARY_DEBUG}")
 string(REPLACE "protobuf.a" "protobufd.a" "Protobuf_LIBRARY_DEBUG" "${Protobuf_LIBRARY_DEBUG}")
 
-target_link_libraries(${PROJECT_NAME} ${Protobuf_LIBRARY} Threads::Threads)
+target_link_libraries(${PROJECT_NAME} "$<IF:$<CONFIG:Debug>,${Protobuf_LIBRARY_DEBUG},${Protobuf_LIBRARY}>" Threads::Threads)
