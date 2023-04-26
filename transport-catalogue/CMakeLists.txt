@@ -35,7 +35,7 @@ set(LDLIBS tbb pthread)
 find_package(Protobuf REQUIRED)
 find_package(Threads REQUIRED)
 
-# protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ".proto")
+protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS "schema/transport_catalogue.proto")
 
 if (DEFINED CMAKE_BUILD_TYPE AND CMAKE_BUILD_TYPE STREQUAL "Debug") 
     message("Debug mode.")
