@@ -32,7 +32,10 @@ set(DEFS)
 set(LINK_OPTS)
 set(LDLIBS tbb pthread)
 
+find_package(Protobuf REQUIRED)
+find_package(Threads REQUIRED)
 
+# protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ".proto")
 
 if (DEFINED CMAKE_BUILD_TYPE AND CMAKE_BUILD_TYPE STREQUAL "Debug") 
     message("Debug mode.")
@@ -59,9 +62,17 @@ message(STATE ${PROJECT_SOURCE_DIR})
 
 file(COPY ${TESTS_DATA_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
-add_executable(${PROJECT_NAME} ${LIBS})
+add_executable(${PROJECT_NAME} ${PROTO_SRCS} ${PROTO_HDRS} ${LIBS})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 target_compile_options(${PROJECT_NAME} PRIVATE ${CFLAGS})
 target_compile_definitions(${PROJECT_NAME} PRIVATE ${DEFS})
 target_link_options(${PROJECT_NAME} PRIVATE ${LINK_OPTS})
 target_link_libraries(${PROJECT_NAME} ${LDLIBS})
+
+target_include_directories(${PROJECT_NAME} PUBLIC ${Protobuf_INCLUDE_DIRS})
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+
+string(REPLACE "protobuf.lib" "protobufd.lib" "Protobuf_LIBRARY_DEBUG" "${Protobuf_LIBRARY_DEBUG}")
+string(REPLACE "protobuf.a" "protobufd.a" "Protobuf_LIBRARY_DEBUG" "${Protobuf_LIBRARY_DEBUG}")
+
+target_link_libraries(${PROJECT_NAME} ${Protobuf_LIBRARY} Threads::Threads)
