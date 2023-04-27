@@ -1,3 +1,6 @@
+#ifndef __REQUEST_HANDLER_H__
+#define __REQUEST_HANDLER_H__
+
 #pragma once
 
 #include <algorithm>
@@ -564,18 +567,21 @@ namespace transport_catalogue::io /* Interfaces */ {
 }
 
 namespace transport_catalogue::io /* RequestHandler */ {
-
     class RequestHandler : public IRequestObserver {
+    public: /* Constants */
+        enum class Mode { MAKE_BASE, PROCESS_REQUESTS };
+
     public:
         RequestHandler(
             const data::ITransportStatDataReader& reader, const data::ITransportDataWriter& writer, const IStatResponseSender& response_sender,
-            io::renderer::IRenderer& renderer)
+            io::renderer::IRenderer& renderer, Mode mode = Mode::PROCESS_REQUESTS)
             : db_reader_{reader},
               db_writer_{writer},
               response_sender_{response_sender},
               renderer_{renderer},
               router_({}, db_reader_.GetDataReader()),
-              storage_(db_reader_, db_writer_) {}
+              storage_(db_reader_, db_writer_),
+              mode_{mode} {}
 
         ~RequestHandler() {}
 
@@ -628,6 +634,7 @@ namespace transport_catalogue::io /* RequestHandler */ {
         io::renderer::IRenderer& renderer_;
         router::TransportRouter router_;
         serialization::Store storage_;
+        Mode mode_;
 
         bool PrepareMapRendererData();
     };
@@ -873,3 +880,4 @@ namespace transport_catalogue::io /* RequestHandler::SettingsBuilder template im
             std::move(raw_color));
     }
 }
+#endif  // __REQUEST_HANDLER_H__

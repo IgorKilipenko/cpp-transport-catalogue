@@ -97,7 +97,8 @@ void ProcessRequests() {
 
     maps::MapRenderer renderer;
 
-    const auto request_handler_ptr = std::make_shared<RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer);
+    const auto request_handler_ptr = std::make_shared<RequestHandler>(
+        catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer, RequestHandler::Mode::PROCESS_REQUESTS);
     json_reader.AddObserver(request_handler_ptr);
     json_reader.ReadDocument();
 }
@@ -112,7 +113,8 @@ void MakeDataBase() {
 
     maps::MapRenderer renderer;
 
-    const auto request_handler_ptr = std::make_shared<RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer);
+    const auto request_handler_ptr = std::make_shared<RequestHandler>(
+        catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer, RequestHandler::Mode::MAKE_BASE);
     json_reader.AddObserver(request_handler_ptr);
     json_reader.ReadDocument();
 }

@@ -365,7 +365,9 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
     }
 
     void RequestHandler::OnReadingComplete(RawRequest&& request) {
-        storage_.SaveToStorage();
+        if (mode_ == Mode::MAKE_BASE) {
+            storage_.SaveToStorage();
+        }
     }
 
     void RequestHandler::ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const {
@@ -445,7 +447,6 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
     void RequestHandler::ExecuteRequest(SerializationSettingsRequest&& request) {
         assert(request.GetFile().has_value());
         storage_.SetDbPath(std::filesystem::path(request.GetFile().value()));
-        //! storage_.SerializeBuses();
     }
 
     void RequestHandler::SendStatResponse(StatResponse&& response) const {
@@ -805,7 +806,8 @@ namespace transport_catalogue::io /* RoutingSettingsRequest implementation */ {
 
 namespace transport_catalogue::io /* SerializationSettingsRequest implementation */ {
 
-    SerializationSettingsRequest::SerializationSettingsRequest(RequestCommand type, RequestArgsMap&& args) : Request(std::move(type), std::move(args)) {
+    SerializationSettingsRequest::SerializationSettingsRequest(RequestCommand type, RequestArgsMap&& args)
+        : Request(std::move(type), std::move(args)) {
         Build();
     }
 
