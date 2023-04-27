@@ -111,6 +111,8 @@ namespace transport_catalogue::io /* JsonReader */ {
         void NotifyRenderSettingsRequest(RawRequest&& requests) override;
 
         void NotifyRoutingSettingsRequest(RawRequest&& requests) override;
+        
+        void NotifySerializationSettingsRequest(RawRequest&& requests) override;
 
         bool HasObserver() const override;
 

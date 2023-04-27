@@ -23,6 +23,7 @@
 #include "domain.h"
 #include "geo.h"
 #include "map_renderer.h"
+#include "serialization.h"
 #include "svg.h"
 #include "transport_catalogue.h"
 #include "transport_router.h"
@@ -112,7 +113,8 @@ namespace transport_catalogue::io /* Request fields enums */ {
     };
 
     struct RenderSettingsRequestFields {
-        inline static const std::string ID = StatRequestFields::ID;
+        [[deprecated("Will be removed in a future release.")]]
+        inline static const std::string ID = StatRequestFields::ID; //! Unused - needed remove in next version
         inline static const std::string WIDTH{"width"};
         inline static const std::string HEIGHT{"height"};
         inline static const std::string PADDING{"padding"};
@@ -126,10 +128,18 @@ namespace transport_catalogue::io /* Request fields enums */ {
         inline static const std::string UNDERLAYER_COLOR{"underlayer_color"};
         inline static const std::string COLOR_PALETTE{"color_palette"};
     };
+
     struct RoutingSettingsRequestFields {
-        inline static const std::string ID = StatRequestFields::ID;
+        [[deprecated("Will be removed in a future release.")]]
+        inline static const std::string ID = StatRequestFields::ID; //! Unused - needed remove in next version
         inline static const std::string BUS_WAIT_TIME{"bus_wait_time"};
         inline static const std::string BUS_VELOCITY{"bus_velocity"};
+    };
+
+    struct SerializationSettingsFields {
+        [[deprecated("Will be removed in a future release.")]]
+        inline static const std::string ID = StatRequestFields::ID; //! Unused - needed remove in next version
+        inline static const std::string FILE{"file"};
     };
 }
 
@@ -221,6 +231,7 @@ namespace transport_catalogue::io /* Request */ {
         virtual bool IsStatRequest() const;
         virtual bool IsRenderSettingsRequest() const;
         virtual bool IsRoutingSettingsRequest() const;
+        virtual bool IsSerializationSettingsRequest() const;
         virtual bool IsValidRequest() const;
 
         virtual bool IsStopCommand() const;
@@ -242,6 +253,7 @@ namespace transport_catalogue::io /* Request */ {
         Request() = default;
         Request(RequestCommand type, RequestArgsMap&& args) : command_{std::move(type)}, args_{std::move(args)} {}
 
+        //! [[deprecated("Will be removed in a future release. Use ctr with RequestCommand type.")]]
         Request(std::string&& type, RequestArgsMap&& args);
 
         explicit Request(RawRequest&& raw_request);
@@ -436,6 +448,27 @@ namespace transport_catalogue::io /* RoutingSettingsRequest */ {
     };
 }
 
+namespace transport_catalogue::io /* SerializationSettingsRequest */ {
+
+    class SerializationSettingsRequest : public Request {
+    public:
+        SerializationSettingsRequest(RequestCommand type, RequestArgsMap&& args);
+        explicit SerializationSettingsRequest(RawRequest&& raw_request);
+
+        const std::optional<std::string>& GetFile() const;
+        bool IsSerializationSettingsRequest() const override;
+
+    public:
+        using Fields = SerializationSettingsFields;
+
+    protected:
+        void Build() override;
+
+    private:
+        std::optional<std::string> file_;
+    };
+}
+
 namespace transport_catalogue::io /* Response */ {
     using ResponseBase = RequestBase;
     class RawResponse : public ResponseBase {
@@ -499,7 +532,7 @@ namespace transport_catalogue::io /* Interfaces */ {
         virtual void OnStatRequest(std::vector<RawRequest>&& requests) = 0;
         virtual void OnRenderSettingsRequest(RawRequest&& requests) = 0;
         virtual void OnRoutingSettingsRequest(RawRequest&& requests) = 0;
-        virtual void OnMakeDataBaseRequest(std::vector<RawRequest>&& requests) = 0;
+        virtual void OnSerializationSettingsRequest(RawRequest&& request) = 0;
 
     protected:
         virtual ~IRequestObserver() = default;
@@ -517,6 +550,7 @@ namespace transport_catalogue::io /* Interfaces */ {
         virtual void NotifyStatRequest(std::vector<RawRequest>&& requests) = 0;
         virtual void NotifyRenderSettingsRequest(RawRequest&& requests) = 0;
         virtual void NotifyRoutingSettingsRequest(RawRequest&& requests) = 0;
+        virtual void NotifySerializationSettingsRequest(RawRequest&& requests) = 0;
     };
 
     class IStatResponseSender {
@@ -555,7 +589,7 @@ namespace transport_catalogue::io /* RequestHandler */ {
         void OnStatRequest(std::vector<RawRequest>&& requests) override;
         void OnRenderSettingsRequest(RawRequest&& requests) override;
         void OnRoutingSettingsRequest(RawRequest&& requests) override;
-        void OnMakeDataBaseRequest(std::vector<RawRequest>&& requests) override;
+        void OnSerializationSettingsRequest(RawRequest&& request) override;
 
         /// Execute Basic (Insert) request
         void ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const;
@@ -574,6 +608,9 @@ namespace transport_catalogue::io /* RequestHandler */ {
 
         void ExecuteRequest(RoutingSettingsRequest&& request);
 
+        /// Execute SerializationSettings (Set) request
+        void ExecuteRequest(SerializationSettingsRequest&& request);
+
         /// Send Stat Response
         void SendStatResponse(StatResponse&& response) const;
 
@@ -586,6 +623,7 @@ namespace transport_catalogue::io /* RequestHandler */ {
         const IStatResponseSender& response_sender_;
         io::renderer::IRenderer& renderer_;
         router::TransportRouter router_;
+        serialization::Store store_;
 
         bool PrepareMapRendererData();
     };

@@ -202,6 +202,10 @@ namespace transport_catalogue::io /* Request implementation */ {
         return false;
     }
 
+    bool Request::IsSerializationSettingsRequest() const {
+        return false;
+    }
+
     bool Request::IsValidRequest() const {
         return (IsBusCommand() || IsStopCommand() || IsMapCommand() || IsRouteCommand() || IsRenderSettingsRequest() || IsRenderSettingsRequest());
     }
@@ -355,6 +359,11 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         ExecuteRequest(std::move(reqs));
     }
 
+    void RequestHandler::OnSerializationSettingsRequest(RawRequest&& request) {
+        SerializationSettingsRequest reqs(std::move(request));
+        ExecuteRequest(std::move(reqs));
+    }
+
     void RequestHandler::ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const {
         assert(raw_req.IsValidRequest());
 
@@ -427,6 +436,11 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         router_.SetSettings(
             {static_cast<double>(request.GetBusWaitTimeMin().value_or(0)), static_cast<double>(request.GetBusVelocityKmh().value_or(0))});
         router_.Build();
+    }
+
+    void RequestHandler::ExecuteRequest(SerializationSettingsRequest&& request) {
+        assert(request.GetFile().has_value());
+        store_.SetDbPath(std::filesystem::path(request.GetFile().value()));
     }
 
     void RequestHandler::SendStatResponse(StatResponse&& response) const {
@@ -781,5 +795,27 @@ namespace transport_catalogue::io /* RoutingSettingsRequest implementation */ {
         bus_wait_time_min_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::WIDTH);
         bus_wait_time_min_ = args_.ExtractNumberValueIf(RoutingSettingsRequestFields::BUS_WAIT_TIME);
         bus_velocity_kmh_ = args_.ExtractNumberValueIf(RoutingSettingsRequestFields::BUS_VELOCITY);
+    }
+}
+
+namespace transport_catalogue::io /* SerializationSettingsRequest implementation */ {
+
+    SerializationSettingsRequest::SerializationSettingsRequest(RequestCommand type, RequestArgsMap&& args) : Request(std::move(type), std::move(args)) {
+        Build();
+    }
+
+    SerializationSettingsRequest::SerializationSettingsRequest(RawRequest&& raw_request)
+        : SerializationSettingsRequest(RequestCommand::SET_RENDER_SETTINGS, std::move(raw_request)) {}
+
+    const std::optional<std::string>& SerializationSettingsRequest::GetFile() const {
+        return file_;
+    }
+
+    bool SerializationSettingsRequest::IsSerializationSettingsRequest() const {
+        return true;
+    }
+
+    void SerializationSettingsRequest::Build() {
+        file_ = args_.ExtractIf<std::string>(Fields::FILE);
     }
 }
