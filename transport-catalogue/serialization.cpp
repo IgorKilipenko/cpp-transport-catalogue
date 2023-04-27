@@ -1,14 +1,28 @@
 #include "serialization.h"
 
+#include "domain.h"
 
 namespace transport_catalogue::serialization /* Store implementation */ {
-    void Store::SerializeBuses(data::BusRecord bus, std::ostream& out) const {
+    template <>
+    auto Store::ConvertToSerializable(data::BusRecord bus) const {
         proto_data_schema::Bus bus_model;
         bus_model.set_name(bus->name);
         bus_model.set_is_roundtrip(bus->is_roundtrip);
         std::for_each(bus->route.begin(), bus->route.end(), [&](data::StopRecord stop) {
             bus_model.add_route(stop->name);
         });
+
+        return bus_model;
+    }
+
+    template <>
+    auto Store::ConvertToSerializable(const data::Bus& bus) const {
+        data::BusRecord bus_record = &bus;
+        return ConvertToSerializable(bus_record);
+    }
+
+    void Store::SerializeBuses(data::BusRecord bus, std::ostream& out) const {
+        proto_data_schema::Bus bus_model = ConvertToSerializable(bus);
         bus_model.SerializeToOstream(&out);
     }
 
@@ -24,13 +38,8 @@ namespace transport_catalogue::serialization /* Store implementation */ {
         });
     }
 
-    template<>
-    auto Store::ConvertToSerializable(const data::Bus& bus) const {
-        proto_data_schema::Bus bus_model;
-        return bus_model;
-    }
-
-    void Store::SerializeStops(data::StopRecord stop, std::ostream& out) {
+    template <>
+    auto Store::ConvertToSerializable(data::StopRecord stop) const {
         proto_data_schema::Stop stop_model;
         stop_model.set_name(stop->name);
 
@@ -40,6 +49,17 @@ namespace transport_catalogue::serialization /* Store implementation */ {
 
         *stop_model.mutable_coordinates() = coordinates;
 
+        return stop_model;
+    }
+
+    template <>
+    auto Store::ConvertToSerializable(const data::Stop& stop) const {
+        data::StopRecord stop_record = &stop;
+        return ConvertToSerializable(stop_record);
+    }
+
+    void Store::SerializeStops(data::StopRecord stop, std::ostream& out) {
+        proto_data_schema::Stop stop_model = ConvertToSerializable(stop);
         stop_model.SerializeToOstream(&out);
     }
 
@@ -60,8 +80,8 @@ namespace transport_catalogue::serialization /* Store implementation */ {
             return false;
         }
         std::ofstream out(db_path_.value(), std::ios::binary);
-        SerializeBuses(out);
         SerializeStops(out);
+        SerializeBuses(out);
         return true;
     }
 }

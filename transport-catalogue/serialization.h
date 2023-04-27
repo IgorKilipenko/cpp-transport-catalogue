@@ -6,8 +6,11 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <memory>
 #include <optional>
 #include <ostream>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "detail/type_traits.h"
@@ -34,9 +37,12 @@ namespace transport_catalogue::serialization /* Store */ {
         void SerializeStops(data::StopRecord stop, std::ostream& out);
         void SerializeStops(const data::Stop& stop, std::ostream& out);
         void SerializeStops(std::ostream& out);
-        
-        template<typename T>
+
+        template <typename T, std::enable_if_t<!std::is_pointer_v<std::decay_t<T>>, bool> = true>
         auto ConvertToSerializable(T&& object) const;
+
+        template <typename T, std::enable_if_t<std::is_same_v<std::decay_t<T>, data::DbRecord<std::remove_pointer_t<std::decay_t<T>>>>, bool> = true>
+        auto ConvertToSerializable(T object_ptr) const;
 
         void SetDbPath(std::filesystem::path path) {
             db_path_ = path;
@@ -53,6 +59,4 @@ namespace transport_catalogue::serialization /* Store */ {
 
 }
 
-namespace transport_catalogue::serialization /* Store implementation */ {
-
-}
+namespace transport_catalogue::serialization /* Store implementation */ {}
