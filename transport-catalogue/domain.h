@@ -300,6 +300,7 @@ namespace transport_catalogue::data /* Interfaces */ {
         virtual StopRecord GetStop(std::string_view name) const = 0;
         virtual const DatabaseScheme::StopsTable& GetStopsTable() const = 0;
 
+        virtual std::vector<BusRecord> GetBuses() const = 0;
         virtual const BusRecordSet& GetBuses(StopRecord stop) const = 0;
         virtual const BusRecordSet& GetBuses(const std::string_view bus_name) const = 0;
         virtual const DatabaseScheme::BusRoutesTable& GetBusRoutesTable() const = 0;
@@ -471,6 +472,8 @@ namespace transport_catalogue::data /* Database inner classes (Read/Write interf
         const DatabaseScheme::BusRoutesTable& GetBusRoutesTable() const override {
             return db_.GetBusRoutesTable();
         }
+
+        std::vector<BusRecord> GetBuses() const override;
 
         const BusRecordSet& GetBuses(StopRecord stop) const override;
 
@@ -687,6 +690,15 @@ namespace transport_catalogue::data /* Database::DataReader implementation */ {
     template <class Owner>
     StopRecord Database<Owner>::DataReader::GetStop(std::string_view name) const {
         return db_.GetStop(name);
+    }
+
+    template <class Owner>
+    std::vector<BusRecord> Database<Owner>::DataReader::GetBuses() const {
+        std::vector<BusRecord> result(db_.name_to_bus_.size());
+        std::transform(db_.name_to_bus_.begin(), db_.name_to_bus_.end(), result.begin() ,[](auto&& item) {
+            return item.second;
+        });
+        return result;
     }
 
     template <class Owner>

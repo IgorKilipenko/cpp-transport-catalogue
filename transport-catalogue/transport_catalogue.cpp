@@ -45,6 +45,10 @@ namespace transport_catalogue /* TransportCatalogue < ITransportDataReader imple
         return db_reader_.GetBusRoutesTable();
     }
 
+    std::vector<data::BusRecord> TransportCatalogue::GetBuses() const {
+        return db_reader_.GetBuses();
+    }
+
     const data::BusRecordSet& TransportCatalogue::GetBuses(data::StopRecord stop) const {
         return db_reader_.GetBuses(stop);
     }
