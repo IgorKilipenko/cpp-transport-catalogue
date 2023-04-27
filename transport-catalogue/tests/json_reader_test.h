@@ -72,6 +72,10 @@ namespace transport_catalogue::tests {
                 *serialization_settings_requests_ = io::JsonReader::Converter::ConvertToJson(std::move(request));
             }
 
+            void OnReadingComplete(io::RawRequest&& request) override {
+                out_ << "OnReadingComplete" << std::endl;
+            }
+
             std::string& GetName() {
                 return name_;
             }

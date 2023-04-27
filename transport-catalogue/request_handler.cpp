@@ -364,6 +364,10 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         ExecuteRequest(std::move(reqs));
     }
 
+    void RequestHandler::OnReadingComplete(RawRequest&& request) {
+        storage_.SaveToStorage();
+    }
+
     void RequestHandler::ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const {
         assert(raw_req.IsValidRequest());
 
@@ -440,7 +444,8 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
 
     void RequestHandler::ExecuteRequest(SerializationSettingsRequest&& request) {
         assert(request.GetFile().has_value());
-        store_.SetDbPath(std::filesystem::path(request.GetFile().value()));
+        storage_.SetDbPath(std::filesystem::path(request.GetFile().value()));
+        //! storage_.SerializeBuses();
     }
 
     void RequestHandler::SendStatResponse(StatResponse&& response) const {

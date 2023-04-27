@@ -113,8 +113,8 @@ namespace transport_catalogue::io /* Request fields enums */ {
     };
 
     struct RenderSettingsRequestFields {
-        [[deprecated("Will be removed in a future release.")]]
-        inline static const std::string ID = StatRequestFields::ID; //! Unused - needed remove in next version
+        [[deprecated("Will be removed in a future release.")]] inline static const std::string ID =
+            StatRequestFields::ID;  //! Unused - needed remove in next version
         inline static const std::string WIDTH{"width"};
         inline static const std::string HEIGHT{"height"};
         inline static const std::string PADDING{"padding"};
@@ -130,15 +130,15 @@ namespace transport_catalogue::io /* Request fields enums */ {
     };
 
     struct RoutingSettingsRequestFields {
-        [[deprecated("Will be removed in a future release.")]]
-        inline static const std::string ID = StatRequestFields::ID; //! Unused - needed remove in next version
+        [[deprecated("Will be removed in a future release.")]] inline static const std::string ID =
+            StatRequestFields::ID;  //! Unused - needed remove in next version
         inline static const std::string BUS_WAIT_TIME{"bus_wait_time"};
         inline static const std::string BUS_VELOCITY{"bus_velocity"};
     };
 
     struct SerializationSettingsFields {
-        [[deprecated("Will be removed in a future release.")]]
-        inline static const std::string ID = StatRequestFields::ID; //! Unused - needed remove in next version
+        [[deprecated("Will be removed in a future release.")]] inline static const std::string ID =
+            StatRequestFields::ID;  //! Unused - needed remove in next version
         inline static const std::string FILE{"file"};
     };
 }
@@ -528,6 +528,7 @@ namespace transport_catalogue::io /* Response */ {
 namespace transport_catalogue::io /* Interfaces */ {
     class IRequestObserver {
     public:
+        virtual void OnReadingComplete(RawRequest&& request) = 0;
         virtual void OnBaseRequest(std::vector<RawRequest>&& requests) = 0;
         virtual void OnStatRequest(std::vector<RawRequest>&& requests) = 0;
         virtual void OnRenderSettingsRequest(RawRequest&& requests) = 0;
@@ -546,6 +547,7 @@ namespace transport_catalogue::io /* Interfaces */ {
 
     protected:
         virtual bool HasObserver() const = 0;
+        virtual void NotifyReadingComplete(bool complete) = 0;
         virtual void NotifyBaseRequest(std::vector<RawRequest>&& requests) = 0;
         virtual void NotifyStatRequest(std::vector<RawRequest>&& requests) = 0;
         virtual void NotifyRenderSettingsRequest(RawRequest&& requests) = 0;
@@ -572,7 +574,8 @@ namespace transport_catalogue::io /* RequestHandler */ {
               db_writer_{writer},
               response_sender_{response_sender},
               renderer_{renderer},
-              router_({}, db_reader_.GetDataReader()) {}
+              router_({}, db_reader_.GetDataReader()),
+              storage_(db_reader_, db_writer_) {}
 
         ~RequestHandler() {}
 
@@ -585,6 +588,7 @@ namespace transport_catalogue::io /* RequestHandler */ {
         ///! Used for testing only
         std::vector<svg::Document*> RenderMapByLayers(bool force_prepare_data = false);
 
+        void OnReadingComplete(RawRequest&& request) override;
         void OnBaseRequest(std::vector<RawRequest>&& requests) override;
         void OnStatRequest(std::vector<RawRequest>&& requests) override;
         void OnRenderSettingsRequest(RawRequest&& requests) override;
@@ -623,7 +627,7 @@ namespace transport_catalogue::io /* RequestHandler */ {
         const IStatResponseSender& response_sender_;
         io::renderer::IRenderer& renderer_;
         router::TransportRouter router_;
-        serialization::Store store_;
+        serialization::Store storage_;
 
         bool PrepareMapRendererData();
     };

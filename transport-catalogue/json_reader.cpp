@@ -20,6 +20,12 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
         observers_.erase(observer.get());
     }
 
+    void JsonReader::NotifyReadingComplete(bool complete) {
+        json::Builder result_builder;
+        result_builder.StartDict().Key("complete").Value(complete).EndDict();
+        NotifyObservers(RequestType::UNKNOWN, std::vector<RawRequest>{Converter::JsonToRequest(std::move(result_builder.Extract().AsMap()))});
+    }
+
     void JsonReader::NotifyBaseRequest(std::vector<RawRequest>&& requests) {
         NotifyObservers(RequestType::BASE, std::move(requests));
     }
@@ -66,7 +72,11 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
                 ptr->second.lock()->OnRoutingSettingsRequest(is_broadcast_ && observers_.size() > 1 ? requests.front() : std::move(requests.front()));
             } else if (type == RequestType::SERIALIZATION_SETTINGS) {
                 assert(requests.size() == 1);
-                ptr->second.lock()->OnSerializationSettingsRequest(is_broadcast_ && observers_.size() > 1 ? requests.front() : std::move(requests.front()));
+                ptr->second.lock()->OnSerializationSettingsRequest(
+                    is_broadcast_ && observers_.size() > 1 ? requests.front() : std::move(requests.front()));
+            } else if (type == RequestType::UNKNOWN) {
+                assert(requests.size() == 1);
+                ptr->second.lock()->OnReadingComplete(is_broadcast_ && observers_.size() > 1 ? requests.front() : std::move(requests.front()));
             }
 
             ptr = is_broadcast_ ? ++ptr : observers_.end();
@@ -116,6 +126,8 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
             json::Array array = stat_req_ptr->second.ExtractArray();
             NotifyStatRequest(Converter::JsonToRequest(std::move(array)));
         }
+
+        NotifyReadingComplete(true);
 
         //! throw exception
     }

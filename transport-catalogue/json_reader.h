@@ -104,6 +104,8 @@ namespace transport_catalogue::io /* JsonReader */ {
 
         void RemoveObserver(std::shared_ptr<IRequestObserver> observer) override;
 
+        void NotifyReadingComplete(bool complete) override;
+
         void NotifyBaseRequest(std::vector<RawRequest>&& requests) override;
 
         void NotifyStatRequest(std::vector<RawRequest>&& requests) override;
