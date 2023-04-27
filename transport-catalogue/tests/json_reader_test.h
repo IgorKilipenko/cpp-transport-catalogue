@@ -35,7 +35,8 @@ namespace transport_catalogue::tests {
                   name_{name},
                   base_requests_{std::make_shared<json::Array>()},
                   stat_requests_{std::make_shared<json::Array>()},
-                  render_settings_requests_{std::make_shared<std::vector<json::Dict>>()} {}
+                  render_settings_requests_{std::make_shared<std::vector<json::Dict>>()},
+                  serialization_settings_requests_{std::make_shared<json::Dict>()} {}
 
             MockRequestObserver(const MockRequestObserver&) = delete;
             MockRequestObserver& operator=(const MockRequestObserver&) = delete;
@@ -64,6 +65,11 @@ namespace transport_catalogue::tests {
 
             void OnRoutingSettingsRequest(io::RawRequest&& request) override {
                 out_ << "OnRoutingSettingsRequest" << std::endl;
+            }
+
+            void OnSerializationSettingsRequest(io::RawRequest&& request) override {
+                out_ << "OnSerializationSettingsRequest" << std::endl;
+                *serialization_settings_requests_ = io::JsonReader::Converter::ConvertToJson(std::move(request));
             }
 
             std::string& GetName() {
@@ -98,12 +104,21 @@ namespace transport_catalogue::tests {
                 return *render_settings_requests_;
             }
 
+            const json::Dict& GetSerializationSettingsRequest() {
+                return const_cast<json::Dict&>(*serialization_settings_requests_);
+            }
+
+            json::Dict& GetSerializationSettingsRequest() const {
+                return *serialization_settings_requests_;
+            }
+
         private:
             std::ostream& out_;
             std::string name_;
             std::shared_ptr<json::Array> base_requests_;
             std::shared_ptr<json::Array> stat_requests_;
             std::shared_ptr<std::vector<json::Dict>> render_settings_requests_;
+            std::shared_ptr<json::Dict> serialization_settings_requests_;
         };
 
     public:
@@ -260,6 +275,35 @@ namespace transport_catalogue::tests {
             CheckResults(std::move(expected_node), std::move(render_settings));
         }
 
+        void SerializationSettingsReadTest() const {
+            std::string json_file =
+                R"(
+                    {
+                        "serialization_settings": {
+                            "file": "transport_catalogue.db"
+                        }
+                    }
+                )";
+
+            std::stringstream stream;
+            std::ostringstream out;
+
+            io::JsonReader json_reader{stream};
+            stream << json_file << std::endl;
+
+            auto observer_ptr = std::make_shared<MockRequestObserver>(out, "SerializationSettings Mock Observer");
+            json_reader.AddObserver(observer_ptr);
+
+            json_reader.ReadDocument();
+
+            assert(observer_ptr->GetSerializationSettingsRequest().at(io::SerializationSettingsFields::FILE).IsString());
+
+            const json::Node serialization_settings = observer_ptr->GetSerializationSettingsRequest();
+            const json::Node expected_node = json::Node::LoadNode(std::stringstream(json_file)).AsMap()[io::RequestFields::SERIALIZATION_SETTINGS];
+
+            CheckResults(std::move(expected_node), std::move(serialization_settings));
+        }
+
         void TestJsonConverter() const {
             // base
             {
@@ -269,6 +313,7 @@ namespace transport_catalogue::tests {
                 assert(std::get_if<std::string>(&to));
                 assert(std::get<std::string>(to) == expected);
             }
+            
             {
                 using ToType = std::vector<std::string>;
                 std::string expected = "success";
@@ -319,6 +364,9 @@ namespace transport_catalogue::tests {
 
             RenderSettingsReadTest();
             std::cerr << prefix << "RenderSettingsReadTest : Done." << std::endl;
+
+            SerializationSettingsReadTest();
+            std::cerr << prefix << "SerializationSettingsReadTest : Done." << std::endl;
 
             std::cerr << std::endl << "All JsonReader Tests : Done." << std::endl << std::endl;
         }
