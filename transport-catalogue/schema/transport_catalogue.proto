@@ -17,3 +17,8 @@ message Bus {
     repeated string route = 2;
     bool is_roundtrip = 3;
 }
+
+message TransportData {
+    repeated Stop stops = 1;
+    repeated Bus buses = 2;
+}
