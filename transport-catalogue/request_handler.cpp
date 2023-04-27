@@ -262,6 +262,8 @@ namespace transport_catalogue::io /* RequestEnumConverter implementation */ {
             return RequestFields::STAT_REQUESTS;
         case io::RequestType::RENDER_SETTINGS:
             return RequestFields::RENDER_SETTINGS;
+        case io::RequestType::SERIALIZATION_SETTINGS:
+            return RequestFields::SERIALIZATION_SETTINGS;
         case io::RequestType::UNKNOWN:
             return "Unknown"sv;
         default:
@@ -280,6 +282,8 @@ namespace transport_catalogue::io /* RequestEnumConverter implementation */ {
             return RequestType::RENDER_SETTINGS;
         } else if (enum_name == RequestFields::ROUTING_SETTINGS) {
             return RequestType::ROUTING_SETTINGS;
+        } else if (enum_name == RequestFields::SERIALIZATION_SETTINGS) {
+            return RequestType::SERIALIZATION_SETTINGS;
         } else if (enum_name == "Unknown"sv) {
             return RequestType::UNKNOWN;
         }
@@ -301,6 +305,8 @@ namespace transport_catalogue::io /* RequestEnumConverter implementation */ {
             return io::RequestCommand::SET_RENDER_SETTINGS;
         } else if (enum_name == "SetRouteSettings"sv) {
             return io::RequestCommand::SET_ROUTING_SETTINGS;
+        } else if (enum_name == "SetSerializationSettings"sv) {
+            return io::RequestCommand::SET_SERIALIZATION_SETTINGS;
         } else if (enum_name == "Unknown"sv) {
             return io::RequestCommand::UNKNOWN;
         }

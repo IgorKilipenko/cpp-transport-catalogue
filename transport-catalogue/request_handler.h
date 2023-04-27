@@ -81,15 +81,16 @@ namespace transport_catalogue::io /* Requests aliases */ {
 }
 
 namespace transport_catalogue::io /* Request fields enums */ {
-    enum class RequestType : int8_t { BASE, STAT, RENDER_SETTINGS, ROUTING_SETTINGS, UNKNOWN };
+    enum class RequestType : int8_t { BASE, STAT, RENDER_SETTINGS, ROUTING_SETTINGS, SERIALIZATION_SETTINGS, UNKNOWN };
 
-    enum class RequestCommand : uint8_t { STOP, BUS, MAP, ROUTE, SET_RENDER_SETTINGS, SET_ROUTING_SETTINGS, UNKNOWN };
+    enum class RequestCommand : uint8_t { STOP, BUS, MAP, ROUTE, SET_RENDER_SETTINGS, SET_ROUTING_SETTINGS, SET_SERIALIZATION_SETTINGS, UNKNOWN };
 
     struct RequestFields {
         inline static const std::string BASE_REQUESTS{"base_requests"};
         inline static const std::string STAT_REQUESTS{"stat_requests"};
         inline static const std::string RENDER_SETTINGS{"render_settings"};
         inline static const std::string ROUTING_SETTINGS{"routing_settings"};
+        inline static const std::string SERIALIZATION_SETTINGS{"serialization_settings"};
         inline static const std::string TYPE{"type"};
         inline static const std::string NAME{"name"};
     };
@@ -498,6 +499,7 @@ namespace transport_catalogue::io /* Interfaces */ {
         virtual void OnStatRequest(std::vector<RawRequest>&& requests) = 0;
         virtual void OnRenderSettingsRequest(RawRequest&& requests) = 0;
         virtual void OnRoutingSettingsRequest(RawRequest&& requests) = 0;
+        virtual void OnMakeDataBaseRequest(std::vector<RawRequest>&& requests) = 0;
 
     protected:
         virtual ~IRequestObserver() = default;
@@ -553,6 +555,7 @@ namespace transport_catalogue::io /* RequestHandler */ {
         void OnStatRequest(std::vector<RawRequest>&& requests) override;
         void OnRenderSettingsRequest(RawRequest&& requests) override;
         void OnRoutingSettingsRequest(RawRequest&& requests) override;
+        void OnMakeDataBaseRequest(std::vector<RawRequest>&& requests) override;
 
         /// Execute Basic (Insert) request
         void ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const;
