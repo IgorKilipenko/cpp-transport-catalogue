@@ -25,6 +25,7 @@ set(LIBS
     ${SRC_DIR}/map_renderer.cpp
     ${SRC_DIR}/request_handler.cpp
     ${SRC_DIR}/transport_router.cpp
+    ${SRC_DIR}/serialization.cpp
 )
 
 set(CFLAGS -Wall -Werror -pedantic)
