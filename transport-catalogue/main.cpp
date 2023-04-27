@@ -12,6 +12,7 @@
 #include "json_reader.h"
 #include "request_handler.h"
 #include "tests/json_builder_test.h"
+#include "tests/make_database_test.h"
 #include "tests/request_handler_test.h"
 #include "tests/transport_router_test.h"
 #include "transport_catalogue.h"
@@ -48,6 +49,9 @@ int tests() {
 
     TransportRouterTester transport_router_tester;
     transport_router_tester.RunTests();
+
+    MakeDatabaseTester make_database_tester;
+    make_database_tester.RunTests();
 
     /*
         using namespace transport_catalogue;

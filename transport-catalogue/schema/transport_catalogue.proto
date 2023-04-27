@@ -9,8 +9,7 @@ message Coordinates {
 
 message Stop {
     string name = 1;
-    Coordinates coords = 2;
-    map<string, uint32 > road_distances = 3;
+    Coordinates coordinates = 2;
 }
 
 message Bus {
