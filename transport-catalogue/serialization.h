@@ -24,6 +24,7 @@ namespace transport_catalogue::serialization /* Model types defs */ {
         data::StopRecord to_stop;
         double distance_between;
     };
+    //using DistanceBetweenStopsItem = data::MeasuredRoadDistance;
 }
 
 namespace transport_catalogue::serialization /* DataConvertor */ {
@@ -53,8 +54,9 @@ namespace transport_catalogue::serialization /* Store */ {
             db_path_ = path;
         }
 
-        void ConvertBusesToSerializable(proto_data_schema::TransportData& container) const;
-        void ConvertStopsToSerializable(proto_data_schema::TransportData& container) const;
+        void PrepareBuses(proto_data_schema::TransportData& container) const;
+        void PrepareStops(proto_data_schema::TransportData& container) const;
+        void PrepareDistances(proto_data_schema::TransportData& container) const;
         proto_data_schema::TransportData BuildSerializableTransportData() const;
 
         bool SaveToStorage();
@@ -63,8 +65,8 @@ namespace transport_catalogue::serialization /* Store */ {
         bool DeserializeTransportData() const;
 
     private:
-        [[maybe_unused]] const data::ITransportStatDataReader& db_reader_;
-        [[maybe_unused]] const data::ITransportDataWriter& db_writer_;
+        const data::ITransportStatDataReader& db_reader_;
+        const data::ITransportDataWriter& db_writer_;
         const data::DatabaseScheme::StopsTable& stops_;
         std::optional<std::filesystem::path> db_path_;
         const DataConvertor convertor_;

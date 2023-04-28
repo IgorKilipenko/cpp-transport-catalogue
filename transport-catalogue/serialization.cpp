@@ -60,25 +60,33 @@ namespace transport_catalogue::serialization /* DataConvertor implementation */ 
 
 namespace transport_catalogue::serialization /* Store (serialize) implementation */ {
 
-    void Store::ConvertBusesToSerializable(proto_data_schema::TransportData& container) const {
+    void Store::PrepareBuses(proto_data_schema::TransportData& container) const {
         const data::DatabaseScheme::BusRoutesTable& buses = db_reader_.GetDataReader().GetBusRoutesTable();
         std::for_each(buses.begin(), buses.end(), [&](const data::Bus& bus) {
             *container.add_buses() = convertor_.ConvertToModel(bus);
         });
     }
 
-    void Store::ConvertStopsToSerializable(proto_data_schema::TransportData& container) const {
+    void Store::PrepareStops(proto_data_schema::TransportData& container) const {
         const data::DatabaseScheme::StopsTable& stops = db_reader_.GetDataReader().GetStopsTable();
         std::for_each(stops.begin(), stops.end(), [&](const data::Stop& stop) {
             *container.add_stops() = convertor_.ConvertToModel(stop);
         });
     }
 
+    void Store::PrepareDistances(proto_data_schema::TransportData& container) const {
+        const data::DatabaseScheme::DistanceBetweenStopsTable& distances = db_reader_.GetDataReader().GetDistancesBetweenStops();
+        std::for_each(distances.begin(), distances.end(), [&](const data::DatabaseScheme::DistanceBetweenStopsTable::value_type& dist_item) {
+            *container.add_distances() = convertor_.ConvertToModel(
+                DistanceBetweenStopsItem(dist_item.first.first, dist_item.first.second, dist_item.second.measured_distance));
+        });
+    }
+
     proto_data_schema::TransportData Store::BuildSerializableTransportData() const {
         proto_data_schema::TransportData data;
-        ConvertStopsToSerializable(data);
-        ConvertBusesToSerializable(data);
-
+        PrepareStops(data);
+        PrepareDistances(data);
+        PrepareBuses(data);
         return data;
     }
 
@@ -113,6 +121,13 @@ namespace transport_catalogue::serialization /* Store (deserialize) implementati
         std::for_each(std::move_iterator(stops.begin()), std::move_iterator(stops.end()), [&](proto_data_schema::Stop&& stop) {
             db_writer_.AddStop(std::move(*stop.mutable_name()), {stop.coordinates().lat(), stop.coordinates().lng()});
         });
+
+        auto distances = std::move(*data.mutable_distances());
+        std::for_each(
+            std::move_iterator(distances.begin()), std::move_iterator(distances.end()), [&](proto_data_schema::DistancesBetweenStops&& dist_item) {
+                db_writer_.SetMeasuredDistance(data::MeasuredRoadDistance(
+                    std::move(*dist_item.mutable_from_stop()), std::move(*dist_item.mutable_to_stop()), dist_item.distance()));
+            });
 
         auto buses = std::move(*data.mutable_buses());
         std::for_each(std::move_iterator(buses.begin()), std::move_iterator(buses.end()), [&](proto_data_schema::Bus&& bus) {
