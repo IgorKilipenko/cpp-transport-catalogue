@@ -167,7 +167,7 @@ namespace json /* Parser implementation */ {
             if (!input_.good()) {
                 throw ParsingError("Dict parsing error. Not found dictionary key/value separator character : ["s + Token::KEYVAL_SEPARATOR + "]"s);
             }
-            result.emplace(move(key), Parse());
+            result.emplace(std::move(key), Parse());
         }
 
         if (ch != Token::END_OBJ) {
@@ -416,6 +416,17 @@ namespace json /* PrintContext implementation */ {
 }
 
 namespace json /* Node implementation */ {
+
+    double Node::EQUALITY_TOLERANCE = 1e-6;
+
+    double Node::GetEqualityTolerance() {
+        return EQUALITY_TOLERANCE;
+    }
+
+    void Node::SetEqualityTolerance(double tolerance) {
+        EQUALITY_TOLERANCE = tolerance;
+    }
+
     bool Node::IsNull() const {
         return IsType<std::nullptr_t>();
     }
@@ -513,11 +524,16 @@ namespace json /* Node implementation */ {
     }
 
     bool Node::operator==(const Node& rhs) const {
-        return this == &rhs || *GetValuePtr() == *rhs.GetValuePtr();
+        return this == &rhs || *GetValuePtr() == *rhs.GetValuePtr() ||
+               (IsPureDouble() && rhs.IsPureDouble() && std::abs(AsDouble() - rhs.AsDouble()) <= EQUALITY_TOLERANCE);
     }
 
     bool Node::operator!=(const Node& rhs) const {
         return !(*this == rhs);
+    }
+
+    bool Node::EqualsWithTolerance(const Node& rhs, double tolerance) const {
+        return *this == rhs || (IsDouble() && rhs.IsDouble() && std::abs(AsDouble() - rhs.AsDouble()) <= tolerance);
     }
 
     Node Node::LoadNode(std::istream& stream, const OnNodeItemParsedCallback* on_node_loaded) {

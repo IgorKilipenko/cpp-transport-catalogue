@@ -32,6 +32,4 @@
 *.app
 
 build
-.vscode/**
-CMakeLists.txt
 .cache

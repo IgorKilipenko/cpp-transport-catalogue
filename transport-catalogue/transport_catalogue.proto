@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package proto_data_schema;
+
+message Coordinates {
+    double lat = 1;
+    double lng = 2;
+}
+
+message Stop {
+    string name = 1;
+    Coordinates coordinates = 2;
+}
+
+message Bus {
+    string name = 1;
+    repeated string route = 2;
+    bool is_roundtrip = 3;
+}
+
+message DistancesBetweenStops {
+    string from_stop = 1;
+    string to_stop = 2;
+    double distance = 3;
+}
+
+message TransportData {
+    repeated Stop stops = 1;
+    repeated Bus buses = 2;
+    repeated DistancesBetweenStops distances = 3;
+}

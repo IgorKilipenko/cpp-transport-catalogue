@@ -22,6 +22,7 @@
 #include "domain.h"
 #include "geo.h"
 #include "map_renderer.h"
+#include "serialization.h"
 #include "svg.h"
 #include "transport_catalogue.h"
 #include "transport_router.h"
@@ -80,15 +81,16 @@ namespace transport_catalogue::io /* Requests aliases */ {
 }
 
 namespace transport_catalogue::io /* Request fields enums */ {
-    enum class RequestType : int8_t { BASE, STAT, RENDER_SETTINGS, ROUTING_SETTINGS, UNKNOWN };
+    enum class RequestType : int8_t { BASE, STAT, RENDER_SETTINGS, ROUTING_SETTINGS, SERIALIZATION_SETTINGS, UNKNOWN };
 
-    enum class RequestCommand : uint8_t { STOP, BUS, MAP, ROUTE, SET_RENDER_SETTINGS, SET_ROUTING_SETTINGS, UNKNOWN };
+    enum class RequestCommand : uint8_t { STOP, BUS, MAP, ROUTE, SET_RENDER_SETTINGS, SET_ROUTING_SETTINGS, SET_SERIALIZATION_SETTINGS, UNKNOWN };
 
     struct RequestFields {
         inline static const std::string BASE_REQUESTS{"base_requests"};
         inline static const std::string STAT_REQUESTS{"stat_requests"};
         inline static const std::string RENDER_SETTINGS{"render_settings"};
         inline static const std::string ROUTING_SETTINGS{"routing_settings"};
+        inline static const std::string SERIALIZATION_SETTINGS{"serialization_settings"};
         inline static const std::string TYPE{"type"};
         inline static const std::string NAME{"name"};
     };
@@ -110,7 +112,8 @@ namespace transport_catalogue::io /* Request fields enums */ {
     };
 
     struct RenderSettingsRequestFields {
-        inline static const std::string ID = StatRequestFields::ID;
+        [[deprecated("Will be removed in a future release.")]] inline static const std::string ID =
+            StatRequestFields::ID;  //! Unused - needed remove in next version
         inline static const std::string WIDTH{"width"};
         inline static const std::string HEIGHT{"height"};
         inline static const std::string PADDING{"padding"};
@@ -124,10 +127,18 @@ namespace transport_catalogue::io /* Request fields enums */ {
         inline static const std::string UNDERLAYER_COLOR{"underlayer_color"};
         inline static const std::string COLOR_PALETTE{"color_palette"};
     };
+
     struct RoutingSettingsRequestFields {
-        inline static const std::string ID = StatRequestFields::ID;
+        [[deprecated("Will be removed in a future release.")]] inline static const std::string ID =
+            StatRequestFields::ID;  //! Unused - needed remove in next version
         inline static const std::string BUS_WAIT_TIME{"bus_wait_time"};
         inline static const std::string BUS_VELOCITY{"bus_velocity"};
+    };
+
+    struct SerializationSettingsFields {
+        [[deprecated("Will be removed in a future release.")]] inline static const std::string ID =
+            StatRequestFields::ID;  //! Unused - needed remove in next version
+        inline static const std::string FILE{"file"};
     };
 }
 
@@ -184,7 +195,7 @@ namespace transport_catalogue::io /* RawRequest */ {
         std::optional<double> ExtractNumberValueIf(KeyType_&& key);
 
         template <typename KeyType_>
-        std::optional<Offset> ExtractOffestValueIf(KeyType_&& key);
+        std::optional<Offset> ExtractOffsetValueIf(KeyType_&& key);
 
         template <typename KeyType_>
         std::optional<Color> ExtractColorValueIf(KeyType_&& key);
@@ -219,6 +230,7 @@ namespace transport_catalogue::io /* Request */ {
         virtual bool IsStatRequest() const;
         virtual bool IsRenderSettingsRequest() const;
         virtual bool IsRoutingSettingsRequest() const;
+        virtual bool IsSerializationSettingsRequest() const;
         virtual bool IsValidRequest() const;
 
         virtual bool IsStopCommand() const;
@@ -240,6 +252,7 @@ namespace transport_catalogue::io /* Request */ {
         Request() = default;
         Request(RequestCommand type, RequestArgsMap&& args) : command_{std::move(type)}, args_{std::move(args)} {}
 
+        //! [[deprecated("Will be removed in a future release. Use ctr with RequestCommand type.")]]
         Request(std::string&& type, RequestArgsMap&& args);
 
         explicit Request(RawRequest&& raw_request);
@@ -271,8 +284,8 @@ namespace transport_catalogue::io /* BaseRequest */ {
         bool IsConvertedToRoundtrip() const;
         const std::optional<data::Coordinates>& GetCoordinates() const;
         std::optional<data::Coordinates>& GetCoordinates();
-        const std::vector<data::MeasuredRoadDistance>& GetroadDistances() const;
-        std::vector<data::MeasuredRoadDistance>& GetroadDistances();
+        const std::vector<data::MeasuredRoadDistance>& GetRoadDistances() const;
+        std::vector<data::MeasuredRoadDistance>& GetRoadDistances();
         bool IsBaseRequest() const override;
         bool IsValidRequest() const override;
         void ConvertToRoundtrip();
@@ -336,13 +349,13 @@ namespace transport_catalogue::io /* StatRequest */ {
     };
 }
 
-namespace transport_catalogue::io /* RouteSataRequest */ {
+namespace transport_catalogue::io /* RouteStatRequest */ {
 
-    class RouteSataRequest final : public StatRequest {
+    class RouteStatRequest final : public StatRequest {
         using StatRequest::StatRequest;
 
     public:
-        RouteSataRequest(StatRequest&& request);
+        RouteStatRequest(StatRequest&& request);
 
         bool IsValidRequest() const override;
         const std::optional<std::string>& GetFromStop() const;
@@ -434,6 +447,27 @@ namespace transport_catalogue::io /* RoutingSettingsRequest */ {
     };
 }
 
+namespace transport_catalogue::io /* SerializationSettingsRequest */ {
+
+    class SerializationSettingsRequest : public Request {
+    public:
+        SerializationSettingsRequest(RequestCommand type, RequestArgsMap&& args);
+        explicit SerializationSettingsRequest(RawRequest&& raw_request);
+
+        const std::optional<std::string>& GetFile() const;
+        bool IsSerializationSettingsRequest() const override;
+
+    public:
+        using Fields = SerializationSettingsFields;
+
+    protected:
+        void Build() override;
+
+    private:
+        std::optional<std::string> file_;
+    };
+}
+
 namespace transport_catalogue::io /* Response */ {
     using ResponseBase = RequestBase;
     class RawResponse : public ResponseBase {
@@ -493,10 +527,12 @@ namespace transport_catalogue::io /* Response */ {
 namespace transport_catalogue::io /* Interfaces */ {
     class IRequestObserver {
     public:
+        virtual void OnReadingComplete(RawRequest&& request) = 0;
         virtual void OnBaseRequest(std::vector<RawRequest>&& requests) = 0;
         virtual void OnStatRequest(std::vector<RawRequest>&& requests) = 0;
         virtual void OnRenderSettingsRequest(RawRequest&& requests) = 0;
         virtual void OnRoutingSettingsRequest(RawRequest&& requests) = 0;
+        virtual void OnSerializationSettingsRequest(RawRequest&& request) = 0;
 
     protected:
         virtual ~IRequestObserver() = default;
@@ -510,10 +546,12 @@ namespace transport_catalogue::io /* Interfaces */ {
 
     protected:
         virtual bool HasObserver() const = 0;
+        virtual void NotifyReadingComplete(bool complete) = 0;
         virtual void NotifyBaseRequest(std::vector<RawRequest>&& requests) = 0;
         virtual void NotifyStatRequest(std::vector<RawRequest>&& requests) = 0;
         virtual void NotifyRenderSettingsRequest(RawRequest&& requests) = 0;
         virtual void NotifyRoutingSettingsRequest(RawRequest&& requests) = 0;
+        virtual void NotifySerializationSettingsRequest(RawRequest&& requests) = 0;
     };
 
     class IStatResponseSender {
@@ -525,33 +563,39 @@ namespace transport_catalogue::io /* Interfaces */ {
 }
 
 namespace transport_catalogue::io /* RequestHandler */ {
-
     class RequestHandler : public IRequestObserver {
+    public: /* Constants */
+        enum class Mode { MAKE_BASE, PROCESS_REQUESTS };
+
     public:
         RequestHandler(
             const data::ITransportStatDataReader& reader, const data::ITransportDataWriter& writer, const IStatResponseSender& response_sender,
-            io::renderer::IRenderer& renderer)
+            io::renderer::IRenderer& renderer, Mode mode = Mode::PROCESS_REQUESTS)
             : db_reader_{reader},
               db_writer_{writer},
               response_sender_{response_sender},
               renderer_{renderer},
-              router_({}, db_reader_.GetDataReader()) {}
+              router_({}, db_reader_.GetDataReader()),
+              storage_(db_reader_, db_writer_),
+              mode_{mode} {}
 
         ~RequestHandler() {}
 
         class SettingsBuilder;
 
-        //* Is non-const for use cahce in next versions
+        //* Is non-const for use cache in next versions
         std::string RenderMap();
 
         /// Build (or if force_prepare_data = false get pre-builded) map and return non-rendered layers (as svg documents).
         ///! Used for testing only
         std::vector<svg::Document*> RenderMapByLayers(bool force_prepare_data = false);
 
+        void OnReadingComplete(RawRequest&& request) override;
         void OnBaseRequest(std::vector<RawRequest>&& requests) override;
         void OnStatRequest(std::vector<RawRequest>&& requests) override;
         void OnRenderSettingsRequest(RawRequest&& requests) override;
         void OnRoutingSettingsRequest(RawRequest&& requests) override;
+        void OnSerializationSettingsRequest(RawRequest&& request) override;
 
         /// Execute Basic (Insert) request
         void ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const;
@@ -570,6 +614,9 @@ namespace transport_catalogue::io /* RequestHandler */ {
 
         void ExecuteRequest(RoutingSettingsRequest&& request);
 
+        /// Execute SerializationSettings (Set) request
+        void ExecuteRequest(SerializationSettingsRequest&& request);
+
         /// Send Stat Response
         void SendStatResponse(StatResponse&& response) const;
 
@@ -582,6 +629,8 @@ namespace transport_catalogue::io /* RequestHandler */ {
         const IStatResponseSender& response_sender_;
         io::renderer::IRenderer& renderer_;
         router::TransportRouter router_;
+        serialization::Store storage_;
+        Mode mode_;
 
         bool PrepareMapRendererData();
     };
@@ -793,7 +842,7 @@ namespace transport_catalogue::io /* RawRequest template implementation */ {
     }
 
     template <typename KeyType_>
-    std::optional<RawRequest::Offset> RawRequest::ExtractOffestValueIf(KeyType_&& key) {
+    std::optional<RawRequest::Offset> RawRequest::ExtractOffsetValueIf(KeyType_&& key) {
         std::optional<Array> array = ExtractIf<Array>(std::forward<KeyType_>(key));
         if (!array.has_value() || (assert(array->size() == 2), array->size() != 2)) {
             return std::nullopt;

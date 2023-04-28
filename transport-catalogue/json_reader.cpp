@@ -20,6 +20,12 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
         observers_.erase(observer.get());
     }
 
+    void JsonReader::NotifyReadingComplete(bool complete) {
+        json::Builder result_builder;
+        result_builder.StartDict().Key("complete").Value(complete).EndDict();
+        NotifyObservers(RequestType::UNKNOWN, std::vector<RawRequest>{Converter::JsonToRequest(std::move(result_builder.Extract().AsMap()))});
+    }
+
     void JsonReader::NotifyBaseRequest(std::vector<RawRequest>&& requests) {
         NotifyObservers(RequestType::BASE, std::move(requests));
     }
@@ -34,6 +40,10 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
 
     void JsonReader::NotifyRoutingSettingsRequest(RawRequest&& requests) {
         NotifyObservers(RequestType::ROUTING_SETTINGS, std::vector<RawRequest>{std::move(requests)});
+    }
+
+    void JsonReader::NotifySerializationSettingsRequest(RawRequest&& requests) {
+        NotifyObservers(RequestType::SERIALIZATION_SETTINGS, std::vector<RawRequest>{std::move(requests)});
     }
 
     bool JsonReader::HasObserver() const {
@@ -60,6 +70,13 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
             } else if (type == RequestType::ROUTING_SETTINGS) {
                 assert(requests.size() == 1);
                 ptr->second.lock()->OnRoutingSettingsRequest(is_broadcast_ && observers_.size() > 1 ? requests.front() : std::move(requests.front()));
+            } else if (type == RequestType::SERIALIZATION_SETTINGS) {
+                assert(requests.size() == 1);
+                ptr->second.lock()->OnSerializationSettingsRequest(
+                    is_broadcast_ && observers_.size() > 1 ? requests.front() : std::move(requests.front()));
+            } else if (type == RequestType::UNKNOWN) {
+                assert(requests.size() == 1);
+                ptr->second.lock()->OnReadingComplete(is_broadcast_ && observers_.size() > 1 ? requests.front() : std::move(requests.front()));
             }
 
             ptr = is_broadcast_ ? ++ptr : observers_.end();
@@ -75,13 +92,20 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
         json::Dict raw_requests = root.ExtractMap();
         auto render_settings_req_ptr = std::move_iterator(raw_requests.find(RENDER_SETTINGS_REQUESTS_LITERAL));
         auto routing_settings_req_ptr = std::move_iterator(raw_requests.find(ROUTING_SETTINGS_REQUESTS_LITERAL));
+        auto serialization_settings_req_ptr = std::move_iterator(raw_requests.find(SERIALIZATION_SETTINGS_LITERAL));
         auto base_req_ptr = std::move_iterator(raw_requests.find(BASE_REQUESTS_LITERAL));
         auto stat_req_ptr = std::move_iterator(raw_requests.find(STAT_REQUESTS_LITERAL));
 
         auto end = std::move_iterator(raw_requests.end());
 
-        assert(base_req_ptr != end || stat_req_ptr != end || render_settings_req_ptr != end || routing_settings_req_ptr != end);
+        assert(
+            base_req_ptr != end || stat_req_ptr != end || render_settings_req_ptr != end || routing_settings_req_ptr != end ||
+            serialization_settings_req_ptr != end);
 
+        if (serialization_settings_req_ptr != end && serialization_settings_req_ptr->second.IsMap()) {
+            json::Dict dict = serialization_settings_req_ptr->second.ExtractMap();
+            NotifySerializationSettingsRequest(Converter::JsonToRequest(std::move(dict)));
+        }
         //! Fill data. Must be executed before requesting statistics
         if (base_req_ptr != end && base_req_ptr->second.IsArray()) {
             json::Array array = base_req_ptr->second.ExtractArray();
@@ -102,6 +126,8 @@ namespace transport_catalogue::io /* JsonReader implementation */ {
             json::Array array = stat_req_ptr->second.ExtractArray();
             NotifyStatRequest(Converter::JsonToRequest(std::move(array)));
         }
+
+        NotifyReadingComplete(true);
 
         //! throw exception
     }
@@ -286,7 +312,9 @@ namespace transport_catalogue::io /* JsonResponseSender implementation */ {
         std::for_each(std::make_move_iterator(items.begin()), std::make_move_iterator(items.end()), [&items_json](auto&& item) {
             RouteInfo::WaitInfo wait_info = std::move(item.second);
             items_json.emplace_back(json::Dict{
-                {"type", wait_info.TYPE_NAME}, {"stop_name", static_cast<std::string>(wait_info.stop_name)}, {"time", static_cast<double>(wait_info.time)}});
+                {"type", wait_info.TYPE_NAME},
+                {"stop_name", static_cast<std::string>(wait_info.stop_name)},
+                {"time", static_cast<double>(wait_info.time)}});
 
             RouteInfo::BusInfo bus_info = std::move(item.first);
             items_json.emplace_back(json::Dict{

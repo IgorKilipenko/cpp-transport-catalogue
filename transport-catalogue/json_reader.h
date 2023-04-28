@@ -38,18 +38,18 @@ namespace transport_catalogue::detail::io /* FileReader */ {
     public:
         template <typename Path = std::filesystem::path>
         static std::string Read(Path&& path) {
-            std::ifstream istrm;
-            istrm.open(path, std::ios::in);
-            if (!istrm.is_open()) {
+            std::ifstream in;
+            in.open(path, std::ios::in);
+            if (!in.is_open()) {
                 throw exceptions::ReadingException("failed to open " /*+ filename*/);
             }
             std::string result;
             char ch;
-            while (istrm.get(ch)) {
+            while (in.get(ch)) {
                 result.push_back(ch);
             }
 
-            istrm.close();
+            in.close();
             return result;
         }
     };
@@ -103,6 +103,8 @@ namespace transport_catalogue::io /* JsonReader */ {
 
         void RemoveObserver(std::shared_ptr<IRequestObserver> observer) override;
 
+        void NotifyReadingComplete(bool complete) override;
+
         void NotifyBaseRequest(std::vector<RawRequest>&& requests) override;
 
         void NotifyStatRequest(std::vector<RawRequest>&& requests) override;
@@ -110,6 +112,8 @@ namespace transport_catalogue::io /* JsonReader */ {
         void NotifyRenderSettingsRequest(RawRequest&& requests) override;
 
         void NotifyRoutingSettingsRequest(RawRequest&& requests) override;
+        
+        void NotifySerializationSettingsRequest(RawRequest&& requests) override;
 
         bool HasObserver() const override;
 
@@ -139,6 +143,7 @@ namespace transport_catalogue::io /* JsonReader */ {
         constexpr static const std::string_view STAT_REQUESTS_LITERAL = "stat_requests"sv;
         constexpr static const std::string_view RENDER_SETTINGS_REQUESTS_LITERAL = "render_settings"sv;
         constexpr static const std::string_view ROUTING_SETTINGS_REQUESTS_LITERAL = "routing_settings"sv;
+        constexpr static const std::string_view SERIALIZATION_SETTINGS_LITERAL = "serialization_settings"sv;
     };
 }
 

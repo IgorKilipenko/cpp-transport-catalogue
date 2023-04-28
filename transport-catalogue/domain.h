@@ -299,10 +299,12 @@ namespace transport_catalogue::data /* Interfaces */ {
         virtual StopRecord GetStop(std::string_view name) const = 0;
         virtual const DatabaseScheme::StopsTable& GetStopsTable() const = 0;
 
+        virtual std::vector<BusRecord> GetBuses() const = 0;
         virtual const BusRecordSet& GetBuses(StopRecord stop) const = 0;
         virtual const BusRecordSet& GetBuses(const std::string_view bus_name) const = 0;
         virtual const DatabaseScheme::BusRoutesTable& GetBusRoutesTable() const = 0;
 
+        virtual const DatabaseScheme::DistanceBetweenStopsTable& GetDistancesBetweenStops() const = 0;
         virtual DistanceBetweenStopsRecord GetDistanceBetweenStops(StopRecord from, StopRecord to) const = 0;
 
         virtual ~ITransportDataReader() = default;
@@ -471,9 +473,13 @@ namespace transport_catalogue::data /* Database inner classes (Read/Write interf
             return db_.GetBusRoutesTable();
         }
 
+        std::vector<BusRecord> GetBuses() const override;
+
         const BusRecordSet& GetBuses(StopRecord stop) const override;
 
         const BusRecordSet& GetBuses(const std::string_view bus_name) const override;
+
+        const DatabaseScheme::DistanceBetweenStopsTable& GetDistancesBetweenStops() const override;
 
         DistanceBetweenStopsRecord GetDistanceBetweenStops(StopRecord from, StopRecord to) const override;
 
@@ -689,6 +695,15 @@ namespace transport_catalogue::data /* Database::DataReader implementation */ {
     }
 
     template <class Owner>
+    std::vector<BusRecord> Database<Owner>::DataReader::GetBuses() const {
+        std::vector<BusRecord> result(db_.name_to_bus_.size());
+        std::transform(db_.name_to_bus_.begin(), db_.name_to_bus_.end(), result.begin(), [](auto&& item) {
+            return item.second;
+        });
+        return result;
+    }
+
+    template <class Owner>
     const BusRecordSet& Database<Owner>::DataReader::GetBuses(StopRecord stop) const {
         static const BusRecordSet empty_result;
         auto ptr = db_.stop_to_buses_.find(stop);
@@ -700,6 +715,11 @@ namespace transport_catalogue::data /* Database::DataReader implementation */ {
         static const BusRecordSet empty_result;
         auto stop_ptr = GetStop(bus_name);
         return stop_ptr == nullptr ? empty_result : GetBuses(stop_ptr);
+    }
+
+    template <class Owner>
+    const DatabaseScheme::DistanceBetweenStopsTable& Database<Owner>::DataReader::GetDistancesBetweenStops() const {
+        return db_.measured_distances_btw_stops_;
     }
 
     template <class Owner>

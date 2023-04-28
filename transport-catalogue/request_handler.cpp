@@ -55,11 +55,11 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
         return coordinates_;
     }
 
-    const std::vector<data::MeasuredRoadDistance>& BaseRequest::GetroadDistances() const {
+    const std::vector<data::MeasuredRoadDistance>& BaseRequest::GetRoadDistances() const {
         return road_distances_;
     }
 
-    std::vector<data::MeasuredRoadDistance>& BaseRequest::GetroadDistances() {
+    std::vector<data::MeasuredRoadDistance>& BaseRequest::GetRoadDistances() {
         return road_distances_;
     }
 
@@ -202,6 +202,10 @@ namespace transport_catalogue::io /* Request implementation */ {
         return false;
     }
 
+    bool Request::IsSerializationSettingsRequest() const {
+        return false;
+    }
+
     bool Request::IsValidRequest() const {
         return (IsBusCommand() || IsStopCommand() || IsMapCommand() || IsRouteCommand() || IsRenderSettingsRequest() || IsRenderSettingsRequest());
     }
@@ -262,6 +266,8 @@ namespace transport_catalogue::io /* RequestEnumConverter implementation */ {
             return RequestFields::STAT_REQUESTS;
         case io::RequestType::RENDER_SETTINGS:
             return RequestFields::RENDER_SETTINGS;
+        case io::RequestType::SERIALIZATION_SETTINGS:
+            return RequestFields::SERIALIZATION_SETTINGS;
         case io::RequestType::UNKNOWN:
             return "Unknown"sv;
         default:
@@ -280,6 +286,8 @@ namespace transport_catalogue::io /* RequestEnumConverter implementation */ {
             return RequestType::RENDER_SETTINGS;
         } else if (enum_name == RequestFields::ROUTING_SETTINGS) {
             return RequestType::ROUTING_SETTINGS;
+        } else if (enum_name == RequestFields::SERIALIZATION_SETTINGS) {
+            return RequestType::SERIALIZATION_SETTINGS;
         } else if (enum_name == "Unknown"sv) {
             return RequestType::UNKNOWN;
         }
@@ -301,6 +309,8 @@ namespace transport_catalogue::io /* RequestEnumConverter implementation */ {
             return io::RequestCommand::SET_RENDER_SETTINGS;
         } else if (enum_name == "SetRouteSettings"sv) {
             return io::RequestCommand::SET_ROUTING_SETTINGS;
+        } else if (enum_name == "SetSerializationSettings"sv) {
+            return io::RequestCommand::SET_SERIALIZATION_SETTINGS;
         } else if (enum_name == "Unknown"sv) {
             return io::RequestCommand::UNKNOWN;
         }
@@ -349,12 +359,23 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         ExecuteRequest(std::move(reqs));
     }
 
+    void RequestHandler::OnSerializationSettingsRequest(RawRequest&& request) {
+        SerializationSettingsRequest reqs(std::move(request));
+        ExecuteRequest(std::move(reqs));
+    }
+
+    void RequestHandler::OnReadingComplete(RawRequest&& request) {
+        if (mode_ == Mode::MAKE_BASE) {
+            storage_.SaveToStorage();
+        }
+    }
+
     void RequestHandler::ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const {
         assert(raw_req.IsValidRequest());
 
         if (raw_req.IsStopCommand()) {
             db_writer_.AddStop(data::Stop{std::move(raw_req.GetName()), std::move(raw_req.GetCoordinates().value())});
-            std::move(raw_req.GetroadDistances().begin(), raw_req.GetroadDistances().end(), std::back_inserter(out_distances));
+            std::move(raw_req.GetRoadDistances().begin(), raw_req.GetRoadDistances().end(), std::back_inserter(out_distances));
 
         } else {
             bool is_roundtrip = raw_req.IsRoundtrip();
@@ -397,8 +418,8 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
             bool is_router = request.IsRouteCommand();
 
             std::string name = request.GetName().value_or("");
-            std::optional<RouteSataRequest> route_request =
-                is_router ? std::optional<RouteSataRequest>{RouteSataRequest(StatRequest(request))} : std::nullopt;
+            std::optional<RouteStatRequest> route_request =
+                is_router ? std::optional<RouteStatRequest>{RouteStatRequest(StatRequest(request))} : std::nullopt;
 
             StatResponse resp(
                 std::move(request), is_bus ? db_reader_.GetBusInfo(name) : std::nullopt, is_stop ? db_reader_.GetStopInfo(name) : std::nullopt,
@@ -421,6 +442,14 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         router_.SetSettings(
             {static_cast<double>(request.GetBusWaitTimeMin().value_or(0)), static_cast<double>(request.GetBusVelocityKmh().value_or(0))});
         router_.Build();
+    }
+
+    void RequestHandler::ExecuteRequest(SerializationSettingsRequest&& request) {
+        assert(request.GetFile().has_value());
+        storage_.SetDbPath(std::filesystem::path(request.GetFile().value()));
+        if (mode_ == Mode::PROCESS_REQUESTS) {
+            storage_.DeserializeTransportData();
+        }
     }
 
     void RequestHandler::SendStatResponse(StatResponse&& response) const {
@@ -709,42 +738,42 @@ namespace transport_catalogue::io /* RenderSettingsRequest implementation */ {
         stop_radius_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::STOP_RADIUS);
         line_width_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::LINE_WIDTH);
         bus_label_font_size_ = args_.ExtractIf<int>(RenderSettingsRequestFields::BUS_LABEL_FONT_SIZE);
-        bus_label_offset_ = args_.ExtractOffestValueIf(RenderSettingsRequestFields::BUS_LABEL_OFFSET);
+        bus_label_offset_ = args_.ExtractOffsetValueIf(RenderSettingsRequestFields::BUS_LABEL_OFFSET);
         stop_label_font_size_ = args_.ExtractIf<int>(RenderSettingsRequestFields::STOP_LABEL_FONT_SIZE);
-        stop_label_offset_ = args_.ExtractOffestValueIf(RenderSettingsRequestFields::STOP_LABEL_OFFSET);
+        stop_label_offset_ = args_.ExtractOffsetValueIf(RenderSettingsRequestFields::STOP_LABEL_OFFSET);
         underlayer_color_ = args_.ExtractColorValueIf(RenderSettingsRequestFields::UNDERLAYER_COLOR);
         underlayer_width_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::UNDERLAYER_WIDTH);
         color_palette_ = args_.ExtractColorPaletteIf(RenderSettingsRequestFields::COLOR_PALETTE);
     }
 }
 
-namespace transport_catalogue::io /* RouteSataRequest implementation */ {
+namespace transport_catalogue::io /* RouteStatRequest implementation */ {
 
-    RouteSataRequest::RouteSataRequest(StatRequest&& request) : StatRequest(std::move(request)) {
+    RouteStatRequest::RouteStatRequest(StatRequest&& request) : StatRequest(std::move(request)) {
         Build();
     }
 
-    bool RouteSataRequest::IsValidRequest() const {
+    bool RouteStatRequest::IsValidRequest() const {
         return StatRequest::IsValidRequest() && from_ != std::nullopt && to_ != std::nullopt;
     }
 
-    const std::optional<std::string>& RouteSataRequest::GetFromStop() const {
+    const std::optional<std::string>& RouteStatRequest::GetFromStop() const {
         return from_;
     }
 
-    std::optional<std::string>& RouteSataRequest::GetFromStop() {
+    std::optional<std::string>& RouteStatRequest::GetFromStop() {
         return from_;
     }
 
-    const std::optional<std::string>& RouteSataRequest::GetToStop() const {
+    const std::optional<std::string>& RouteStatRequest::GetToStop() const {
         return to_;
     }
 
-    std::optional<std::string>& RouteSataRequest::GetToStop() {
+    std::optional<std::string>& RouteStatRequest::GetToStop() {
         return to_;
     }
 
-    void RouteSataRequest::Build() {
+    void RouteStatRequest::Build() {
         from_ = args_.ExtractIf<std::string>("from");
         to_ = args_.ExtractIf<std::string>("to");
     }
@@ -775,5 +804,28 @@ namespace transport_catalogue::io /* RoutingSettingsRequest implementation */ {
         bus_wait_time_min_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::WIDTH);
         bus_wait_time_min_ = args_.ExtractNumberValueIf(RoutingSettingsRequestFields::BUS_WAIT_TIME);
         bus_velocity_kmh_ = args_.ExtractNumberValueIf(RoutingSettingsRequestFields::BUS_VELOCITY);
+    }
+}
+
+namespace transport_catalogue::io /* SerializationSettingsRequest implementation */ {
+
+    SerializationSettingsRequest::SerializationSettingsRequest(RequestCommand type, RequestArgsMap&& args)
+        : Request(std::move(type), std::move(args)) {
+        Build();
+    }
+
+    SerializationSettingsRequest::SerializationSettingsRequest(RawRequest&& raw_request)
+        : SerializationSettingsRequest(RequestCommand::SET_RENDER_SETTINGS, std::move(raw_request)) {}
+
+    const std::optional<std::string>& SerializationSettingsRequest::GetFile() const {
+        return file_;
+    }
+
+    bool SerializationSettingsRequest::IsSerializationSettingsRequest() const {
+        return true;
+    }
+
+    void SerializationSettingsRequest::Build() {
+        file_ = args_.ExtractIf<std::string>(Fields::FILE);
     }
 }

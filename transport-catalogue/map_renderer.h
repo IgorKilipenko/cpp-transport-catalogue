@@ -85,14 +85,14 @@ namespace transport_catalogue::maps /* Locations */ {
 
 }
 
-namespace transport_catalogue::maps /* ColorPaletteСyclicIterator */ {
+namespace transport_catalogue::maps /* ColorPaletteCyclicalIterator */ {
 
-    class ColorPaletteСyclicIterator {
+    class ColorPaletteCyclicalIterator {
     public:
         inline static const ColorPalette::value_type NoneColor = svg::Colors::NoneColor;
 
-        ColorPaletteСyclicIterator() : ColorPaletteСyclicIterator(ColorPalette()) {}
-        ColorPaletteСyclicIterator(ColorPalette&& palette) : palette_(std::move(palette)), curr_it_{palette_.begin()} {}
+        ColorPaletteCyclicalIterator() : ColorPaletteCyclicalIterator(ColorPalette()) {}
+        ColorPaletteCyclicalIterator(ColorPalette&& palette) : palette_(std::move(palette)), curr_it_{palette_.begin()} {}
 
         ColorPalette::const_iterator NextColor();
 
@@ -140,7 +140,7 @@ namespace transport_catalogue::maps /* RenderSettings */ {
 
     class IDrawable {
     public:
-        virtual void Darw(svg::ObjectContainer& layer) const = 0;
+        virtual void Draw(svg::ObjectContainer& layer) const = 0;
         virtual std::shared_ptr<IDrawable> Clone() const = 0;
         virtual ~IDrawable() = default;
 
@@ -245,8 +245,8 @@ namespace transport_catalogue::maps /* MapRenderer */ {
             void SetColorPalette(ColorPalette colors);
 
         private:
-            ColorPaletteСyclicIterator route_colors_iterator_;
-            ColorPaletteСyclicIterator busses_colors_iterator_;
+            ColorPaletteCyclicalIterator route_colors_iterator_;
+            ColorPaletteCyclicalIterator busses_colors_iterator_;
         };
 
     public:
@@ -314,7 +314,7 @@ namespace transport_catalogue::maps /* MapRenderer::DbObject */ {
 namespace transport_catalogue::maps /* MapRenderer::BusRoute */ {
     class MapRenderer::BusRoute : public IDbObject<data::Bus>, public IDrawable {
     public:
-        class BusRouteLable;
+        class BusRouteLabel;
 
     public:
         BusRoute(data::BusRecord bus_record, const RenderSettings& settings, const Projection_& projection)
@@ -326,38 +326,38 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute */ {
 
         void UpdateLocation() override;
 
-        void Darw(svg::ObjectContainer& layer) const override;
+        void Draw(svg::ObjectContainer& layer) const override;
 
         const data::Route& GetRoute() const;
 
         void SetColor(const Color&& color);
 
-        BusRouteLable BuildLable() const;
+        BusRouteLabel BuildLabel() const;
 
         virtual std::shared_ptr<IDrawable> Clone() const override final;
 
     private:
         Polyline locations_;
-        Color color_ = ColorPaletteСyclicIterator::NoneColor;
+        Color color_ = ColorPaletteCyclicalIterator::NoneColor;
         std::shared_ptr<int> ref_ = std::make_shared<int>();
 
         void Build();
     };
 }
 
-namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
+namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLabel */ {
 
-    class MapRenderer::BusRoute::BusRouteLable : public IDbObject<data::Bus>, public IDrawable {
+    class MapRenderer::BusRoute::BusRouteLabel : public IDbObject<data::Bus>, public IDrawable {
     private:
-        struct NameLable {
+        struct NameLabel {
             std::string text;
             Location location;
 
-            NameLable(std::string text, Location location) : text(text), location(location) {}
+            NameLabel(std::string text, Location location) : text(text), location(location) {}
         };
 
     public:
-        BusRouteLable(const BusRoute& drawable_bus)
+        BusRouteLabel(const BusRoute& drawable_bus)
             : IDbObject{drawable_bus.db_record_, drawable_bus.projection_},
               IDrawable{drawable_bus.settings_},
               drawable_bus_{drawable_bus},
@@ -366,7 +366,7 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
             Build();
         }
 
-        void Darw(svg::ObjectContainer& layer) const override;
+        void Draw(svg::ObjectContainer& layer) const override;
 
         void Update() override;
 
@@ -380,7 +380,7 @@ namespace transport_catalogue::maps /* MapRenderer::BusRoute::BusRouteLable */ {
         const BusRoute& drawable_bus_;
         std::weak_ptr<int> parent_ref_handle_;
         Color color_;
-        std::vector<NameLable> name_lables_;
+        std::vector<NameLabel> name_labels_;
 
         void Build();
     };
@@ -390,7 +390,7 @@ namespace transport_catalogue::maps /* MapRenderer::StopMarker */ {
 
     class MapRenderer::StopMarker : public IDbObject<data::Stop>, public IDrawable {
     public:
-        class StopMarkerLable;
+        class StopMarkerLabel;
 
     public:
         StopMarker(data::StopRecord bus_record, const RenderSettings& settings, const Projection_& projection)
@@ -402,11 +402,11 @@ namespace transport_catalogue::maps /* MapRenderer::StopMarker */ {
 
         void UpdateLocation() override;
 
-        void Darw(svg::ObjectContainer& layer) const override;
+        void Draw(svg::ObjectContainer& layer) const override;
 
         void SetColor(const Color&& color);
 
-        StopMarkerLable BuildLable() const;
+        StopMarkerLabel BuildLabel() const;
 
         virtual std::shared_ptr<IDrawable> Clone() const override final;
 
@@ -416,26 +416,26 @@ namespace transport_catalogue::maps /* MapRenderer::StopMarker */ {
 
     private:
         Location location_;
-        Color color_ = ColorPaletteСyclicIterator::NoneColor;
+        Color color_ = ColorPaletteCyclicalIterator::NoneColor;
         std::shared_ptr<int> ref_ = std::make_shared<int>();
 
         void Build();
     };
 }
 
-namespace transport_catalogue::maps /* MapRenderer::StopMarker::StopMarkerLable */ {
+namespace transport_catalogue::maps /* MapRenderer::StopMarker::StopMarkerLabel */ {
 
-    class MapRenderer::StopMarker::StopMarkerLable : public IDbObject<data::Stop>, public IDrawable {
+    class MapRenderer::StopMarker::StopMarkerLabel : public IDbObject<data::Stop>, public IDrawable {
     private:
-        struct NameLable {
+        struct NameLabel {
             std::string text;
             Location location;
 
-            NameLable(std::string text, Location location) : text(text), location(location) {}
+            NameLabel(std::string text, Location location) : text(text), location(location) {}
         };
 
     public:
-        StopMarkerLable(const StopMarker& bus_marker)
+        StopMarkerLabel(const StopMarker& bus_marker)
             : IDbObject{bus_marker.db_record_, bus_marker.projection_},
               IDrawable{bus_marker.settings_},
               bus_marker_{bus_marker},
@@ -444,7 +444,7 @@ namespace transport_catalogue::maps /* MapRenderer::StopMarker::StopMarkerLable 
             Build();
         }
 
-        void Darw(svg::ObjectContainer& layer) const override;
+        void Draw(svg::ObjectContainer& layer) const override;
 
         void Update() override;
 
@@ -458,7 +458,7 @@ namespace transport_catalogue::maps /* MapRenderer::StopMarker::StopMarkerLable 
         const StopMarker& bus_marker_;
         std::weak_ptr<int> parent_ref_handle_;
         Color color_;
-        std::vector<NameLable> name_lables_;
+        std::vector<NameLabel> name_labels_;
 
         void Build();
     };
