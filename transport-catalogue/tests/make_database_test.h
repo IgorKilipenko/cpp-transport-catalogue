@@ -41,37 +41,20 @@ namespace transport_catalogue::tests {
             assert(result.empty());
         }
 
-        void TestFromFile(std::string file_name, std::string answer_suffix = "expected_res") const {
+        void TestFromFile(std::string file_name, std::string request_suffix = "request", std::string answer_suffix = "expected_res") const {
             std::string result = ReadDocument(DATA_PATH / (file_name + ".json"), io::RequestHandler::Mode::MAKE_BASE);
-            std::string request_result = ReadDocument(DATA_PATH / (file_name + "_request" + ".json"), io::RequestHandler::Mode::PROCESS_REQUESTS);
-            std::string expected_result_str = transport_catalogue::detail::io::FileReader::Read(DATA_PATH / (file_name + "_" + answer_suffix + ".json"));
-            assert(result.empty() && !request_result.empty());
+            std::string request_result =
+                ReadDocument(DATA_PATH / (file_name + "_" + request_suffix + ".json"), io::RequestHandler::Mode::PROCESS_REQUESTS);
+            std::string expected_result_str =
+                transport_catalogue::detail::io::FileReader::Read(DATA_PATH / (file_name + "_" + answer_suffix + ".json"));
+            assert(result.empty() && !request_result.empty() && !expected_result_str.empty());
 
             json::Document doc = json::Document::Load(std::stringstream{request_result});
             assert(doc.GetRoot().IsArray());
             json::Array response = doc.GetRoot().AsArray();
             json::Array expected_response = json::Node::LoadNode(std::stringstream{expected_result_str}).AsArray();
 
-            for (auto result_it = response.begin(), expected_it = expected_response.begin(); result_it != response.end();
-                 ++result_it, ++expected_it) {
-                if (expected_it->IsMap() && expected_it->AsMap().count("items")) {
-                    json::Dict res_map = result_it->AsMap();
-                    json::Dict expected_map = expected_it->AsMap();
-
-
-                    if (res_map != expected_map) {
-                        if (res_map.at("request_id") != expected_map.at("request_id")) {
-                            std::cerr << "Test result:" << std::endl;
-                            result_it->Print(std::cerr);
-                            std::cerr << std::endl;
-
-                            std::cerr << std::endl << "Test expected result:" << std::endl;
-                            expected_it->Print(std::cerr);
-                            std::cerr << std::endl;
-                        }
-                    }
-                }
-            }
+            CheckResultsExtend(std::move(response), std::move(expected_response), 1e-5);
         }
 
         void TestBase() const {
@@ -86,7 +69,6 @@ namespace transport_catalogue::tests {
             TestFromFile("step1_test2");
         }
 
-        
         void Test3() const {
             TestFromFile("step1_test3");
             TestFromFile("step1_test3_2");
@@ -113,7 +95,7 @@ namespace transport_catalogue::tests {
 
             Test3();
             std::cerr << prefix << "Test3 : Done." << std::endl;
-            
+
             /*
             Test4();
             std::cerr << prefix << "Test4 : Done." << std::endl;
