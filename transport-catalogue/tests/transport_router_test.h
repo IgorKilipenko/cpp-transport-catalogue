@@ -80,10 +80,8 @@ namespace transport_catalogue::tests {
                     if (res_map != expected_map) {
                         double tt1 = calc_time(res_map.at("items").AsArray());
                         double tt2 = calc_time(expected_map.at("items").AsArray());
-                        if (res_map.at("request_id") != expected_map.at("request_id") || std::abs(tt1 - tt2) > 0.011 /*|| tt1 != res_map.at("total_time") ||
-                            tt2 != expected_map.at("total_time") */
-                            || std::abs(res_map.at("total_time").AsDouble() - expected_map.at("total_time").AsDouble()) > 0.011   /*||
-                            res_map.at("items").AsArray().size() != expected_map.at("items").AsArray().size()*/) {
+                        if (res_map.at("request_id") != expected_map.at("request_id") || std::abs(tt1 - tt2) > 0.011 ||
+                            std::abs(res_map.at("total_time").AsDouble() - expected_map.at("total_time").AsDouble()) > 0.011) {
                             std::cerr << "Test result:" << std::endl;
                             result_it->Print(std::cerr);
                             std::cerr << std::endl;
@@ -91,47 +89,10 @@ namespace transport_catalogue::tests {
                             std::cerr << std::endl << "Test expected result:" << std::endl;
                             expected_it->Print(std::cerr);
                             std::cerr << std::endl;
-
-                            // assert(false);
                         }
                     }
                 }
             }
-
-            /*for (auto result_it = response.begin(), expected_it = expected_response.begin(); result_it != response.end();
-                 ++result_it, ++expected_it) {
-                if (expected_it->IsMap() && expected_it->AsMap().count("items")) {
-                    json::Dict res_map = result_it->AsMap();
-                    json::Dict expected_map = expected_it->AsMap();
-
-                    assert(res_map.count("request_id") && expected_map.count("request_id"));
-                    assert(res_map.count("total_time") && expected_map.count("total_time"));
-
-                    if (res_map != expected_map) {
-                        std::cerr << "Test result:" << std::endl;
-                        result_it->Print(std::cerr);
-                        std::cerr << std::endl;
-
-                        std::cerr << std::endl << "Test expected result:" << std::endl;
-                        expected_it->Print(std::cerr);
-
-                        //assert(false);
-                    }
-                }
-            }*/
-
-            // CheckResultsExtend(std::move(expected_response), std::move(response));
-
-            /*if (response != expected_response) {
-                std::cerr << "Test result:" << std::endl;
-                json::Node(response).Print(std::cerr);
-                std::cerr << std::endl;
-
-                std::cerr << std::endl << "Test expected result:" << std::endl;
-                json::Node(expected_response).Print(std::cerr);
-
-                assert(false);
-            }*/
         }
 
         void Test1() const {
