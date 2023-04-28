@@ -8,7 +8,7 @@
 
 using namespace std::literals;
 
-void ProcessRequests() {
+void Process(transport_catalogue::io::RequestHandler::Mode mode) {
     using namespace transport_catalogue;
     using namespace transport_catalogue::io;
 
@@ -18,24 +18,8 @@ void ProcessRequests() {
 
     maps::MapRenderer renderer;
 
-    const auto request_handler_ptr = std::make_shared<RequestHandler>(
-        catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer, RequestHandler::Mode::PROCESS_REQUESTS);
-    json_reader.AddObserver(request_handler_ptr);
-    json_reader.ReadDocument();
-}
-
-void MakeDataBase() {
-    using namespace transport_catalogue;
-    using namespace transport_catalogue::io;
-
-    TransportCatalogue catalog;
-    JsonReader json_reader(std::cin);
-    JsonResponseSender stat_sender(std::cout);
-
-    maps::MapRenderer renderer;
-
-    const auto request_handler_ptr = std::make_shared<RequestHandler>(
-        catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer, RequestHandler::Mode::MAKE_BASE);
+    const auto request_handler_ptr =
+        std::make_shared<RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer, mode);
     json_reader.AddObserver(request_handler_ptr);
     json_reader.ReadDocument();
 }
@@ -53,11 +37,10 @@ int main(int argc, char* argv[]) {
     const std::string_view mode(argv[1]);
 
     if (mode == "make_base"sv) {
-        // make base here
-        MakeDataBase();
+        Process(transport_catalogue::io::RequestHandler::Mode::MAKE_BASE);
 
     } else if (mode == "process_requests"sv) {
-        ProcessRequests();
+        Process(transport_catalogue::io::RequestHandler::Mode::PROCESS_REQUESTS);
 
     } else {
         PrintUsage();
