@@ -50,7 +50,7 @@ namespace transport_catalogue::serialization /* Store */ {
         Store& operator=(Store&&) = delete;
 
     public: /* serialize methods */
-        void SetDbPath(std::string path) {
+        void SetDbPath(std::filesystem::path path) {
             db_path_ = path;
         }
 
@@ -68,7 +68,7 @@ namespace transport_catalogue::serialization /* Store */ {
         const data::ITransportStatDataReader& db_reader_;
         const data::ITransportDataWriter& db_writer_;
         const data::DatabaseScheme::StopsTable& stops_;
-        std::optional<std::string> db_path_;
+        std::optional<std::filesystem::path> db_path_;
         const DataConvertor convertor_;
     };
 
