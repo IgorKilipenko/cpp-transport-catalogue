@@ -14,9 +14,6 @@
 namespace transport_catalogue::serialization /* Model types defs */ {
     using StopModel = proto_data_schema::Stop;
     using BusModel = proto_data_schema::Bus;
-    // using DistanceBetweenStopsItem =
-    //     std::pair<data::DatabaseScheme::DistanceBetweenStopsTable::key_type, data::DatabaseScheme::DistanceBetweenStopsTable::value_type>;
-
     struct DistanceBetweenStopsItem {
         DistanceBetweenStopsItem(data::StopRecord from_stop, data::StopRecord to_stop, double distance_between)
             : from_stop{from_stop}, to_stop{to_stop}, distance_between{distance_between} {}
@@ -24,7 +21,6 @@ namespace transport_catalogue::serialization /* Model types defs */ {
         data::StopRecord to_stop;
         double distance_between;
     };
-    //using DistanceBetweenStopsItem = data::MeasuredRoadDistance;
 }
 
 namespace transport_catalogue::serialization /* DataConvertor */ {
@@ -42,7 +38,7 @@ namespace transport_catalogue::serialization /* Store */ {
     class Store {
     public: /* constructors */
         Store(const data::ITransportStatDataReader& db_reader, const data::ITransportDataWriter& db_writer)
-            : db_reader_{db_reader}, db_writer_{db_writer}, stops_{db_reader.GetDataReader().GetStopsTable()} {}
+            : db_reader_{db_reader}, db_writer_{db_writer}, stops_{db_reader.GetDataReader().GetStopsTable()}, convertor_{} {}
 
         Store(const Store&) = delete;
         Store(Store&& other) = delete;

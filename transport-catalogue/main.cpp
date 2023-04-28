@@ -1,8 +1,6 @@
-#include <filesystem>
+#include <fstream>
 #include <iostream>
-#include <memory>
-#include <sstream>
-#include <vector>
+#include <string_view>
 
 #include "./tests/json_reader_test.h"
 #include "./tests/json_test.h"
@@ -16,7 +14,6 @@
 #include "tests/request_handler_test.h"
 #include "tests/transport_router_test.h"
 #include "transport_catalogue.h"
-#include "transport_catalogue.pb.h"
 
 using namespace std::literals;
 
@@ -53,41 +50,10 @@ int tests() {
     MakeDatabaseTester make_database_tester;
     make_database_tester.RunTests();
 
-    /*
-        using namespace transport_catalogue;
-        using namespace transport_catalogue::io;
-
-        TransportCatalogue catalog;
-        JsonReader json_reader(std::cin);
-        JsonResponseSender stat_sender(std::cout);
-
-        maps::MapRenderer renderer;
-
-        const auto request_handler_ptr = std::make_shared<RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender,
-       renderer); json_reader.AddObserver(request_handler_ptr);
-
-        json_reader.ReadDocument();
-
-        std::vector<svg::Document*> layer_ptrs = request_handler_ptr->RenderMap();
-
-        svg::Document svg_map;
-        std::for_each(std::make_move_iterator(layer_ptrs.begin()), std::make_move_iterator(layer_ptrs.end()), [&svg_map](svg::Document*&& layer) {
-            svg_map.MoveObjectsFrom(std::move(*layer));
-        });
-
-        svg_map.Render(std::cout);
-    */
-
-    proto_data_schema::Coordinates c;
-    c.set_lat(1);
-    c.set_lng(2);
-
-    std::cout << "lat: " << c.lat() << " lng: " << c.lng() << std::endl;
-
     return 0;
 }
 
-void ProcessRequests() {
+void Process(transport_catalogue::io::RequestHandler::Mode mode) {
     using namespace transport_catalogue;
     using namespace transport_catalogue::io;
 
@@ -97,24 +63,8 @@ void ProcessRequests() {
 
     maps::MapRenderer renderer;
 
-    const auto request_handler_ptr = std::make_shared<RequestHandler>(
-        catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer, RequestHandler::Mode::PROCESS_REQUESTS);
-    json_reader.AddObserver(request_handler_ptr);
-    json_reader.ReadDocument();
-}
-
-void MakeDataBase() {
-    using namespace transport_catalogue;
-    using namespace transport_catalogue::io;
-
-    TransportCatalogue catalog;
-    JsonReader json_reader(std::cin);
-    JsonResponseSender stat_sender(std::cout);
-
-    maps::MapRenderer renderer;
-
-    const auto request_handler_ptr = std::make_shared<RequestHandler>(
-        catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer, RequestHandler::Mode::MAKE_BASE);
+    const auto request_handler_ptr =
+        std::make_shared<RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer, mode);
     json_reader.AddObserver(request_handler_ptr);
     json_reader.ReadDocument();
 }
@@ -132,11 +82,10 @@ int main(int argc, char* argv[]) {
     const std::string_view mode(argv[1]);
 
     if (mode == "make_base"sv) {
-        // make base here
-        MakeDataBase();
+        Process(transport_catalogue::io::RequestHandler::Mode::MAKE_BASE);
 
     } else if (mode == "process_requests"sv) {
-        ProcessRequests();
+        Process(transport_catalogue::io::RequestHandler::Mode::PROCESS_REQUESTS);
 
     } else if (mode == "tests"sv) {
         tests();

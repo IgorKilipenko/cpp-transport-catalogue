@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 set(CMAKE_VERBOSE_MAKEFILE ON)
-set(PROJECT_NAME "transport-catalogue")
+set(PROJECT_NAME "transport_catalogue")
 project(${PROJECT_NAME} CXX)
 
 set(SRC_DIR ${PROJECT_SOURCE_DIR})
@@ -54,14 +54,6 @@ if (DEFINED CMAKE_BUILD_TYPE AND CMAKE_BUILD_TYPE STREQUAL "Debug")
         message("FSANITIZE_DEBUG" enabled)
     endif()
 endif()
-
-set(TESTS_DIR ${SRC_DIR}/tests)
-set(TESTS_DATA_DIR ${TESTS_DIR}/data)
-set(TESTS_DATA_FILES ${TESTS_DATA_DIR}/json_requests/)
-
-message(STATE ${PROJECT_SOURCE_DIR})
-
-file(COPY ${TESTS_DATA_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 add_executable(${PROJECT_NAME} ${PROTO_SRCS} ${PROTO_HDRS} ${LIBS})
 
