@@ -89,6 +89,8 @@ namespace transport_catalogue::tests {
                             std::cerr << std::endl << "Test expected result:" << std::endl;
                             expected_it->Print(std::cerr);
                             std::cerr << std::endl;
+                            
+                            assert(false);
                         }
                     }
                 }
