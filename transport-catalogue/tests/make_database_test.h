@@ -41,7 +41,7 @@ namespace transport_catalogue::tests {
             assert(result.empty());
         }
 
-        void TestFromFile(std::string file_name, std::string request_suffix = "request", std::string answer_suffix = "expected_res") const {
+        void TestFromFile(std::string file_name, std::string request_suffix = "request", std::string answer_suffix = "expected_res", double tolerance = json::Node::GetEqualityTolerance()) const {
             std::string result = ReadDocument(DATA_PATH / (file_name + ".json"), io::RequestHandler::Mode::MAKE_BASE);
             std::string request_result =
                 ReadDocument(DATA_PATH / (file_name + "_" + request_suffix + ".json"), io::RequestHandler::Mode::PROCESS_REQUESTS);
@@ -54,7 +54,7 @@ namespace transport_catalogue::tests {
             json::Array response = doc.GetRoot().AsArray();
             json::Array expected_response = json::Node::LoadNode(std::stringstream{expected_result_str}).AsArray();
 
-            CheckResultsExtend(std::move(response), std::move(expected_response), 1e-5);
+            CheckResultsExtend(std::move(response), std::move(expected_response), tolerance);
         }
 
         void TestBase() const {
@@ -70,16 +70,16 @@ namespace transport_catalogue::tests {
         }
 
         void Test3() const {
-            TestFromFile("step1_test3");
-            TestFromFile("step1_test3_2");
+            TestFromFile("step1_test3", "request", "expected_res", 1e-5);
+            TestFromFile("step1_test3_2", "request", "expected_res", 1e-5);
         }
 
-        /*
+        
         void TestOnRandomData() const {
-            TestFromExample("s12_final_opentest_1", "answer");
-            TestFromExample("s12_final_opentest_2", "answer");
-            TestFromExample("s12_final_opentest_3", "answer");
-        }*/
+            TestFromFile("s14_1_opentest_1", "process_requests", "answer", 1e-5);
+            TestFromFile("s14_1_opentest_2", "process_requests", "answer", 1e-5);
+            TestFromFile("s14_1_opentest_3", "process_requests", "answer", 1e-5);
+        }
 
         void RunTests() const {
             const std::string prefix = "[MakeDatabase] ";
@@ -96,12 +96,8 @@ namespace transport_catalogue::tests {
             Test3();
             std::cerr << prefix << "Test3 : Done." << std::endl;
 
-            /*
-            Test4();
-            std::cerr << prefix << "Test4 : Done." << std::endl;
-
             TestOnRandomData();
-            std::cerr << prefix << "TestOnRandomData : Done." << std::endl;*/
+            std::cerr << prefix << "TestOnRandomData : Done." << std::endl;
 
             std::cerr << std::endl << "All MakeDatabase Tests : Done." << std::endl << std::endl;
         }
