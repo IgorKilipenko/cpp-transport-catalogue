@@ -5,23 +5,16 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
-#include <iterator>
-#include <memory>
-#include <optional>
 #include <ostream>
 #include <type_traits>
-#include <utility>
 #include <vector>
 
-#include "detail/type_traits.h"
 #include "domain.h"
-#include "json.h"
-#include "transport_catalogue.h"
 
 namespace transport_catalogue::serialization /* Store */ {
 
     class Store {
-    public:
+    public: /* constructors */
         Store(const data::ITransportStatDataReader& db_reader, const data::ITransportDataWriter& db_writer)
             : db_reader_{db_reader}, db_writer_{db_writer}, stops_{db_reader.GetDataReader().GetStopsTable()} {}
 
@@ -30,6 +23,7 @@ namespace transport_catalogue::serialization /* Store */ {
         Store& operator=(const Store&) = delete;
         Store& operator=(Store&&) = delete;
 
+    public: /* serialize methods */
         void SerializeBuses(data::BusRecord bus, std::ostream& out) const;
         void SerializeBuses(const data::Bus& bus, std::ostream& out) const;
         void SerializeBuses(std::ostream& out) const;
@@ -48,7 +42,15 @@ namespace transport_catalogue::serialization /* Store */ {
             db_path_ = path;
         }
 
+        std::vector<proto_data_schema::Bus> ConvertBusesToSerializable() const;
+        void ConvertBusesToSerializable(proto_data_schema::TransportData& container) const;
+        void ConvertStopsToSerializable(proto_data_schema::TransportData& container) const;
+        proto_data_schema::TransportData BuildSerializableTransportData() const;
+
         bool SaveToStorage();
+
+    public: /* deserialize methods */
+        bool DeserializeTransportData() const;
 
     private:
         [[maybe_unused]] const data::ITransportStatDataReader& db_reader_;

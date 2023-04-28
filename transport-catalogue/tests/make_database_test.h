@@ -12,7 +12,7 @@ namespace transport_catalogue::tests {
         inline static const std::filesystem::path DATA_PATH = std::filesystem::current_path() / "transport-catalogue/tests/data/serialization";
 
     public:
-        std::string ReadDocument(std::string json_file) const {
+        std::string ReadDocument(std::string json_file, io::RequestHandler::Mode mode = io::RequestHandler::Mode::MAKE_BASE) const {
             using namespace transport_catalogue;
             using namespace transport_catalogue::io;
 
@@ -28,46 +28,37 @@ namespace transport_catalogue::tests {
 
             maps::MapRenderer renderer;
 
-            const auto request_handler_ptr =
-                std::make_shared<RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer);
+            const auto request_handler_ptr = std::make_shared<RequestHandler>(
+                catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer, mode);
             json_reader.AddObserver(request_handler_ptr);
 
             json_reader.ReadDocument();
             return ostream.str();
         }
 
-        /*void MakeDataBase(std::string&& data) const {
-            using namespace transport_catalogue;
-            using namespace transport_catalogue::io;
-
-            std::stringstream ss(std::move(data));
-
-            TransportCatalogue catalog;
-            JsonReader json_reader(std::cin);
-            JsonResponseSender stat_sender(std::cout);
-
-            maps::MapRenderer renderer;
-
-            const auto request_handler_ptr =
-                std::make_shared<RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer);
-            json_reader.AddObserver(request_handler_ptr);
-            json_reader.ReadDocument();
-        }*/
-
-        void TestFromExample(std::string file_name, std::string answer_suffix = "output") const {
+        void TestFromExample(std::string file_name, std::string answer_suffix = "expected_res") const {
             std::string result = ReadDocument(DATA_PATH / (file_name + ".json"));
-            //std::string expected_str = transport_catalogue::detail::io::FileReader::Read(DATA_PATH / (file_name + "_" + answer_suffix + ".json"));
-            //assert(!result.empty());
+            std::string expected_result = ReadDocument(DATA_PATH / (file_name + ".json"));
+            // std::string expected_str = transport_catalogue::detail::io::FileReader::Read(DATA_PATH / (file_name + "_" + answer_suffix + ".json"));
+            // assert(!result.empty());
+        }
+
+        void TestFromFile(std::string file_name, std::string answer_suffix = "expected_res") const {
+            std::string result = ReadDocument(DATA_PATH / (file_name + ".json"), io::RequestHandler::Mode::MAKE_BASE);
+            std::string request = ReadDocument(DATA_PATH / (file_name + "_request" + ".json"), io::RequestHandler::Mode::PROCESS_REQUESTS);
+            std::string expected_result = transport_catalogue::detail::io::FileReader::Read(DATA_PATH / (file_name + "_" + answer_suffix + ".json"));
+            assert(!result.empty());
         }
 
         void Test1() const {
             TestFromExample("step1_test1");
         }
-        /*
+
         void Test2() const {
-            TestFromExample("test2");
+            TestFromFile("step1_test1");
         }
 
+        /*
         void Test3() const {
             TestFromExample("test3");
         }
@@ -88,9 +79,10 @@ namespace transport_catalogue::tests {
             Test1();
             std::cerr << prefix << "Test1 : Done." << std::endl;
 
-            /*Test2();
+            Test2();
             std::cerr << prefix << "Test2 : Done." << std::endl;
 
+            /*
             Test3();
             std::cerr << prefix << "Test3 : Done." << std::endl;
 
