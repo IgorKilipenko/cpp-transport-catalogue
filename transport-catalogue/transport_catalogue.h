@@ -46,6 +46,7 @@ namespace transport_catalogue /* TransportCatalogue */ {
         std::vector<data::BusRecord> GetBuses() const override;
         const data::BusRecordSet& GetBuses(data::StopRecord stop) const override;
         const data::BusRecordSet& GetBuses(const std::string_view bus_name) const override;
+        const data::DatabaseScheme::DistanceBetweenStopsTable& GetDistancesBetweenStops() const override;
         data::DistanceBetweenStopsRecord GetDistanceBetweenStops(data::StopRecord from, data::StopRecord to) const override;
 
     public: /* ITransportStatDataReader interface */

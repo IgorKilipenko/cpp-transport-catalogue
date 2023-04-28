@@ -60,6 +60,10 @@ namespace transport_catalogue /* TransportCatalogue < ITransportDataReader imple
     data::DistanceBetweenStopsRecord TransportCatalogue::GetDistanceBetweenStops(data::StopRecord from, data::StopRecord to) const {
         return db_reader_.GetDistanceBetweenStops(from, to);
     }
+
+    const data::DatabaseScheme::DistanceBetweenStopsTable& TransportCatalogue::GetDistancesBetweenStops() const {
+        return db_reader_.GetDistancesBetweenStops();
+    }
 }
 
 namespace transport_catalogue /* TransportCatalogue < ITransportDataWriter implementation */ {
