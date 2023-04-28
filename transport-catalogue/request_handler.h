@@ -112,8 +112,8 @@ namespace transport_catalogue::io /* Request fields enums */ {
     };
 
     struct RenderSettingsRequestFields {
-        [[deprecated("Will be removed in a future release.")]] inline static const std::string ID =
-            StatRequestFields::ID;  //! Unused - needed remove in next version
+        //! [[deprecated("Will be removed in a future release.")]]
+        inline static const std::string ID = StatRequestFields::ID;
         inline static const std::string WIDTH{"width"};
         inline static const std::string HEIGHT{"height"};
         inline static const std::string PADDING{"padding"};
@@ -129,15 +129,15 @@ namespace transport_catalogue::io /* Request fields enums */ {
     };
 
     struct RoutingSettingsRequestFields {
-        [[deprecated("Will be removed in a future release.")]] inline static const std::string ID =
-            StatRequestFields::ID;  //! Unused - needed remove in next version
+        //! [[deprecated("Will be removed in a future release.")]]
+        inline static const std::string ID = StatRequestFields::ID;
         inline static const std::string BUS_WAIT_TIME{"bus_wait_time"};
         inline static const std::string BUS_VELOCITY{"bus_velocity"};
     };
 
     struct SerializationSettingsFields {
-        [[deprecated("Will be removed in a future release.")]] inline static const std::string ID =
-            StatRequestFields::ID;  //! Unused - needed remove in next version
+        //! [[deprecated("Will be removed in a future release.")]]
+        inline static const std::string ID = StatRequestFields::ID;
         inline static const std::string FILE{"file"};
     };
 }

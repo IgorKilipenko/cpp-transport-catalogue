@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.14)
 set(CMAKE_VERBOSE_MAKEFILE ON)
-set(PROJECT_NAME "transport-catalogue")
+set(PROJECT_NAME "transport_catalogue")
 project(${PROJECT_NAME} CXX)
+set(CMAKE_CXX_STANDARD 17)
 
 set(SRC_DIR ${PROJECT_SOURCE_DIR})
 set(MAIN_FILE ${SRC_DIR}/main.cpp )
@@ -33,7 +34,7 @@ protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS "transport_catalogue.proto")
 
 add_executable(${PROJECT_NAME} ${PROTO_SRCS} ${PROTO_HDRS} ${LIBS})
 
-target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
+#target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 target_compile_options(${PROJECT_NAME} PRIVATE ${CFLAGS})
 target_compile_definitions(${PROJECT_NAME} PRIVATE ${DEFS})
 target_link_options(${PROJECT_NAME} PRIVATE ${LINK_OPTS})
