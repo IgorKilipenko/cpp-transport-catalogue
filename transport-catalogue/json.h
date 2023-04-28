@@ -124,13 +124,17 @@ namespace json /* Node */ {
     using NodeValueType = std::variant<std::nullptr_t, std::string, int, double, bool, json::Array, json::Dict>;
 
     class Node : private NodeValueType {
+    private:
+        static double EQUALITY_TOLERANCE;
+
     public:
         using NodeValueType::variant;
         using ValueType = NodeValueType;
         using OnNodeItemParsedCallback = std::function<void(const Node&, const void*)>;
 
     public:
-        static constexpr const double EQUALITY_TOLERANCE = 1e-6;
+        static double GetEqualityTolerance();
+        static void SetEqualityTolerance(double tolerance);
 
         bool IsNull() const;
 
@@ -198,9 +202,7 @@ namespace json /* Node */ {
 
         bool operator!=(const Node& rhs) const;
 
-        bool EqualsWithTolerance(const Node& rhs, double tolerance = EQUALITY_TOLERANCE) const {
-            return *this == rhs || (this->IsDouble() && std::abs(AsDouble() - rhs.AsDouble()) <= tolerance);
-        }
+        bool EqualsWithTolerance(const Node& rhs, double tolerance = EQUALITY_TOLERANCE) const;
 
         static Node LoadNode(std::istream& stream, const OnNodeItemParsedCallback* = nullptr);
 

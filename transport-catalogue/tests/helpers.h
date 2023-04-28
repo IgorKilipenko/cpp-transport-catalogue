@@ -54,15 +54,8 @@ namespace transport_catalogue::tests {
 
     template <typename Result, detail::EnableIf<detail::IsConvertibleV<Result, json::Document> || detail::IsBaseOfV<json::Node, Result>> = true>
     void CheckResults(Result &&expected_result, Result &&result) {
-        // if (result != expected_result) {
-        if constexpr (detail::IsBaseOfV<json::Node, Result>) {
-            if (result.EqualsWithTolerance(expected_result)) {
-                return;
-            }
-        } else {
-            if (result == expected_result) {
-                return;
-            }
+        if (result == expected_result) {
+            return;
         }
 
         std::cerr << "Test result:" << std::endl;
@@ -75,11 +68,17 @@ namespace transport_catalogue::tests {
         assert(false);
     }
 
-    inline void CheckResultsExtend(json::Array &&expected_result, json::Array &&result) {
+    inline void CheckResultsExtend(json::Array &&expected_result, json::Array &&result, double tolerance = json::Node::GetEqualityTolerance()) {
         assert(expected_result.size() == result.size());
+
+        double prev_tolerance = json::Node::GetEqualityTolerance();
+        json::Node::SetEqualityTolerance(tolerance);
+
         for (size_t i = 0; i < expected_result.size(); ++i) {
             CheckResults(expected_result[i], result[i]);
         }
+
+        json::Node::SetEqualityTolerance(prev_tolerance);
     }
 
     template <typename String, detail::EnableIfConvertible<String, std::string_view> = true>
