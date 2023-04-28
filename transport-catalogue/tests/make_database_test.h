@@ -38,16 +38,14 @@ namespace transport_catalogue::tests {
 
         void TestFromExample(std::string file_name, std::string answer_suffix = "expected_res") const {
             std::string result = ReadDocument(DATA_PATH / (file_name + ".json"));
-            std::string expected_result = ReadDocument(DATA_PATH / (file_name + ".json"));
-            // std::string expected_str = transport_catalogue::detail::io::FileReader::Read(DATA_PATH / (file_name + "_" + answer_suffix + ".json"));
-            // assert(!result.empty());
+            assert(result.empty());
         }
 
         void TestFromFile(std::string file_name, std::string answer_suffix = "expected_res") const {
             std::string result = ReadDocument(DATA_PATH / (file_name + ".json"), io::RequestHandler::Mode::MAKE_BASE);
-            std::string request = ReadDocument(DATA_PATH / (file_name + "_request" + ".json"), io::RequestHandler::Mode::PROCESS_REQUESTS);
+            std::string request_result = ReadDocument(DATA_PATH / (file_name + "_request" + ".json"), io::RequestHandler::Mode::PROCESS_REQUESTS);
             std::string expected_result = transport_catalogue::detail::io::FileReader::Read(DATA_PATH / (file_name + "_" + answer_suffix + ".json"));
-            assert(!result.empty());
+            assert(result.empty() && !request_result.empty());
         }
 
         void Test1() const {

@@ -11,8 +11,33 @@
 
 #include "domain.h"
 
-namespace transport_catalogue::serialization /* Store */ {
+namespace transport_catalogue::serialization /* Model types defs */ {
+    using StopModel = proto_data_schema::Stop;
+    using BusModel = proto_data_schema::Bus;
+    // using DistanceBetweenStopsItem =
+    //     std::pair<data::DatabaseScheme::DistanceBetweenStopsTable::key_type, data::DatabaseScheme::DistanceBetweenStopsTable::value_type>;
 
+    struct DistanceBetweenStopsItem {
+        DistanceBetweenStopsItem(data::StopRecord from_stop, data::StopRecord to_stop, double distance_between)
+            : from_stop{from_stop}, to_stop{to_stop}, distance_between{distance_between} {}
+        data::StopRecord from_stop;
+        data::StopRecord to_stop;
+        double distance_between;
+    };
+}
+
+namespace transport_catalogue::serialization /* DataConvertor */ {
+    class DataConvertor {
+    public:
+        template <typename T, std::enable_if_t<!std::is_pointer_v<std::decay_t<T>>, bool> = true>
+        auto ConvertToModel(T&& object) const;
+
+        template <typename T, std::enable_if_t<std::is_same_v<std::decay_t<T>, data::DbRecord<std::remove_pointer_t<std::decay_t<T>>>>, bool> = true>
+        auto ConvertToModel(T object_ptr) const;
+    };
+}
+
+namespace transport_catalogue::serialization /* Store */ {
     class Store {
     public: /* constructors */
         Store(const data::ITransportStatDataReader& db_reader, const data::ITransportDataWriter& db_writer)
@@ -24,25 +49,10 @@ namespace transport_catalogue::serialization /* Store */ {
         Store& operator=(Store&&) = delete;
 
     public: /* serialize methods */
-        void SerializeBuses(data::BusRecord bus, std::ostream& out) const;
-        void SerializeBuses(const data::Bus& bus, std::ostream& out) const;
-        void SerializeBuses(std::ostream& out) const;
-
-        void SerializeStops(data::StopRecord stop, std::ostream& out);
-        void SerializeStops(const data::Stop& stop, std::ostream& out);
-        void SerializeStops(std::ostream& out);
-
-        template <typename T, std::enable_if_t<!std::is_pointer_v<std::decay_t<T>>, bool> = true>
-        auto ConvertToSerializable(T&& object) const;
-
-        template <typename T, std::enable_if_t<std::is_same_v<std::decay_t<T>, data::DbRecord<std::remove_pointer_t<std::decay_t<T>>>>, bool> = true>
-        auto ConvertToSerializable(T object_ptr) const;
-
         void SetDbPath(std::filesystem::path path) {
             db_path_ = path;
         }
 
-        std::vector<proto_data_schema::Bus> ConvertBusesToSerializable() const;
         void ConvertBusesToSerializable(proto_data_schema::TransportData& container) const;
         void ConvertStopsToSerializable(proto_data_schema::TransportData& container) const;
         proto_data_schema::TransportData BuildSerializableTransportData() const;
@@ -57,6 +67,7 @@ namespace transport_catalogue::serialization /* Store */ {
         [[maybe_unused]] const data::ITransportDataWriter& db_writer_;
         const data::DatabaseScheme::StopsTable& stops_;
         std::optional<std::filesystem::path> db_path_;
+        const DataConvertor convertor_;
     };
 
 }
