@@ -54,7 +54,7 @@ namespace transport_catalogue::tests {
             json::Array response = doc.GetRoot().AsArray();
             json::Array expected_response = json::Node::LoadNode(std::stringstream{expected_result_str}).AsArray();
 
-            CheckResultsExtend(std::move(response), std::move(expected_response), tolerance);
+            CheckResultsExtend(std::move(expected_response), std::move(response), tolerance);
         }
 
         void TestBase() const {
