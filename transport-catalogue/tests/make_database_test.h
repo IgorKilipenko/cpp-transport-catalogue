@@ -86,11 +86,13 @@ namespace transport_catalogue::tests {
             TestFromFile("step1_test2");
         }
 
-        /*
+        
         void Test3() const {
             TestFromFile("step1_test3");
+            TestFromFile("step1_test3_2");
         }
 
+        /*
         void TestOnRandomData() const {
             TestFromExample("s12_final_opentest_1", "answer");
             TestFromExample("s12_final_opentest_2", "answer");
@@ -109,10 +111,10 @@ namespace transport_catalogue::tests {
             Test2();
             std::cerr << prefix << "Test2 : Done." << std::endl;
 
-            /*
             Test3();
             std::cerr << prefix << "Test3 : Done." << std::endl;
             
+            /*
             Test4();
             std::cerr << prefix << "Test4 : Done." << std::endl;
 
