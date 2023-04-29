@@ -93,6 +93,8 @@ namespace transport_catalogue::geo {
     };
 
     struct Size {
+        Size() = default;
+        Size(double height, double width) : height(height), width(width) {}
         double height = 0.;
         double width = 0.;
     };

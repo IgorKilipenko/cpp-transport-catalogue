@@ -64,17 +64,15 @@ namespace transport_catalogue::io /* Requests aliases */ {
         template <typename... Args>
         static std::optional<std::variant<uint8_t, double>> ExtractRgbaColorItemIf(std::variant<Args...>&& value);
 
-        template <
-            typename ValType, detail::EnableIf<
-                                  !std::is_lvalue_reference_v<ValType> && (detail::IsConvertibleV<ValType, Array::value_type> ||
-                                                                           detail::IsConvertibleV<ValType, RequestValueType::ValueType>)> = true>
+        // clang-format off
+        template <typename ValType, detail::EnableIf<!std::is_lvalue_reference_v<ValType> 
+            && (detail::IsConvertibleV<ValType, Array::value_type> ||detail::IsConvertibleV<ValType, RequestValueType::ValueType>)> = true>
         static std::optional<Color> ExtractColorIf(ValType&& value);
 
-        template <
-            typename ValType, detail::EnableIf<
-                                  !std::is_lvalue_reference_v<ValType> && (detail::IsConvertibleV<ValType, Array::value_type> ||
-                                                                           detail::IsConvertibleV<ValType, RequestValueType::ValueType>)> = true>
+        template <typename ValType, detail::EnableIf<!std::is_lvalue_reference_v<ValType> 
+            && (detail::IsConvertibleV<ValType, Array::value_type> || detail::IsConvertibleV<ValType, RequestValueType::ValueType>)> = true>
         static std::optional<double> ExtractNumericIf(ValType&& value);
+        // clang-format on
     };
 
     using RequestBase = std::unordered_map<std::string, RequestValueType>;
@@ -83,7 +81,8 @@ namespace transport_catalogue::io /* Requests aliases */ {
 namespace transport_catalogue::io /* Request fields enums */ {
     enum class RequestType : int8_t { BASE, STAT, RENDER_SETTINGS, ROUTING_SETTINGS, SERIALIZATION_SETTINGS, UNKNOWN };
 
-    enum class RequestCommand : uint8_t { STOP, BUS, MAP, ROUTE, SET_RENDER_SETTINGS, SET_ROUTING_SETTINGS, SET_SERIALIZATION_SETTINGS, UNKNOWN };
+    /// Request GET commands (for build responses)
+    enum class RequestCommand : uint8_t { STOP, BUS, MAP, ROUTE, UNKNOWN };
 
     struct RequestFields {
         inline static const std::string BASE_REQUESTS{"base_requests"};
@@ -112,8 +111,6 @@ namespace transport_catalogue::io /* Request fields enums */ {
     };
 
     struct RenderSettingsRequestFields {
-        //! [[deprecated("Will be removed in a future release.")]]
-        inline static const std::string ID = StatRequestFields::ID;
         inline static const std::string WIDTH{"width"};
         inline static const std::string HEIGHT{"height"};
         inline static const std::string PADDING{"padding"};
@@ -129,15 +126,11 @@ namespace transport_catalogue::io /* Request fields enums */ {
     };
 
     struct RoutingSettingsRequestFields {
-        //! [[deprecated("Will be removed in a future release.")]]
-        inline static const std::string ID = StatRequestFields::ID;
         inline static const std::string BUS_WAIT_TIME{"bus_wait_time"};
         inline static const std::string BUS_VELOCITY{"bus_velocity"};
     };
 
     struct SerializationSettingsFields {
-        //! [[deprecated("Will be removed in a future release.")]]
-        inline static const std::string ID = StatRequestFields::ID;
         inline static const std::string FILE{"file"};
     };
 }
@@ -226,6 +219,7 @@ namespace transport_catalogue::io /* Request */ {
         Request(Request&& other) = default;
         Request& operator=(Request&& other) = default;
 
+    public: /* Request type check */
         virtual bool IsBaseRequest() const;
         virtual bool IsStatRequest() const;
         virtual bool IsRenderSettingsRequest() const;
@@ -233,10 +227,11 @@ namespace transport_catalogue::io /* Request */ {
         virtual bool IsSerializationSettingsRequest() const;
         virtual bool IsValidRequest() const;
 
-        virtual bool IsStopCommand() const;
-        virtual bool IsBusCommand() const;
-        virtual bool IsMapCommand() const;
-        virtual bool IsRouteCommand() const;
+    public: /* Commands for build response */
+        virtual bool IsGetStopCommand() const;
+        virtual bool IsGetBusCommand() const;
+        virtual bool IsGetMapCommand() const;
+        virtual bool IsGetRouteCommand() const;
 
         RequestCommand& GetCommand();
         const RequestCommand& GetCommand() const;
@@ -251,8 +246,6 @@ namespace transport_catalogue::io /* Request */ {
         inline static const RequestEnumConverter converter{};
         Request() = default;
         Request(RequestCommand type, RequestArgsMap&& args) : command_{std::move(type)}, args_{std::move(args)} {}
-
-        //! [[deprecated("Will be removed in a future release. Use ctr with RequestCommand type.")]]
         Request(std::string&& type, RequestArgsMap&& args);
 
         explicit Request(RawRequest&& raw_request);
@@ -380,16 +373,11 @@ namespace transport_catalogue::io /* RenderSettingsRequest */ {
         using Offset = RawRequest::Offset;
 
     public:
-        RenderSettingsRequest(RequestCommand type, RequestArgsMap&& args) : Request(std::move(type), std::move(args)) {
-            Build();
-        }
+        RenderSettingsRequest(RequestCommand type, RequestArgsMap&& args);
+        explicit RenderSettingsRequest(RawRequest&& raw_request);
 
-        explicit RenderSettingsRequest(RawRequest&& raw_request)
-            : RenderSettingsRequest(RequestCommand::SET_RENDER_SETTINGS, std::move(raw_request)) {}
-
-        bool IsBaseRequest() const override;
-        bool IsStatRequest() const override;
         bool IsValidRequest() const override;
+        bool IsRenderSettingsRequest() const override;
 
         std::optional<double>& GetWidth();
         std::optional<double>& GetHeight();
@@ -434,6 +422,8 @@ namespace transport_catalogue::io /* RoutingSettingsRequest */ {
         RoutingSettingsRequest(RequestCommand type, RequestArgsMap&& args);
         explicit RoutingSettingsRequest(RawRequest&& raw_request);
 
+        bool IsValidRequest() const override;
+
         const std::optional<uint16_t>& GetBusWaitTimeMin() const;
         const std::optional<uint16_t>& GetBusVelocityKmh() const;
         bool IsRoutingSettingsRequest() const override;
@@ -451,11 +441,11 @@ namespace transport_catalogue::io /* SerializationSettingsRequest */ {
 
     class SerializationSettingsRequest : public Request {
     public:
-        SerializationSettingsRequest(RequestCommand type, RequestArgsMap&& args);
         explicit SerializationSettingsRequest(RawRequest&& raw_request);
 
         const std::optional<std::string>& GetFile() const;
         bool IsSerializationSettingsRequest() const override;
+        bool IsValidRequest() const override;
 
     public:
         using Fields = SerializationSettingsFields;
@@ -576,12 +566,12 @@ namespace transport_catalogue::io /* RequestHandler */ {
               response_sender_{response_sender},
               renderer_{renderer},
               router_({}, db_reader_.GetDataReader()),
-              storage_(db_reader_, db_writer_),
+              storage_(db_reader_, db_writer_, renderer_),
               mode_{mode} {}
 
         ~RequestHandler() {}
 
-        class SettingsBuilder;
+        class RenderSettingsBuilder;
 
         //* Is non-const for use cache in next versions
         std::string RenderMap();
@@ -638,7 +628,7 @@ namespace transport_catalogue::io /* RequestHandler */ {
 
 namespace transport_catalogue::io /* RequestHandler::SettingsBuilder */ {
 
-    class RequestHandler::SettingsBuilder {
+    class RequestHandler::RenderSettingsBuilder {
     public:
         static maps::RenderSettings BuildMapRenderSettings(RenderSettingsRequest&& request);
 
@@ -855,24 +845,10 @@ namespace transport_catalogue::io /* RawRequest template implementation */ {
     }
 }
 
-namespace transport_catalogue::io /* RequestHandler::SettingsBuilder template implementation */ {
+namespace transport_catalogue::io /* RequestHandler::RenderSettingsBuilder template implementation */ {
 
     template <typename RawColor_, detail::EnableIf<!std::is_lvalue_reference_v<RawColor_>>>
-    std::optional<maps::Color> RequestHandler::SettingsBuilder::ConvertColor(RawColor_&& raw_color) {
-        return std::visit(
-            [](auto&& arg) -> std::optional<maps::Color> {
-                using T = std::decay_t<decltype(arg)>;
-                if constexpr (detail::IsConvertibleV<T, maps::Color>) {
-                    return std::move(arg);
-                } else if constexpr (detail::IsConvertibleV<T, std::vector<std::variant<uint8_t, double>>>) {
-                    if (arg.size() == 3) {
-                        return svg::Rgb::FromVariant(std::move(arg));
-                    } else if (arg.size() > 3) {
-                        return svg::Rgba::FromVariant(std::move(arg));
-                    }
-                }
-                return std::nullopt;
-            },
-            std::move(raw_color));
+    std::optional<maps::Color> RequestHandler::RenderSettingsBuilder::ConvertColor(RawColor_&& raw_color) {
+        return svg::Colors::ConvertColor(std::move(raw_color));
     }
 }

@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package proto_schema.svg;
+
+message Rgb {
+    int32 red = 1;
+    int32 green = 2;
+    int32 blue = 3;
+}
+
+message Rgba {
+    Rgb rgb = 1;
+    double alpha = 2;
+}
+
+message Color
+{
+    oneof type
+    {
+        Rgb rgb = 1;
+        Rgba rgba = 2;
+        string named = 3;
+    }
+}

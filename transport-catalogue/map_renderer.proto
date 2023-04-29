@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package proto_schema.maps;
+
+import "svg.proto";
+
+message Offset {
+    double north = 1;
+    double east = 2;
+}
+
+message Label {
+    Offset offset = 1;
+    int32 font_size = 2;
+}
+
+message Container {
+    double width = 1;
+    double height = 2;
+    double padding = 3;
+}
+
+message Decoration {
+    double line_width = 1;
+    double stop_marker_radius = 2;
+    proto_schema.svg.Color underlayer_color = 3;
+    double underlayer_width = 4;
+}
+
+message ColorPalette {
+    repeated proto_schema.svg.Color color_palette = 1;
+}
+
+message RenderSettings {
+    Container container = 1;
+    Label bus_label = 2;
+    Label stop_label = 3;
+    Decoration decoration = 4;
+    ColorPalette color_palette = 5;
+}

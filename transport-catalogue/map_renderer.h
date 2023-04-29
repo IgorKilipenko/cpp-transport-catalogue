@@ -188,7 +188,7 @@ namespace transport_catalogue::io::renderer /* IRenderer */ {
         virtual void AddStopToLayer(const data::StopRecord&& stop_record) = 0;
         virtual void SetRenderSettings(maps::RenderSettings&& settings) = 0;
 
-        virtual maps::RenderSettings& GetRenderSettings() = 0;
+        virtual const maps::RenderSettings& GetRenderSettings() const = 0;
         virtual RawMapData GetRawMap() = 0;
         virtual svg::Document& GetRouteLayer() = 0;
         virtual svg::Document& GetRouteNamesLayer() = 0;
@@ -260,7 +260,7 @@ namespace transport_catalogue::maps /* MapRenderer */ {
 
         void SetRenderSettings(RenderSettings&& settings) override;
 
-        RenderSettings& GetRenderSettings() override;
+        const RenderSettings& GetRenderSettings() const override;
 
         RawMapData GetRawMap() override;
 

@@ -1,6 +1,8 @@
 syntax = "proto3";
 
-package proto_data_schema;
+package proto_schema.transport;
+
+import "map_renderer.proto";
 
 message Coordinates {
     double lat = 1;
@@ -28,4 +30,13 @@ message TransportData {
     repeated Stop stops = 1;
     repeated Bus buses = 2;
     repeated DistancesBetweenStops distances = 3;
+}
+
+message Settings {
+    proto_schema.maps.RenderSettings render_settings = 1;
+}
+
+message Database {
+    TransportData transport_data = 1;
+    Settings settings = 2;
 }
