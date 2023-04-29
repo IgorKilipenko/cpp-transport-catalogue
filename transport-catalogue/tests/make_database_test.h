@@ -84,6 +84,16 @@ namespace transport_catalogue::tests {
             TestFromFile("step2_test1");
         }
 
+        void Test2_2() const {
+            TestFromFile("step2_test1");
+        }
+
+        void TestOnRandomDataStep2() const {
+            TestFromFile("s14_2_opentest_1", "process_requests", "answer", 1e-5);
+            TestFromFile("s14_2_opentest_2", "process_requests", "answer", 1e-5);
+            TestFromFile("s14_2_opentest_3", "process_requests", "answer", 1e-5);
+        }
+
         void RunTests() const {
             const std::string prefix = "[MakeDatabase] ";
 
@@ -104,6 +114,12 @@ namespace transport_catalogue::tests {
 
             Test2_1();
             std::cerr << prefix << "Test2_1 : Done." << std::endl;
+
+            Test2_2();
+            std::cerr << prefix << "Test2_2 : Done." << std::endl;
+
+            TestOnRandomDataStep2();
+            std::cerr << prefix << "TestOnRandomDataStep2 : Done." << std::endl;
 
             std::cerr << std::endl << "All MakeDatabase Tests : Done." << std::endl << std::endl;
         }
