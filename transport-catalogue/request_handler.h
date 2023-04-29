@@ -65,17 +65,15 @@ namespace transport_catalogue::io /* Requests aliases */ {
         template <typename... Args>
         static std::optional<std::variant<uint8_t, double>> ExtractRgbaColorItemIf(std::variant<Args...>&& value);
 
-        template <
-            typename ValType, detail::EnableIf<
-                                  !std::is_lvalue_reference_v<ValType> && (detail::IsConvertibleV<ValType, Array::value_type> ||
-                                                                           detail::IsConvertibleV<ValType, RequestValueType::ValueType>)> = true>
+        // clang-format off
+        template <typename ValType, detail::EnableIf<!std::is_lvalue_reference_v<ValType> 
+            && (detail::IsConvertibleV<ValType, Array::value_type> ||detail::IsConvertibleV<ValType, RequestValueType::ValueType>)> = true>
         static std::optional<Color> ExtractColorIf(ValType&& value);
 
-        template <
-            typename ValType, detail::EnableIf<
-                                  !std::is_lvalue_reference_v<ValType> && (detail::IsConvertibleV<ValType, Array::value_type> ||
-                                                                           detail::IsConvertibleV<ValType, RequestValueType::ValueType>)> = true>
+        template <typename ValType, detail::EnableIf<!std::is_lvalue_reference_v<ValType> 
+            && (detail::IsConvertibleV<ValType, Array::value_type> || detail::IsConvertibleV<ValType, RequestValueType::ValueType>)> = true>
         static std::optional<double> ExtractNumericIf(ValType&& value);
+        // clang-format on
     };
 
     using RequestBase = std::unordered_map<std::string, RequestValueType>;
@@ -574,7 +572,7 @@ namespace transport_catalogue::io /* RequestHandler */ {
 
         ~RequestHandler() {}
 
-        class SettingsBuilder;
+        class RenderSettingsBuilder;
 
         //* Is non-const for use cache in next versions
         std::string RenderMap();
@@ -631,7 +629,7 @@ namespace transport_catalogue::io /* RequestHandler */ {
 
 namespace transport_catalogue::io /* RequestHandler::SettingsBuilder */ {
 
-    class RequestHandler::SettingsBuilder {
+    class RequestHandler::RenderSettingsBuilder {
     public:
         static maps::RenderSettings BuildMapRenderSettings(RenderSettingsRequest&& request);
 
@@ -848,10 +846,10 @@ namespace transport_catalogue::io /* RawRequest template implementation */ {
     }
 }
 
-namespace transport_catalogue::io /* RequestHandler::SettingsBuilder template implementation */ {
+namespace transport_catalogue::io /* RequestHandler::RenderSettingsBuilder template implementation */ {
 
     template <typename RawColor_, detail::EnableIf<!std::is_lvalue_reference_v<RawColor_>>>
-    std::optional<maps::Color> RequestHandler::SettingsBuilder::ConvertColor(RawColor_&& raw_color) {
+    std::optional<maps::Color> RequestHandler::RenderSettingsBuilder::ConvertColor(RawColor_&& raw_color) {
         return std::visit(
             [](auto&& arg) -> std::optional<maps::Color> {
                 using T = std::decay_t<decltype(arg)>;

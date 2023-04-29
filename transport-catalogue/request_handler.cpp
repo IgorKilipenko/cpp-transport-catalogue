@@ -401,7 +401,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         assert(request.IsRenderSettingsRequest());
         assert(request.IsValidRequest());
 
-        maps::RenderSettings settings = SettingsBuilder::BuildMapRenderSettings(std::move(request));
+        maps::RenderSettings settings = RenderSettingsBuilder::BuildMapRenderSettings(std::move(request));
         renderer_.SetRenderSettings(std::move(settings));
     }
 
@@ -494,9 +494,9 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
     }
 }
 
-namespace transport_catalogue::io /* RequestHandler::SettingsBuilder implementation */ {
+namespace transport_catalogue::io /* RequestHandler::RenderSettingsBuilder implementation */ {
 
-    maps::RenderSettings RequestHandler::SettingsBuilder::BuildMapRenderSettings(RenderSettingsRequest&& request) {
+    maps::RenderSettings RequestHandler::RenderSettingsBuilder::BuildMapRenderSettings(RenderSettingsRequest&& request) {
         maps::RenderSettings settings;
 
         assert(request.GetHeight().has_value() && request.GetWidth().has_value());
