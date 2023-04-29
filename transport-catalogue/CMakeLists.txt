@@ -5,6 +5,7 @@ project(${PROJECT_NAME} CXX)
 
 set(SRC_DIR ${PROJECT_SOURCE_DIR})
 set(MAIN_FILE ${SRC_DIR}/main.cpp )
+set(PROTO_DIR ${SRC_DIR}/schema )
 
 if (DEFINED TESTS AND TESTS)
     set(TESTS_DIR ${SRC_DIR}/tests)
@@ -28,6 +29,12 @@ set(LIBS
     ${SRC_DIR}/serialization.cpp
 )
 
+set(PROTO_FILES 
+    ${PROTO_DIR}/transport_catalogue.proto 
+    ${PROTO_DIR}/svg.proto
+    ${PROTO_DIR}/map_renderer.proto
+)
+
 set(CFLAGS -Wall -Werror -pedantic)
 set(DEFS)
 set(LINK_OPTS)
@@ -36,7 +43,7 @@ set(LDLIBS tbb pthread)
 find_package(Protobuf REQUIRED)
 find_package(Threads REQUIRED)
 
-protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS "schema/transport_catalogue.proto")
+protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTO_FILES})
 
 if (DEFINED CMAKE_BUILD_TYPE AND CMAKE_BUILD_TYPE STREQUAL "Debug") 
     message("Debug mode.")
