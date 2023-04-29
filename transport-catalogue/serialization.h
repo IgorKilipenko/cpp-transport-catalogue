@@ -11,9 +11,12 @@
 
 #include "domain.h"
 
-namespace transport_catalogue::serialization /* Model types defs */ {
-    using StopModel = proto_data_schema::Stop;
-    using BusModel = proto_data_schema::Bus;
+namespace transport_catalogue::serialization /* Model types aliases and defs */ {
+    using StopModel = proto_schema::transport::Stop;
+    using BusModel = proto_schema::transport::Bus;
+    using CoordinatesModel = proto_schema::transport::Coordinates;
+    using DistancesBetweenStopsModel = proto_schema::transport::DistancesBetweenStops;
+    using TransportDataModel = proto_schema::transport::TransportData;
     struct DistanceBetweenStopsItem {
         DistanceBetweenStopsItem(data::StopRecord from_stop, data::StopRecord to_stop, double distance_between)
             : from_stop{from_stop}, to_stop{to_stop}, distance_between{distance_between} {}
@@ -50,10 +53,10 @@ namespace transport_catalogue::serialization /* Store */ {
             db_path_ = path;
         }
 
-        void PrepareBuses(proto_data_schema::TransportData& container) const;
-        void PrepareStops(proto_data_schema::TransportData& container) const;
-        void PrepareDistances(proto_data_schema::TransportData& container) const;
-        proto_data_schema::TransportData BuildSerializableTransportData() const;
+        void PrepareBuses(TransportDataModel& container) const;
+        void PrepareStops(TransportDataModel& container) const;
+        void PrepareDistances(TransportDataModel& container) const;
+        TransportDataModel BuildSerializableTransportData() const;
 
         bool SaveToStorage();
 

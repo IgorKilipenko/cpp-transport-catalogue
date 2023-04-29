@@ -1,6 +1,8 @@
 syntax = "proto3";
 
-package proto_data_schema;
+package proto_schema.transport;
+
+import "map_renderer.proto";
 
 message Coordinates {
     double lat = 1;
