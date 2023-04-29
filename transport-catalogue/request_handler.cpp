@@ -421,7 +421,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         assert(request.GetFile().has_value());
         storage_.SetDbPath(std::filesystem::path(request.GetFile().value()));
         if (mode_ == Mode::PROCESS_REQUESTS) {
-            storage_.DeserializeTransportData();
+            storage_.DeserializeDatabase();
         }
     }
 

@@ -31,3 +31,12 @@ message TransportData {
     repeated Bus buses = 2;
     repeated DistancesBetweenStops distances = 3;
 }
+
+message Settings {
+    proto_schema.maps.RenderSettings render_settings = 1;
+}
+
+message Database {
+    TransportData transport_data = 1;
+    Settings settings = 2;
+}

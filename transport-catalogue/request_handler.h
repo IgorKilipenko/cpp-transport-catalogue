@@ -567,7 +567,7 @@ namespace transport_catalogue::io /* RequestHandler */ {
               response_sender_{response_sender},
               renderer_{renderer},
               router_({}, db_reader_.GetDataReader()),
-              storage_(db_reader_, db_writer_),
+              storage_(db_reader_, db_writer_, renderer_),
               mode_{mode} {}
 
         ~RequestHandler() {}
@@ -850,20 +850,6 @@ namespace transport_catalogue::io /* RequestHandler::RenderSettingsBuilder templ
 
     template <typename RawColor_, detail::EnableIf<!std::is_lvalue_reference_v<RawColor_>>>
     std::optional<maps::Color> RequestHandler::RenderSettingsBuilder::ConvertColor(RawColor_&& raw_color) {
-        return std::visit(
-            [](auto&& arg) -> std::optional<maps::Color> {
-                using T = std::decay_t<decltype(arg)>;
-                if constexpr (detail::IsConvertibleV<T, maps::Color>) {
-                    return std::move(arg);
-                } else if constexpr (detail::IsConvertibleV<T, std::vector<std::variant<uint8_t, double>>>) {
-                    if (arg.size() == 3) {
-                        return svg::Rgb::FromVariant(std::move(arg));
-                    } else if (arg.size() > 3) {
-                        return svg::Rgba::FromVariant(std::move(arg));
-                    }
-                }
-                return std::nullopt;
-            },
-            std::move(raw_color));
+        return svg::Colors::ConvertColor(std::move(raw_color));
     }
 }

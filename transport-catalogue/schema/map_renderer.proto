@@ -5,8 +5,8 @@ package proto_schema.maps;
 import "svg.proto";
 
 message Offset {
-    double x = 1;
-    double y = 2;
+    double north = 1;
+    double east = 2;
 }
 
 message Label {
@@ -22,9 +22,13 @@ message Container {
 
 message Decoration {
     double line_width = 1;
-    double stop_radius = 2;
+    double stop_marker_radius = 2;
     proto_schema.svg.Color underlayer_color = 3;
     double underlayer_width = 4;
+}
+
+message ColorPalette {
+    repeated proto_schema.svg.Color color_palette = 1;
 }
 
 message RenderSettings {
@@ -32,5 +36,5 @@ message RenderSettings {
     Label bus_label = 2;
     Label stop_label = 3;
     Decoration decoration = 4;
-    repeated proto_schema.svg.Color color_palette = 5;
+    ColorPalette color_palette = 5;
 }
