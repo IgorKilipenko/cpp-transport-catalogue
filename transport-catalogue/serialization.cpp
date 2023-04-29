@@ -163,7 +163,7 @@ namespace transport_catalogue::serialization /* DataConvertor implementation */ 
             return stop_label;
         }();
 
-        *settings_model.mutable_bus_label() = stop_label;
+        *settings_model.mutable_stop_label() = stop_label;
 
         proto_schema::maps::ColorPalette* color_palette_model = settings_model.mutable_color_palette();
         std::for_each(settings.color_palette.begin(), settings.color_palette.end(), [&](const maps::Color& color) {
@@ -271,6 +271,7 @@ namespace transport_catalogue::serialization /* Store (deserialize) implementati
 
         proto_schema::maps::Container container_model = std::move(*render_settings_model.mutable_container());
         const maps::Size map_size(container_model.height(), container_model.width());
+        settings.map_size = std::move(map_size);
         settings.padding = container_model.padding();
 
         settings.bus_label_font_size = render_settings_model.bus_label().font_size();
@@ -292,6 +293,8 @@ namespace transport_catalogue::serialization /* Store (deserialize) implementati
         std::transform(std::move_iterator(color_palette_model.begin()), std::move_iterator(color_palette_model.end()), color_palette.begin(), [&](auto&& color_model){
             return convertor_.ConvertFromModel(std::move(color_model));
         });
+
+        settings.color_palette = std::move(color_palette);
 
         map_renderer_.SetRenderSettings(std::move(settings));
     }
