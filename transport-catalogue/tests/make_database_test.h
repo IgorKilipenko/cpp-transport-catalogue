@@ -73,12 +73,15 @@ namespace transport_catalogue::tests {
             TestFromFile("step1_test3", "request", "expected_res", 1e-5);
             TestFromFile("step1_test3_2", "request", "expected_res", 1e-5);
         }
-
-        
+      
         void TestOnRandomData() const {
             TestFromFile("s14_1_opentest_1", "process_requests", "answer", 1e-5);
             TestFromFile("s14_1_opentest_2", "process_requests", "answer", 1e-5);
             TestFromFile("s14_1_opentest_3", "process_requests", "answer", 1e-5);
+        }
+
+        void Test2_1() const {
+            TestFromFile("step2_test1");
         }
 
         void RunTests() const {
@@ -98,6 +101,9 @@ namespace transport_catalogue::tests {
 
             TestOnRandomData();
             std::cerr << prefix << "TestOnRandomData : Done." << std::endl;
+
+            Test2_1();
+            std::cerr << prefix << "Test2_1 : Done." << std::endl;
 
             std::cerr << std::endl << "All MakeDatabase Tests : Done." << std::endl << std::endl;
         }
