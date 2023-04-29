@@ -176,7 +176,7 @@ namespace transport_catalogue::io /* Request implementation */ {
         : Request(
               (assert(
                    type == converter(RequestCommand::BUS) || type == converter(RequestCommand::STOP) || type == converter(RequestCommand::MAP) ||
-                   type == converter(RequestCommand::ROUTE)),
+                   type == converter(RequestCommand::ROUTE) || type == converter(RequestCommand::SERIALIZATION)),
                converter.ToRequestCommand(std::move(type))),
               std::move(args)) {}
 
@@ -207,7 +207,9 @@ namespace transport_catalogue::io /* Request implementation */ {
     }
 
     bool Request::IsValidRequest() const {
-        return (IsBusCommand() || IsStopCommand() || IsMapCommand() || IsRouteCommand() || IsRenderSettingsRequest() || IsRenderSettingsRequest());
+        return (
+            IsBusCommand() || IsStopCommand() || IsMapCommand() || IsRouteCommand() || IsRenderSettingsRequest() || IsRoutingSettingsRequest() ||
+            IsSerializationSettingsRequest());
     }
 
     RequestCommand& Request::GetCommand() {
@@ -232,6 +234,10 @@ namespace transport_catalogue::io /* Request implementation */ {
 
     bool Request::IsRouteCommand() const {
         return command_ == RequestCommand::ROUTE;
+    }
+
+    bool Request::IsSerializationCommand() const {
+        return command_ == RequestCommand::SERIALIZATION;
     }
 }
 
@@ -434,17 +440,26 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
     }
 
     void RequestHandler::ExecuteRequest(RenderSettingsRequest&& request) {
+        assert(request.IsRenderSettingsRequest());
+        assert(request.IsValidRequest());
+
         maps::RenderSettings settings = SettingsBuilder::BuildMapRenderSettings(std::move(request));
         renderer_.SetRenderSettings(std::move(settings));
     }
 
     void RequestHandler::ExecuteRequest(RoutingSettingsRequest&& request) {
+        assert(request.IsRoutingSettingsRequest());
+        assert(request.IsValidRequest());
+
         router_.SetSettings(
             {static_cast<double>(request.GetBusWaitTimeMin().value_or(0)), static_cast<double>(request.GetBusVelocityKmh().value_or(0))});
         router_.Build();
     }
 
     void RequestHandler::ExecuteRequest(SerializationSettingsRequest&& request) {
+        assert(request.IsSerializationSettingsRequest());
+        assert(request.IsValidRequest());
+
         assert(request.GetFile().has_value());
         storage_.SetDbPath(std::filesystem::path(request.GetFile().value()));
         if (mode_ == Mode::PROCESS_REQUESTS) {
@@ -682,16 +697,12 @@ namespace transport_catalogue::io /* StatResponse implementation */ {
 
 namespace transport_catalogue::io /* RenderSettingsRequest implementation */ {
 
-    bool RenderSettingsRequest::IsBaseRequest() const {
-        return false;
-    }
-
-    bool RenderSettingsRequest::IsStatRequest() const {
-        return false;
-    }
-
     bool RenderSettingsRequest::IsValidRequest() const {
-        throw std::runtime_error("Not implemented");
+        return Request::IsValidRequest();
+    }
+
+    bool RenderSettingsRequest::IsRenderSettingsRequest() const {
+        return true;
     }
 
     std::optional<double>& RenderSettingsRequest::GetWidth() {
@@ -788,6 +799,10 @@ namespace transport_catalogue::io /* RoutingSettingsRequest implementation */ {
     RoutingSettingsRequest::RoutingSettingsRequest(RawRequest&& raw_request)
         : RoutingSettingsRequest(RequestCommand::SET_RENDER_SETTINGS, std::move(raw_request)) {}
 
+    bool RoutingSettingsRequest::IsValidRequest() const {
+        return Request::IsValidRequest() && bus_wait_time_min_.has_value() && bus_velocity_kmh_.has_value();
+    }
+
     const std::optional<uint16_t>& RoutingSettingsRequest::GetBusWaitTimeMin() const {
         return bus_wait_time_min_;
     }
@@ -801,7 +816,6 @@ namespace transport_catalogue::io /* RoutingSettingsRequest implementation */ {
     }
 
     void RoutingSettingsRequest::Build() {
-        bus_wait_time_min_ = args_.ExtractNumberValueIf(RenderSettingsRequestFields::WIDTH);
         bus_wait_time_min_ = args_.ExtractNumberValueIf(RoutingSettingsRequestFields::BUS_WAIT_TIME);
         bus_velocity_kmh_ = args_.ExtractNumberValueIf(RoutingSettingsRequestFields::BUS_VELOCITY);
     }
@@ -815,7 +829,7 @@ namespace transport_catalogue::io /* SerializationSettingsRequest implementation
     }
 
     SerializationSettingsRequest::SerializationSettingsRequest(RawRequest&& raw_request)
-        : SerializationSettingsRequest(RequestCommand::SET_RENDER_SETTINGS, std::move(raw_request)) {}
+        : SerializationSettingsRequest(RequestCommand::SET_SERIALIZATION_SETTINGS, std::move(raw_request)) {}
 
     const std::optional<std::string>& SerializationSettingsRequest::GetFile() const {
         return file_;
@@ -823,6 +837,10 @@ namespace transport_catalogue::io /* SerializationSettingsRequest implementation
 
     bool SerializationSettingsRequest::IsSerializationSettingsRequest() const {
         return true;
+    }
+
+    bool SerializationSettingsRequest::IsValidRequest() const {
+        return Request::IsValidRequest() && file_.has_value();
     }
 
     void SerializationSettingsRequest::Build() {

@@ -84,7 +84,7 @@ namespace transport_catalogue::io /* Requests aliases */ {
 namespace transport_catalogue::io /* Request fields enums */ {
     enum class RequestType : int8_t { BASE, STAT, RENDER_SETTINGS, ROUTING_SETTINGS, SERIALIZATION_SETTINGS, UNKNOWN };
 
-    enum class RequestCommand : uint8_t { STOP, BUS, MAP, ROUTE, SET_RENDER_SETTINGS, SET_ROUTING_SETTINGS, SET_SERIALIZATION_SETTINGS, UNKNOWN };
+    enum class RequestCommand : uint8_t { STOP, BUS, MAP, ROUTE, SERIALIZATION, SET_RENDER_SETTINGS, SET_ROUTING_SETTINGS, SET_SERIALIZATION_SETTINGS, UNKNOWN };
 
     struct RequestFields {
         inline static const std::string BASE_REQUESTS{"base_requests"};
@@ -238,6 +238,7 @@ namespace transport_catalogue::io /* Request */ {
         virtual bool IsBusCommand() const;
         virtual bool IsMapCommand() const;
         virtual bool IsRouteCommand() const;
+        virtual bool IsSerializationCommand() const;
 
         RequestCommand& GetCommand();
         const RequestCommand& GetCommand() const;
@@ -388,9 +389,8 @@ namespace transport_catalogue::io /* RenderSettingsRequest */ {
         explicit RenderSettingsRequest(RawRequest&& raw_request)
             : RenderSettingsRequest(RequestCommand::SET_RENDER_SETTINGS, std::move(raw_request)) {}
 
-        bool IsBaseRequest() const override;
-        bool IsStatRequest() const override;
         bool IsValidRequest() const override;
+        bool IsRenderSettingsRequest() const override;
 
         std::optional<double>& GetWidth();
         std::optional<double>& GetHeight();
@@ -435,6 +435,8 @@ namespace transport_catalogue::io /* RoutingSettingsRequest */ {
         RoutingSettingsRequest(RequestCommand type, RequestArgsMap&& args);
         explicit RoutingSettingsRequest(RawRequest&& raw_request);
 
+        bool IsValidRequest() const override;
+
         const std::optional<uint16_t>& GetBusWaitTimeMin() const;
         const std::optional<uint16_t>& GetBusVelocityKmh() const;
         bool IsRoutingSettingsRequest() const override;
@@ -457,6 +459,7 @@ namespace transport_catalogue::io /* SerializationSettingsRequest */ {
 
         const std::optional<std::string>& GetFile() const;
         bool IsSerializationSettingsRequest() const override;
+        bool IsValidRequest() const override;
 
     public:
         using Fields = SerializationSettingsFields;
