@@ -64,7 +64,7 @@ namespace transport_catalogue::maps /* MapRenderer implementation */ {
         color_picker_.SetColorPalette(settings_.color_palette);
     }
 
-    RenderSettings& MapRenderer::GetRenderSettings() {
+    const RenderSettings& MapRenderer::GetRenderSettings() const {
         return settings_;
     }
 
