@@ -119,7 +119,6 @@ namespace transport_catalogue::serialization /* DataConvertor implementation */ 
         }
 
         result = color.named();
-        //! assert(!color.named().empty());
         return result;
     }
 
