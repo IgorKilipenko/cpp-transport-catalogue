@@ -69,7 +69,7 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
 
     bool BaseRequest::IsValidRequest() const {
         return Request::IsValidRequest() && !name_.empty() &&
-               ((IsBusCommand() && is_roundtrip_.has_value()) || (IsStopCommand() && coordinates_.has_value()));
+               ((IsGetBusCommand() && is_roundtrip_.has_value()) || (IsGetStopCommand() && coordinates_.has_value()));
     }
 
     void BaseRequest::ConvertToRoundtrip() {
@@ -172,14 +172,18 @@ namespace transport_catalogue::io /* BaseRequest implementation */ {
 
 namespace transport_catalogue::io /* Request implementation */ {
 
-    Request::Request(std::string&& type, RequestArgsMap&& args)
+    /// For requests that must return a response
+    /// [command] arg used for build response.
+    Request::Request(std::string&& command, RequestArgsMap&& args)
         : Request(
               (assert(
-                   type == converter(RequestCommand::BUS) || type == converter(RequestCommand::STOP) || type == converter(RequestCommand::MAP) ||
-                   type == converter(RequestCommand::ROUTE) || type == converter(RequestCommand::SERIALIZATION)),
-               converter.ToRequestCommand(std::move(type))),
+                   command == converter(RequestCommand::BUS) || command == converter(RequestCommand::STOP) ||
+                   command == converter(RequestCommand::MAP) || command == converter(RequestCommand::ROUTE)),
+               converter.ToRequestCommand(std::move(command))),
               std::move(args)) {}
 
+    /// For requests that should not return a response
+    /// [command] arg used for build response.
     Request::Request(RawRequest&& raw_request)
         : Request(
               (assert(raw_request.count(RequestFields::TYPE) && std::holds_alternative<std::string>(raw_request.at(RequestFields::TYPE))),
@@ -208,7 +212,7 @@ namespace transport_catalogue::io /* Request implementation */ {
 
     bool Request::IsValidRequest() const {
         return (
-            IsBusCommand() || IsStopCommand() || IsMapCommand() || IsRouteCommand() || IsRenderSettingsRequest() || IsRoutingSettingsRequest() ||
+            IsGetBusCommand() || IsGetStopCommand() || IsGetMapCommand() || IsGetRouteCommand() || IsRenderSettingsRequest() || IsRoutingSettingsRequest() ||
             IsSerializationSettingsRequest());
     }
 
@@ -220,104 +224,58 @@ namespace transport_catalogue::io /* Request implementation */ {
         return command_;
     }
 
-    bool Request::IsStopCommand() const {
+    bool Request::IsGetStopCommand() const {
         return command_ == RequestCommand::STOP;
     }
 
-    bool Request::IsBusCommand() const {
+    bool Request::IsGetBusCommand() const {
         return command_ == RequestCommand::BUS;
     }
 
-    bool Request::IsMapCommand() const {
+    bool Request::IsGetMapCommand() const {
         return command_ == RequestCommand::MAP;
     }
 
-    bool Request::IsRouteCommand() const {
+    bool Request::IsGetRouteCommand() const {
         return command_ == RequestCommand::ROUTE;
-    }
-
-    bool Request::IsSerializationCommand() const {
-        return command_ == RequestCommand::SERIALIZATION;
     }
 }
 
 namespace transport_catalogue::io /* RequestEnumConverter implementation */ {
 
+    /// Convert to commands for build response (used in StatRequest)
     std::string_view RequestEnumConverter::operator()(io::RequestCommand enum_value) const {
         using namespace std::string_view_literals;
 
         switch (enum_value) {
-        case io::RequestCommand::BUS:
+        case io::RequestCommand::BUS:  /// For BaseRequest
             return "Bus"sv;
-        case io::RequestCommand::STOP:
+        case io::RequestCommand::STOP:  /// For BaseRequest
             return "Stop"sv;
-        case io::RequestCommand::MAP:
+        case io::RequestCommand::MAP:  /// For StatRequest
             return "Map"sv;
-        case io::RequestCommand::ROUTE:
+        case io::RequestCommand::ROUTE:  /// For StatRequest
             return "Route"sv;
-        case io::RequestCommand::UNKNOWN:
+        case io::RequestCommand::UNKNOWN:  /// Unused
             return "Unknown"sv;
         default:
             return InvalidValue;
         }
     }
 
-    std::string_view RequestEnumConverter::operator()(io::RequestType enum_value) const {
-        using namespace std::string_view_literals;
-
-        switch (enum_value) {
-        case io::RequestType::BASE:
-            return RequestFields::BASE_REQUESTS;
-        case io::RequestType::STAT:
-            return RequestFields::STAT_REQUESTS;
-        case io::RequestType::RENDER_SETTINGS:
-            return RequestFields::RENDER_SETTINGS;
-        case io::RequestType::SERIALIZATION_SETTINGS:
-            return RequestFields::SERIALIZATION_SETTINGS;
-        case io::RequestType::UNKNOWN:
-            return "Unknown"sv;
-        default:
-            return InvalidValue;
-        }
-    }
-
-    RequestType RequestEnumConverter::ToRequestType(std::string_view enum_name) const {
-        using namespace std::string_view_literals;
-
-        if (enum_name == RequestFields::BASE_REQUESTS) {
-            return RequestType::BASE;
-        } else if (enum_name == RequestFields::STAT_REQUESTS) {
-            return RequestType::STAT;
-        } else if (enum_name == RequestFields::RENDER_SETTINGS) {
-            return RequestType::RENDER_SETTINGS;
-        } else if (enum_name == RequestFields::ROUTING_SETTINGS) {
-            return RequestType::ROUTING_SETTINGS;
-        } else if (enum_name == RequestFields::SERIALIZATION_SETTINGS) {
-            return RequestType::SERIALIZATION_SETTINGS;
-        } else if (enum_name == "Unknown"sv) {
-            return RequestType::UNKNOWN;
-        }
-        throw std::invalid_argument(InvalidValue);
-    }
-
+    /// Convert string command to request command enum (Request commands needed for build response)
     RequestCommand RequestEnumConverter::ToRequestCommand(std::string_view enum_name) const {
         using namespace std::string_view_literals;
 
-        if (enum_name == "Bus"sv) {
+        if (enum_name == "Bus"sv) {  /// For BaseRequest
             return io::RequestCommand::BUS;
-        } else if (enum_name == "Stop"sv) {
+        } else if (enum_name == "Stop"sv) {  /// For BaseRequest
             return io::RequestCommand::STOP;
-        } else if (enum_name == "Map"sv) {
+        } else if (enum_name == "Map"sv) {  /// For StatRequest
             return io::RequestCommand::MAP;
-        } else if (enum_name == "Route"sv) {
+        } else if (enum_name == "Route"sv) {  /// For StatRequest
             return io::RequestCommand::ROUTE;
-        } else if (enum_name == "SetSettings"sv) {
-            return io::RequestCommand::SET_RENDER_SETTINGS;
-        } else if (enum_name == "SetRouteSettings"sv) {
-            return io::RequestCommand::SET_ROUTING_SETTINGS;
-        } else if (enum_name == "SetSerializationSettings"sv) {
-            return io::RequestCommand::SET_SERIALIZATION_SETTINGS;
-        } else if (enum_name == "Unknown"sv) {
+        } else if (enum_name == "Unknown"sv) {  /// Unused
             return io::RequestCommand::UNKNOWN;
         }
         throw std::invalid_argument(InvalidValue);
@@ -379,7 +337,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
     void RequestHandler::ExecuteRequest(BaseRequest&& raw_req, std::vector<data::MeasuredRoadDistance>& out_distances) const {
         assert(raw_req.IsValidRequest());
 
-        if (raw_req.IsStopCommand()) {
+        if (raw_req.IsGetStopCommand()) {
             db_writer_.AddStop(data::Stop{std::move(raw_req.GetName()), std::move(raw_req.GetCoordinates().value())});
             std::move(raw_req.GetRoadDistances().begin(), raw_req.GetRoadDistances().end(), std::back_inserter(out_distances));
 
@@ -418,10 +376,10 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
             assert(request.IsStatRequest());
             assert(request.IsValidRequest());
 
-            bool is_bus = request.IsBusCommand();
-            bool is_stop = request.IsStopCommand();
-            bool is_map = request.IsMapCommand();
-            bool is_router = request.IsRouteCommand();
+            bool is_bus = request.IsGetBusCommand();
+            bool is_stop = request.IsGetStopCommand();
+            bool is_map = request.IsGetMapCommand();
+            bool is_router = request.IsGetRouteCommand();
 
             std::string name = request.GetName().value_or("");
             std::optional<RouteStatRequest> route_request =
@@ -696,6 +654,10 @@ namespace transport_catalogue::io /* StatResponse implementation */ {
 }
 
 namespace transport_catalogue::io /* RenderSettingsRequest implementation */ {
+    RenderSettingsRequest::RenderSettingsRequest(RequestCommand type, RequestArgsMap&& args) : Request(std::move(type), std::move(args)) {
+        Build();
+    }
+    RenderSettingsRequest::RenderSettingsRequest(RawRequest&& raw_request) : RenderSettingsRequest(RequestCommand::UNKNOWN, std::move(raw_request)) {}
 
     bool RenderSettingsRequest::IsValidRequest() const {
         return Request::IsValidRequest();
@@ -797,7 +759,7 @@ namespace transport_catalogue::io /* RoutingSettingsRequest implementation */ {
     }
 
     RoutingSettingsRequest::RoutingSettingsRequest(RawRequest&& raw_request)
-        : RoutingSettingsRequest(RequestCommand::SET_RENDER_SETTINGS, std::move(raw_request)) {}
+        : RoutingSettingsRequest(RequestCommand::UNKNOWN, std::move(raw_request)) {}
 
     bool RoutingSettingsRequest::IsValidRequest() const {
         return Request::IsValidRequest() && bus_wait_time_min_.has_value() && bus_velocity_kmh_.has_value();
@@ -823,13 +785,9 @@ namespace transport_catalogue::io /* RoutingSettingsRequest implementation */ {
 
 namespace transport_catalogue::io /* SerializationSettingsRequest implementation */ {
 
-    SerializationSettingsRequest::SerializationSettingsRequest(RequestCommand type, RequestArgsMap&& args)
-        : Request(std::move(type), std::move(args)) {
+    SerializationSettingsRequest::SerializationSettingsRequest(RequestArgsMap&& args) : Request(RequestCommand::UNKNOWN, std::move(args)) {
         Build();
     }
-
-    SerializationSettingsRequest::SerializationSettingsRequest(RawRequest&& raw_request)
-        : SerializationSettingsRequest(RequestCommand::SET_SERIALIZATION_SETTINGS, std::move(raw_request)) {}
 
     const std::optional<std::string>& SerializationSettingsRequest::GetFile() const {
         return file_;
