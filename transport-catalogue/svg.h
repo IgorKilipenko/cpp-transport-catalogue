@@ -141,6 +141,9 @@ namespace svg /* Colors */ {
             typename RgbFrom, typename RgbTo,
             std::enable_if_t<detail::IsConvertible<RgbFrom, Rgb>::value && detail::IsConvertible<RgbTo, Rgb>::value, bool> = true>
         static Rgb Lerp(RgbFrom&& from, RgbTo to, double t);
+
+        template <typename RawColor, std::enable_if_t<!std::is_lvalue_reference_v<RawColor>, bool> = true>
+        static std::optional<Color> ConvertColor(RawColor&& raw_color);
     };
 }
 
@@ -505,6 +508,25 @@ namespace svg /* Colors class template implementation */ {
         std::enable_if_t<detail::IsConvertible<RgbFrom, Rgb>::value && detail::IsConvertible<RgbTo, Rgb>::value, bool>>
     Rgb Colors::Lerp(RgbFrom&& from, RgbTo to, double t) {
         return {Lerp(from.red, to.red, t), Lerp(from.green, to.green, t), Lerp(from.blue, to.blue, t)};
+    }
+
+    template <typename RawColor, std::enable_if_t<!std::is_lvalue_reference_v<RawColor>, bool>>
+    std::optional<Color> Colors::ConvertColor(RawColor&& raw_color) {
+        return std::visit(
+            [](auto&& arg) -> std::optional<Color> {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_convertible_v<std::decay_t<T>, Color>) {
+                    return std::move(arg);
+                } else if constexpr (std::is_convertible_v<std::decay_t<T>, std::vector<std::variant<uint8_t, double>>>) {
+                    if (arg.size() == 3) {
+                        return Rgb::FromVariant(std::move(arg));
+                    } else if (arg.size() > 3) {
+                        return Rgba::FromVariant(std::move(arg));
+                    }
+                }
+                return std::nullopt;
+            },
+            std::move(raw_color));
     }
 }
 
