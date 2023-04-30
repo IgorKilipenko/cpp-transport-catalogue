@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package proto_schema.router;
+
+import "graph.proto";
+
+message RoutingSettings {
+    uint32 bus_wait_time_min = 1;
+    double bus_velocity_kmh = 2;
+}
+
+message RoutingItemInfo {
+    string bus_name = 1;
+    double bus_wait_time_min = 2;
+    double bus_travel_time = 3;
+    uint32 travel_items_count = 4;
+    string stop_name = 5;
+}
+
+message Router {
+    proto_schema.graph.RoutingGraph graph = 1;
+    repeated RoutingItemInfo routing_items = 2;
+}

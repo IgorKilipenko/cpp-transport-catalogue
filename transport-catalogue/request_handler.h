@@ -560,14 +560,15 @@ namespace transport_catalogue::io /* RequestHandler */ {
     public:
         RequestHandler(
             const data::ITransportStatDataReader& reader, const data::ITransportDataWriter& writer, const IStatResponseSender& response_sender,
-            io::renderer::IRenderer& renderer, Mode mode = Mode::PROCESS_REQUESTS)
+            io::renderer::IRenderer& renderer, Mode mode = Mode::PROCESS_REQUESTS, bool force_disable_build_graph = false)
             : db_reader_{reader},
               db_writer_{writer},
               response_sender_{response_sender},
               renderer_{renderer},
               router_({}, db_reader_.GetDataReader()),
-              storage_(db_reader_, db_writer_, renderer_),
-              mode_{mode} {}
+              storage_(db_reader_, db_writer_, renderer_, router_),
+              mode_{mode},
+              force_disable_build_graph_{force_disable_build_graph} {}
 
         ~RequestHandler() {}
 
@@ -621,6 +622,7 @@ namespace transport_catalogue::io /* RequestHandler */ {
         router::TransportRouter router_;
         serialization::Store storage_;
         Mode mode_;
+        bool force_disable_build_graph_;
 
         bool PrepareMapRendererData();
     };
