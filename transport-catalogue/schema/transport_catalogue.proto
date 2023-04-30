@@ -3,6 +3,7 @@ syntax = "proto3";
 package proto_schema.transport;
 
 import "map_renderer.proto";
+import "transport_router.proto";
 
 message Coordinates {
     double lat = 1;
@@ -34,9 +35,11 @@ message TransportData {
 
 message Settings {
     proto_schema.maps.RenderSettings render_settings = 1;
+    proto_schema.router.RoutingSettings routing_settings = 2;
 }
 
 message Database {
     TransportData transport_data = 1;
     Settings settings = 2;
+    proto_schema.router.Router router = 3;
 }

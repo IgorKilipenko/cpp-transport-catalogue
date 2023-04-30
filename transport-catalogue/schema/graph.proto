@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package proto_schema.graph;
+
+message Edge {
+    uint32 from = 1;
+    uint32 to = 2;
+    double weight = 3;
+}
+
+message IncidentEdges {
+    repeated uint32 edge_id = 1;
+}
+
+message RoutingGraph {
+    repeated Edge edge = 1;
+    repeated IncidentEdges incident_edges = 2;
+}

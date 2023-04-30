@@ -33,6 +33,8 @@ set(PROTO_FILES
     ${PROTO_DIR}/transport_catalogue.proto 
     ${PROTO_DIR}/svg.proto
     ${PROTO_DIR}/map_renderer.proto
+    ${PROTO_DIR}/graph.proto
+    ${PROTO_DIR}/transport_router.proto
 )
 
 set(CFLAGS -Wall -Werror -pedantic)
