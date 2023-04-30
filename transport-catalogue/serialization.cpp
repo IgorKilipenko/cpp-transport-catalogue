@@ -255,7 +255,7 @@ namespace transport_catalogue::serialization /* DataConvertor implementation */ 
         auto edges_model = std::move(*graph_model.mutable_edges());
         std::vector<router::RoutingGraph::EdgeType> edges;
         edges.reserve(edges_model.size());
-        for (size_t i = 0; i < edges_model.size(); ++i) {
+        for (int i = 0; i < edges_model.size(); ++i) {
             EdgeModel edge_model = std::move(edges_model[i]);
 
             router::RoutingGraph::EdgeType edge;
@@ -307,7 +307,7 @@ namespace transport_catalogue::serialization /* DataConvertor implementation */ 
     template <>
     auto DataConverter::ConvertFromModel(RoutingItemsModel&& route_items_model, const data::ITransportDataReader& db_reader) const {
         router::RoutingIncidentEdges route_items;
-        for (size_t i = 0; i < route_items_model.size(); ++i) {
+        for (int i = 0; i < route_items_model.size(); ++i) {
             route_items.emplace(i, ConvertFromModel<RoutingItemModel, const data::ITransportDataReader&>(std::move(route_items_model[i]), db_reader));
         }
         return route_items;

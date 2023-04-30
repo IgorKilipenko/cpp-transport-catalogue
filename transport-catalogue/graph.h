@@ -35,15 +35,7 @@ namespace graph {
         DirectedWeightedGraph() = default;
         explicit DirectedWeightedGraph(size_t vertex_count);
 
-        template <typename TEdgeContainer, std::enable_if_t<std::is_same_v<std::decay_t<TEdgeContainer>, EdgeContainer>, bool> = true>
-        DirectedWeightedGraph(TEdgeContainer&& edges, size_t vertex_count);
-
-        template <
-            typename TEdgeContainer, typename TIncidenceListContainer,
-            std::enable_if_t<
-                std::is_same_v<std::decay_t<TEdgeContainer>, EdgeContainer> && std::is_same_v<TIncidenceListContainer, IncidentEdges>,
-                bool> = true>
-        DirectedWeightedGraph(TEdgeContainer&& edges, TIncidenceListContainer incidence_lists);
+        DirectedWeightedGraph(EdgeContainer&& edges, IncidentEdges&& incidence_lists);
 
         template <typename TEdge, std::enable_if_t<std::is_same_v<std::decay_t<TEdge>, Edge<Weight>>, bool> = true>
         EdgeId AddEdge(TEdge&& edge);
@@ -62,25 +54,8 @@ namespace graph {
     DirectedWeightedGraph<Weight>::DirectedWeightedGraph(size_t vertex_count) : incidence_lists_(vertex_count) {}
 
     template <typename Weight>
-    template <
-        typename TEdgeContainer,
-        std::enable_if_t<std::is_same_v<std::decay_t<TEdgeContainer>, typename DirectedWeightedGraph<Weight>::EdgeContainer>, bool>>
-    DirectedWeightedGraph<Weight>::DirectedWeightedGraph(TEdgeContainer&& edges, size_t vertex_count)
-        : DirectedWeightedGraph(vertex_count), edges_(std::forward<TEdgeContainer>(edges)) {
-        std::for_each(std::move_iterator(edges_.begin()), std::move_iterator(edges_.end()), [&](auto&& edge) {
-            AddEdge(std::forward<decltype(edge)>(edge));
-        });
-    }
-
-    template <typename Weight>
-    template <
-        typename TEdgeContainer, typename TIncidenceListContainer,
-        std::enable_if_t<
-            std::is_same_v<std::decay_t<TEdgeContainer>, typename DirectedWeightedGraph<Weight>::EdgeContainer> &&
-                std::is_same_v<TIncidenceListContainer, typename DirectedWeightedGraph<Weight>::IncidentEdges>,
-            bool>>
-    DirectedWeightedGraph<Weight>::DirectedWeightedGraph(TEdgeContainer&& edges, TIncidenceListContainer incidence_lists)
-        :  edges_{std::forward<TEdgeContainer>(edges)}, incidence_lists_{std::forward<TIncidenceListContainer>(incidence_lists)} {}
+    DirectedWeightedGraph<Weight>::DirectedWeightedGraph(EdgeContainer&& edges, IncidentEdges&& incidence_lists)
+        : edges_(std::move(edges)), incidence_lists_(std::move(incidence_lists)) {}
 
     template <typename Weight>
     template <typename TEdge, std::enable_if_t<std::is_same_v<std::decay_t<TEdge>, Edge<Weight>>, bool>>
