@@ -252,7 +252,6 @@ namespace transport_catalogue::serialization /* DataConvertor implementation */ 
 
     template <>
     auto DataConverter::ConvertFromModel(RoutingGraphModel&& graph_model) const {
-        //! router::RoutingGraph graph(graph_model.incident_edges_size());
         auto edges_model = std::move(*graph_model.mutable_edges());
         std::vector<router::RoutingGraph::EdgeType> edges;
         edges.reserve(edges_model.size());
