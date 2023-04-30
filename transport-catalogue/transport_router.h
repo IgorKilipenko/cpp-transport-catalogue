@@ -46,7 +46,6 @@ namespace transport_catalogue::router /* RouteInfo */ {
         size_t travel_items_count = 0;
         std::string_view from_stop;
         std::string_view next_stop;
-        std::string_view current_stop;
     };
 
     struct RoutingSettings {
@@ -55,9 +54,16 @@ namespace transport_catalogue::router /* RouteInfo */ {
     };
 }
 
+namespace transport_catalogue::router /* TransportRouter interface */ {
+    class ITransportRouter {
+        virtual void SetSettings(RoutingSettings settings) = 0;
+        virtual const RoutingSettings& GetSettings() const = 0;
+    };
+}
+
 namespace transport_catalogue::router /* TransportRouter */ {
 
-    class TransportRouter {
+    class TransportRouter : public ITransportRouter {
     private:
         class IndexMapper {
         public:
@@ -78,9 +84,9 @@ namespace transport_catalogue::router /* TransportRouter */ {
     public:
         TransportRouter(RoutingSettings settings, const data::ITransportDataReader& db_reader) : settings_{settings}, db_reader_(db_reader) {}
 
-        void SetSettings(RoutingSettings settings);
+        void SetSettings(RoutingSettings settings) override;
 
-        const RoutingSettings& GetSettings() const;
+        const RoutingSettings& GetSettings() const override;
 
         std::optional<RouteInfo> GetRouteInfo(std::string_view from_stop, std::string_view to_stop) const;
         void Build();

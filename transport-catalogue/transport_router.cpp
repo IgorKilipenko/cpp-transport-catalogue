@@ -76,13 +76,9 @@ namespace transport_catalogue::router {
                 auto ege_id = graph_.AddEdge({index_mapper_.GetAt(from_stop_ptr), index_mapper_.GetAt(next_stop_ptr), total_travel_time});
 
                 const RoutingItemInfo info{
-                    bus.name,
-                    settings_.bus_wait_time_min,
-                    total_travel_time - settings_.bus_wait_time_min,
-                    span,
-                    from_stop_ptr->name,
-                    next_stop_ptr->name,
-                    current_stop_ptr->name};
+                    bus.name, settings_.bus_wait_time_min, total_travel_time - settings_.bus_wait_time_min,
+                    span,     from_stop_ptr->name,         next_stop_ptr->name,
+                };
                 edges_.emplace(std::move(ege_id), std::move(info));
                 ++span;
             }
