@@ -1,15 +1,17 @@
 #include "transport_router.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
 
 #include "domain.h"
 
-namespace transport_catalogue::router {
+namespace transport_catalogue::router /* TransportRouter implementation */ {
 
     void TransportRouter::SetSettings(RoutingSettings settings) {
         settings_ = settings;
@@ -19,7 +21,25 @@ namespace transport_catalogue::router {
         return settings_;
     }
 
+    const RoutingGraph& TransportRouter::GetGraph() const {
+        return graph_;
+    }
+
+    void TransportRouter::SetGraph(RoutingGraph&& graph) {
+        graph_ = graph;
+    }
+
+    bool TransportRouter::HasGraph() const {
+        return is_builded_;
+    }
+
+    const RoutingItemInfo& TransportRouter::GetRoutingItem(graph::EdgeId edge_id) const {
+        return edges_.at(edge_id);
+    }
+
     std::optional<RouteInfo> TransportRouter::GetRouteInfo(std::string_view from_stop, std::string_view to_stop) const {
+        assert(is_builded_ && raw_router_ptr_ != nullptr);
+
         const data::StopRecord from_stop_record = db_reader_.GetStop(from_stop);
         const data::StopRecord to_stop_record = db_reader_.GetStop(to_stop);
         assert(from_stop_record != nullptr && to_stop_record != nullptr);
@@ -32,7 +52,7 @@ namespace transport_catalogue::router {
         items.reserve(edge_info->edges.size());
         for (graph::EdgeId edge_id : edge_info->edges) {
             RoutingItemInfo raw_info = edges_.at(edge_id);
-            RouteInfo::WaitInfo wait_info{raw_info.from_stop, raw_info.bus_wait_time_min};
+            RouteInfo::WaitInfo wait_info{raw_info.stop_name, raw_info.bus_wait_time_min};
             RouteInfo::BusInfo bus_info{raw_info.bus_name, raw_info.travel_items_count, raw_info.bus_travel_time};
             items.emplace_back(std::move(bus_info), std::move(wait_info));
         }
@@ -40,9 +60,11 @@ namespace transport_catalogue::router {
     }
 
     void TransportRouter::Build() {
+        assert(!is_builded_ && raw_router_ptr_ == nullptr);
+
         const auto& buses_table = db_reader_.GetBusRoutesTable();
 
-        graph_ = graph::DirectedWeightedGraph<double>(db_reader_.GetStopsTable().size());
+        graph_ = RoutingGraph(db_reader_.GetStopsTable().size());
         index_mapper_ = IndexMapper(db_reader_.GetStopsTable());
 
         std::for_each(buses_table.begin(), buses_table.end(), [this](const auto& bus) {
@@ -50,6 +72,8 @@ namespace transport_catalogue::router {
         });
 
         raw_router_ptr_ = std::make_unique<graph::Router<double>>(graph_);
+
+        is_builded_ = true;
     }
 
     void TransportRouter::AddRouteEdges_(const data::Bus& bus) {
@@ -76,17 +100,23 @@ namespace transport_catalogue::router {
                 auto ege_id = graph_.AddEdge({index_mapper_.GetAt(from_stop_ptr), index_mapper_.GetAt(next_stop_ptr), total_travel_time});
 
                 const RoutingItemInfo info{
-                    bus.name, settings_.bus_wait_time_min, total_travel_time - settings_.bus_wait_time_min,
-                    span,     from_stop_ptr->name,         next_stop_ptr->name,
+                    bus.name, settings_.bus_wait_time_min, total_travel_time - settings_.bus_wait_time_min, span, from_stop_ptr->name,
                 };
+
                 edges_.emplace(std::move(ege_id), std::move(info));
                 ++span;
             }
         }
     }
+
+    void TransportRouter::ResetGraph() {
+        raw_router_ptr_ = nullptr;
+        is_builded_ = false;
+        graph_ = RoutingGraph();
+    }
 }
 
-namespace transport_catalogue::router /* TransportRouter::IndexMapper */ {
+namespace transport_catalogue::router /* TransportRouter::IndexMapper implementation */ {
     TransportRouter::IndexMapper::IndexMapper(const data::DatabaseScheme::StopsTable& stops) {
         Init_(stops);
     }
