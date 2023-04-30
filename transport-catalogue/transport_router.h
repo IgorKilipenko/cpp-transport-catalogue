@@ -15,10 +15,6 @@
 #include "router.h"
 #include "transport_catalogue.h"
 
-namespace transport_catalogue::router /* Types */ {
-    using RoutingGraph = graph::DirectedWeightedGraph<double>;
-}
-
 namespace transport_catalogue::router /* RouteInfo */ {
 
     class RouteInfo {
@@ -56,6 +52,10 @@ namespace transport_catalogue::router /* RouteInfo */ {
         double bus_velocity_kmh = 0.0;
     };
 }
+namespace transport_catalogue::router /* Types aliases */ {
+    using RoutingGraph = graph::DirectedWeightedGraph<double>;
+    using RoutingIncidentEdges = std::unordered_map<graph::EdgeId, RoutingItemInfo>;
+} 
 
 namespace transport_catalogue::router /* TransportRouter interface */ {
     class ITransportRouter {
@@ -64,7 +64,7 @@ namespace transport_catalogue::router /* TransportRouter interface */ {
         virtual const RoutingSettings& GetSettings() const = 0;
 
         virtual const RoutingGraph& GetGraph() const = 0;
-        virtual void SetGraph(RoutingGraph&& graph) = 0;
+        virtual void SetGraph(RoutingGraph&& graph, RoutingIncidentEdges&& route_edges) = 0;
 
         virtual bool HasGraph() const = 0;
         virtual const RoutingItemInfo& GetRoutingItem(graph::EdgeId edge_id) const = 0;
@@ -74,6 +74,7 @@ namespace transport_catalogue::router /* TransportRouter interface */ {
 namespace transport_catalogue::router /* TransportRouter */ {
 
     class TransportRouter : public ITransportRouter {
+
     private:
         class IndexMapper {
         public:
@@ -103,7 +104,7 @@ namespace transport_catalogue::router /* TransportRouter */ {
 
         const RoutingItemInfo& GetRoutingItem(graph::EdgeId edge_id) const override;
         const RoutingGraph& GetGraph() const override;
-        void SetGraph(RoutingGraph&& graph) override;
+        void SetGraph(RoutingGraph&& graph, RoutingIncidentEdges&& route_edges) override;
         virtual bool HasGraph() const override;
 
         void ResetGraph();
@@ -111,7 +112,7 @@ namespace transport_catalogue::router /* TransportRouter */ {
     private:
         RoutingSettings settings_;
         const data::ITransportDataReader& db_reader_;
-        std::unordered_map<graph::EdgeId, RoutingItemInfo> edges_;
+        RoutingIncidentEdges edges_;
         std::unique_ptr<graph::Router<double>> raw_router_ptr_;
         RoutingGraph graph_;
         IndexMapper index_mapper_;

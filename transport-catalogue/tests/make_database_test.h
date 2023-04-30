@@ -12,7 +12,9 @@ namespace transport_catalogue::tests {
         inline static const std::filesystem::path DATA_PATH = std::filesystem::current_path() / "transport-catalogue/tests/data/serialization";
 
     public:
-        std::string ReadDocument(std::string json_file, io::RequestHandler::Mode mode = io::RequestHandler::Mode::MAKE_BASE) const {
+        std::string ReadDocument(
+            std::string json_file, io::RequestHandler::Mode mode = io::RequestHandler::Mode::MAKE_BASE,
+            bool force_disable_build_graph = false) const {
             using namespace transport_catalogue;
             using namespace transport_catalogue::io;
 
@@ -28,8 +30,8 @@ namespace transport_catalogue::tests {
 
             maps::MapRenderer renderer;
 
-            const auto request_handler_ptr =
-                std::make_shared<RequestHandler>(catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer, mode);
+            const auto request_handler_ptr = std::make_shared<RequestHandler>(
+                catalog.GetStatDataReader(), catalog.GetDataWriter(), stat_sender, renderer, mode, force_disable_build_graph);
             json_reader.AddObserver(request_handler_ptr);
 
             json_reader.ReadDocument();
@@ -41,8 +43,10 @@ namespace transport_catalogue::tests {
             assert(result.empty());
         }
 
-        void TestFromFile(std::string file_name, std::string request_suffix = "request", std::string answer_suffix = "expected_res", double tolerance = json::Node::GetEqualityTolerance()) const {
-            std::string result = ReadDocument(DATA_PATH / (file_name + ".json"), io::RequestHandler::Mode::MAKE_BASE);
+        void TestFromFile(
+            std::string file_name, std::string request_suffix = "request", std::string answer_suffix = "expected_res",
+            double tolerance = json::Node::GetEqualityTolerance(), bool force_disable_build_graph = false) const {
+            std::string result = ReadDocument(DATA_PATH / (file_name + ".json"), io::RequestHandler::Mode::MAKE_BASE, force_disable_build_graph);
             std::string request_result =
                 ReadDocument(DATA_PATH / (file_name + "_" + request_suffix + ".json"), io::RequestHandler::Mode::PROCESS_REQUESTS);
             std::string expected_result_str =
@@ -57,41 +61,47 @@ namespace transport_catalogue::tests {
             CheckResultsExtend(std::move(expected_response), std::move(response), tolerance);
         }
 
+        void TestFromFileWithoutGraph(
+            std::string file_name, std::string request_suffix = "request", std::string answer_suffix = "expected_res",
+            double tolerance = json::Node::GetEqualityTolerance()) const {
+            TestFromFile(file_name, request_suffix, answer_suffix, tolerance, true);
+        }
+
         void TestBase() const {
             TestFromExample("step1_test1");
         }
 
         void Test1() const {
-            TestFromFile("step1_test1");
+            TestFromFileWithoutGraph("step1_test1");
         }
 
         void Test2() const {
-            TestFromFile("step1_test2");
+            TestFromFileWithoutGraph("step1_test2");
         }
 
         void Test3() const {
-            TestFromFile("step1_test3", "request", "expected_res", 1e-5);
-            TestFromFile("step1_test3_2", "request", "expected_res", 1e-5);
+            TestFromFileWithoutGraph("step1_test3", "request", "expected_res", 1e-5);
+            TestFromFileWithoutGraph("step1_test3_2", "request", "expected_res", 1e-5);
         }
-      
+
         void TestOnRandomData() const {
-            TestFromFile("s14_1_opentest_1", "process_requests", "answer", 1e-5);
-            TestFromFile("s14_1_opentest_2", "process_requests", "answer", 1e-5);
-            TestFromFile("s14_1_opentest_3", "process_requests", "answer", 1e-5);
+            TestFromFileWithoutGraph("s14_1_opentest_1", "process_requests", "answer", 1e-5);
+            TestFromFileWithoutGraph("s14_1_opentest_2", "process_requests", "answer", 1e-5);
+            TestFromFileWithoutGraph("s14_1_opentest_3", "process_requests", "answer", 1e-5);
         }
 
         void Test2_1() const {
-            TestFromFile("step2_test1");
+            TestFromFileWithoutGraph("step2_test1");
         }
 
         void Test2_2() const {
-            TestFromFile("step2_test1");
+            TestFromFileWithoutGraph("step2_test1");
         }
 
         void TestOnRandomDataStep2() const {
-            TestFromFile("s14_2_opentest_1", "process_requests", "answer", 1e-5);
-            TestFromFile("s14_2_opentest_2", "process_requests", "answer", 1e-5);
-            TestFromFile("s14_2_opentest_3", "process_requests", "answer", 1e-5);
+            TestFromFileWithoutGraph("s14_2_opentest_1", "process_requests", "answer", 1e-5);
+            TestFromFileWithoutGraph("s14_2_opentest_2", "process_requests", "answer", 1e-5);
+            TestFromFileWithoutGraph("s14_2_opentest_3", "process_requests", "answer", 1e-5);
         }
 
         void RunTests() const {
