@@ -13,8 +13,6 @@
         "editor.inlayHints.enabled": "offUnlessPressed",
         "editor.suggest.showSnippets": true
     },
-    //"C_Cpp.errorSquiggles": "Disabled"
-    //"cmake.sourceDirectory": "${workspaceFolder}/transport-catalogue",
     "cSpell.words": [
         "Biryulyovo",
         "Biryusinka",
