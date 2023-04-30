@@ -382,8 +382,14 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
             bool is_router = request.IsGetRouteCommand();
 
             std::string name = request.GetName().value_or("");
-            std::optional<RouteStatRequest> route_request =
-                is_router ? std::optional<RouteStatRequest>{RouteStatRequest(StatRequest(request))} : std::nullopt;
+
+            std::optional<RouteStatRequest> route_request = std::nullopt;
+            if (is_router) {
+                if (!router_.HasGraph()) {
+                    router_.Build();
+                }
+                route_request = std::optional<RouteStatRequest>{RouteStatRequest(StatRequest(request))};
+            }
 
             StatResponse resp(
                 std::move(request), is_bus ? db_reader_.GetBusInfo(name) : std::nullopt, is_stop ? db_reader_.GetStopInfo(name) : std::nullopt,
@@ -411,7 +417,6 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
 
         router_.SetSettings(
             {static_cast<double>(request.GetBusWaitTimeMin().value_or(0)), static_cast<double>(request.GetBusVelocityKmh().value_or(0))});
-        router_.Build();
     }
 
     void RequestHandler::ExecuteRequest(SerializationSettingsRequest&& request) {

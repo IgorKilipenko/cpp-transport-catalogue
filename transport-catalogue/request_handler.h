@@ -567,7 +567,7 @@ namespace transport_catalogue::io /* RequestHandler */ {
               response_sender_{response_sender},
               renderer_{renderer},
               router_({}, db_reader_.GetDataReader()),
-              storage_(db_reader_, db_writer_, renderer_),
+              storage_(db_reader_, db_writer_, renderer_, router_),
               mode_{mode} {}
 
         ~RequestHandler() {}
