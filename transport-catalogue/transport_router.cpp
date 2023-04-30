@@ -28,7 +28,9 @@ namespace transport_catalogue::router /* TransportRouter implementation */ {
     void TransportRouter::SetGraph(RoutingGraph&& graph, RoutingIncidentEdges&& route_edges) {
         ResetGraph();
         graph_ = std::move(graph);
+        index_mapper_ = IndexMapper(db_reader_.GetStopsTable());
         edges_ = std::move(route_edges);
+        raw_router_ptr_ = std::make_unique<graph::Router<double>>(graph_);
         is_builded_ = true;
     }
 
