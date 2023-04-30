@@ -297,7 +297,7 @@ namespace transport_catalogue::serialization /* DataConvertor implementation */ 
     auto DataConverter::ConvertFromModel(RoutingItemModel&& route_item_model, const data::ITransportDataReader& db_reader) const {
         router::RoutingItemInfo route_item;
         route_item.bus_name = db_reader.GetBus(route_item_model.bus_name())->name;
-        route_item.bus_name = db_reader.GetStop(route_item_model.stop_name())->name;
+        route_item.stop_name = db_reader.GetStop(route_item_model.stop_name())->name;
         route_item.travel_items_count = route_item_model.travel_items_count();
         route_item.bus_travel_time = route_item_model.bus_travel_time();
         route_item.bus_wait_time_min = route_item_model.bus_wait_time_min();
@@ -307,13 +307,6 @@ namespace transport_catalogue::serialization /* DataConvertor implementation */ 
 
     template <>
     auto DataConverter::ConvertFromModel(RoutingItemsModel&& route_items_model, const data::ITransportDataReader& db_reader) const {
-        /*std::vector<router::RoutingItemInfo> route_items(route_items_model.size());
-        std::transform(
-            std::move_iterator(route_items_model.begin()), std::move_iterator(route_items_model.end()), route_items.begin(),
-            [&](RoutingItemModel&& route_item_model) {
-                return ConvertFromModel<RoutingItemModel, const data::ITransportDataReader&>(std::move(route_item_model), db_reader);
-            });*/
-
         router::RoutingIncidentEdges route_items;
         for (size_t i = 0; i < route_items_model.size(); ++i) {
             route_items.emplace(i, ConvertFromModel<RoutingItemModel, const data::ITransportDataReader&>(std::move(route_items_model[i]), db_reader));
