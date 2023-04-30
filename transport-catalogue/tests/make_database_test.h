@@ -95,7 +95,7 @@ namespace transport_catalogue::tests {
         }
 
         void Test2_2() const {
-            TestFromFileWithoutGraph("step2_test1");
+            TestFromFileWithoutGraph("step2_test2");
         }
 
         void TestOnRandomDataStep2() const {
@@ -103,6 +103,11 @@ namespace transport_catalogue::tests {
             TestFromFileWithoutGraph("s14_2_opentest_2", "process_requests", "answer", 1e-5);
             TestFromFileWithoutGraph("s14_2_opentest_3", "process_requests", "answer", 1e-5);
         }
+
+        void Test3_1() const {
+            TestFromFile("step3_test1");
+        }
+
 
         void RunTests() const {
             const std::string prefix = "[MakeDatabase] ";
@@ -130,6 +135,9 @@ namespace transport_catalogue::tests {
 
             TestOnRandomDataStep2();
             std::cerr << prefix << "TestOnRandomDataStep2 : Done." << std::endl;
+
+            Test3_1();
+            std::cerr << prefix << "Test3_1 : Done." << std::endl;
 
             std::cerr << std::endl << "All MakeDatabase Tests : Done." << std::endl << std::endl;
         }
