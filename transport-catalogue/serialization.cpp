@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <iterator>
 #include <string_view>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -236,7 +237,7 @@ namespace transport_catalogue::serialization /* DataConvertor implementation */ 
             edge_model.set_from(edge.from);
             edge_model.set_to(edge.to);
             edge_model.set_weight(edge.weight);
-            *graph_model.add_edge() = edge_model;
+            *graph_model.add_edges() = edge_model;
         }
         for (size_t i = 0; i < graph.GetVertexCount(); ++i) {
             IncidentEdgesModel incident_edges_model;
@@ -247,6 +248,77 @@ namespace transport_catalogue::serialization /* DataConvertor implementation */ 
             *graph_model.add_incident_edges() = std::move(incident_edges_model);
         }
         return graph_model;
+    }
+
+    template <>
+    auto DataConverter::ConvertFromModel(RoutingGraphModel&& graph_model) const {
+        //! router::RoutingGraph graph(graph_model.incident_edges_size());
+        auto edges_model = std::move(*graph_model.mutable_edges());
+        std::vector<router::RoutingGraph::EdgeType> edges;
+        edges.reserve(edges_model.size());
+        for (size_t i = 0; i < edges_model.size(); ++i) {
+            EdgeModel edge_model = std::move(edges_model[i]);
+
+            router::RoutingGraph::EdgeType edge;
+            edge.from = edge_model.from();
+            edge.to = edge_model.to();
+            edge.weight = edge_model.weight();
+            edges.emplace_back(std::move(edge));
+        }
+
+        router::RoutingGraph::IncidentEdges incident_edges;
+        incident_edges.reserve(graph_model.incident_edges_size());
+        for (int i = 0; i < graph_model.incident_edges_size(); ++i) {
+            IncidentEdgesModel incidence_list_model = graph_model.incident_edges(i);
+            router::RoutingGraph::IncidenceList incidence_list;
+            incidence_list.reserve(incidence_list_model.edge_id_size());
+            for (int j = 0; j < incidence_list_model.edge_id_size(); ++j) {
+                incidence_list.push_back(incidence_list_model.edge_id(j));
+            }
+            incident_edges.push_back(std::move(incidence_list));
+        }
+
+        return router::RoutingGraph(std::move(edges), std::move(incident_edges));
+    }
+
+    template <>
+    auto DataConverter::ConvertToModel(const router::RoutingItemInfo& route_item) const {
+        proto_schema::router::RoutingItemInfo route_item_model;
+        route_item_model.set_bus_name(std::string(route_item.bus_name));
+        route_item_model.set_stop_name(std::string(route_item.stop_name));
+        route_item_model.set_travel_items_count(route_item.travel_items_count);
+        route_item_model.set_bus_travel_time(route_item.bus_travel_time);
+        route_item_model.set_bus_wait_time_min(route_item.bus_wait_time_min);
+
+        return route_item_model;
+    }
+
+    template <>
+    auto DataConverter::ConvertFromModel(RoutingItemModel&& route_item_model, const data::ITransportDataReader& db_reader) const {
+        router::RoutingItemInfo route_item;
+        route_item.bus_name = db_reader.GetBus(route_item_model.bus_name())->name;
+        route_item.bus_name = db_reader.GetStop(route_item_model.stop_name())->name;
+        route_item.travel_items_count = route_item_model.travel_items_count();
+        route_item.bus_travel_time = route_item_model.bus_travel_time();
+        route_item.bus_wait_time_min = route_item_model.bus_wait_time_min();
+
+        return route_item;
+    }
+
+    template <>
+    auto DataConverter::ConvertFromModel(RoutingItemsModel&& route_items_model, const data::ITransportDataReader& db_reader) const {
+        /*std::vector<router::RoutingItemInfo> route_items(route_items_model.size());
+        std::transform(
+            std::move_iterator(route_items_model.begin()), std::move_iterator(route_items_model.end()), route_items.begin(),
+            [&](RoutingItemModel&& route_item_model) {
+                return ConvertFromModel<RoutingItemModel, const data::ITransportDataReader&>(std::move(route_item_model), db_reader);
+            });*/
+
+        router::RoutingIncidentEdges route_items;
+        for (size_t i = 0; i < route_items_model.size(); ++i) {
+            route_items.emplace(i, ConvertFromModel<RoutingItemModel, const data::ITransportDataReader&>(std::move(route_items_model[i]), db_reader));
+        }
+        return route_items;
     }
 }
 
@@ -303,14 +375,8 @@ namespace transport_catalogue::serialization /* Store (serialize) implementation
 
     void Store::PrepareRouterModel(RouterModel& router_model) const {
         for (size_t i = 0; i < transport_router_.GetGraph().GetEdgeCount(); ++i) {  //! need edit
-            proto_schema::router::RoutingItemInfo route_item_model;
             const router::RoutingItemInfo& route_item = transport_router_.GetRoutingItem(i);
-            route_item_model.set_bus_name(std::string(route_item.bus_name));
-            route_item_model.set_stop_name(std::string(route_item.stop_name));
-            route_item_model.set_travel_items_count(route_item.travel_items_count);
-            route_item_model.set_bus_travel_time(route_item.bus_travel_time);
-            route_item_model.set_bus_wait_time_min(route_item.bus_wait_time_min);
-
+            proto_schema::router::RoutingItemInfo route_item_model = converter_.ConvertToModel(route_item);
             *router_model.add_routing_items() = std::move(route_item_model);
         }
     }
@@ -334,7 +400,6 @@ namespace transport_catalogue::serialization /* Store (serialize) implementation
         *database_model.mutable_transport_data() = BuildSerializableTransportData();
         *database_model.mutable_settings() = BuildSerializableSettings();
         *database_model.mutable_router() = BuildSerializableRouterModel();
-
 
         const bool success = database_model.SerializeToOstream(&out);
         assert(success);
@@ -387,7 +452,15 @@ namespace transport_catalogue::serialization /* Store (deserialize) implementati
         FillRoutingSettings(std::move(routing_settings_model));
     }
 
-    bool Store::DeserializeDatabase() const {
+    void Store::FillRouter(RouterModel&& router_model) const {
+        RoutingGraphModel graph_model = std::move(*router_model.mutable_graph());
+        router::RoutingGraph graph = converter_.ConvertFromModel(std::move(graph_model));
+        transport_router_.SetGraph(
+            std::move(graph), converter_.ConvertFromModel<RoutingItemsModel, const data::ITransportDataReader&>(
+                                  std::move(*router_model.mutable_routing_items()), db_reader_.GetDataReader()));
+    }
+
+    bool Store::LoadDatabase() const {
         if (!db_path_.has_value()) {
             return false;
         }
@@ -399,6 +472,7 @@ namespace transport_catalogue::serialization /* Store (deserialize) implementati
 
         FillTransportData(std::move(*db_model.mutable_transport_data()));
         FillSettings(std::move(*db_model.mutable_settings()));
+        FillRouter(std::move(*db_model.mutable_router()));
 
         return true;
     }

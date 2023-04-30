@@ -330,6 +330,9 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
 
     void RequestHandler::OnReadingComplete(RawRequest&& request) {
         if (mode_ == Mode::MAKE_BASE) {
+            if (!router_.HasGraph() && !force_disable_build_graph_) {
+                router_.Build();
+            }
             storage_.SaveToStorage();
         }
     }
@@ -426,7 +429,7 @@ namespace transport_catalogue::io /* RequestHandler implementation */ {
         assert(request.GetFile().has_value());
         storage_.SetDbPath(std::filesystem::path(request.GetFile().value()));
         if (mode_ == Mode::PROCESS_REQUESTS) {
-            storage_.DeserializeDatabase();
+            storage_.LoadDatabase();
         }
     }
 

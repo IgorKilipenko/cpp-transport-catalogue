@@ -25,8 +25,11 @@ namespace transport_catalogue::router /* TransportRouter implementation */ {
         return graph_;
     }
 
-    void TransportRouter::SetGraph(RoutingGraph&& graph) {
-        graph_ = graph;
+    void TransportRouter::SetGraph(RoutingGraph&& graph, RoutingIncidentEdges&& route_edges) {
+        ResetGraph();
+        graph_ = std::move(graph);
+        edges_ = std::move(route_edges);
+        is_builded_ = true;
     }
 
     bool TransportRouter::HasGraph() const {
@@ -97,7 +100,8 @@ namespace transport_catalogue::router /* TransportRouter implementation */ {
                 auto it = db_reader_.GetDistanceBetweenStops(current_stop_ptr, next_stop_ptr);
                 total_travel_time += it.measured_distance / 1000.0 / settings_.bus_velocity_kmh * 60.0;
 
-                auto ege_id = graph_.AddEdge({index_mapper_.GetAt(from_stop_ptr), index_mapper_.GetAt(next_stop_ptr), total_travel_time});
+                auto ege_id =
+                    graph_.AddEdge(RoutingGraph::EdgeType{index_mapper_.GetAt(from_stop_ptr), index_mapper_.GetAt(next_stop_ptr), total_travel_time});
 
                 const RoutingItemInfo info{
                     bus.name, settings_.bus_wait_time_min, total_travel_time - settings_.bus_wait_time_min, span, from_stop_ptr->name,

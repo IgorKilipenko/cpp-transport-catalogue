@@ -13,6 +13,6 @@ message IncidentEdges {
 }
 
 message RoutingGraph {
-    repeated Edge edge = 1;
+    repeated Edge edges = 1;
     repeated IncidentEdges incident_edges = 2;
 }

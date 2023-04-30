@@ -46,6 +46,8 @@ namespace transport_catalogue::serialization /* Routings types aliases and defs 
     using EdgeModel = proto_schema::graph::Edge;
     using IncidentEdgesModel = proto_schema::graph::IncidentEdges;
     using RouterModel = proto_schema::router::Router;
+    using RoutingItemModel = proto_schema::router::RoutingItemInfo;
+    using RoutingItemsModel = google::protobuf::RepeatedPtrField<RoutingItemModel>;
 }
 
 namespace transport_catalogue::serialization /* DataConvertor */ {
@@ -57,8 +59,8 @@ namespace transport_catalogue::serialization /* DataConvertor */ {
         template <typename T, std::enable_if_t<std::is_same_v<std::decay_t<T>, data::DbRecord<std::remove_pointer_t<std::decay_t<T>>>>, bool> = true>
         auto ConvertToModel(T object_ptr) const;
 
-        template <typename T>
-        auto ConvertFromModel(T&& object) const;
+        template <typename T, typename... Args>
+        auto ConvertFromModel(T&& object, Args... args) const;
     };
 }
 
@@ -75,11 +77,14 @@ namespace transport_catalogue::serialization /* Store */ {
         Store& operator=(const Store&) = delete;
         Store& operator=(Store&&) = delete;
 
-    public: /* serialize methods */
+    public:
         void SetDbPath(std::filesystem::path path) {
             db_path_ = path;
         }
+        bool SaveToStorage();
+        bool LoadDatabase() const;
 
+    private: /* serialize methods */
         /// Transport data serialization
         void PrepareBuses(TransportDataModel& data_model) const;
         void PrepareStops(TransportDataModel& data_model) const;
@@ -95,15 +100,13 @@ namespace transport_catalogue::serialization /* Store */ {
         void PrepareRouterModel(RouterModel& router_model) const;
         RouterModel BuildSerializableRouterModel() const;
 
-        bool SaveToStorage();
-
-    public: /* deserialize methods */
+    private: /* deserialize methods */
         void FillTransportData(TransportDataModel&& data_model) const;
         void FillRenderSettings(RenderSettingsModel&& render_settings_model) const;
         void FillRoutingSettings(RoutingSettingsModel&& routing_settings_model) const;
         void FillSettings(SettingsModel&& settings_model) const;
-        bool DeserializeDatabase() const;
-
+        void FillRouter(RouterModel&& router_model) const;
+        
     private:
         const data::ITransportStatDataReader& db_reader_;
         const data::ITransportDataWriter& db_writer_;

@@ -17,10 +17,6 @@ message RoutingItemInfo {
     string stop_name = 5;
 }
 
-message IncidenceList {
-    repeated uint32 edge_id = 1;
-}
-
 message Router {
     proto_schema.graph.RoutingGraph graph = 1;
     repeated RoutingItemInfo routing_items = 2;
