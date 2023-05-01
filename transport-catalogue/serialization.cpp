@@ -453,6 +453,7 @@ namespace transport_catalogue::serialization /* Store (deserialize) implementati
     }
 
     bool Store::LoadDatabase() const {
+        using namespace std::string_literals;
         if (!db_path_.has_value()) {
             return false;
         }
@@ -460,7 +461,12 @@ namespace transport_catalogue::serialization /* Store (deserialize) implementati
         DatabaseModel db_model;
 
         std::ifstream in(db_path_.value(), std::ios::binary);
-        assert(db_model.ParseFromIstream(&in));
+        const bool success = db_model.ParseFromIstream(&in);
+        assert(success);
+
+        if (!success) {
+            throw std::ifstream::failure("Couldn't read database.\n File: "s + db_path_.value_or("").string());
+        }
 
         FillTransportData(std::move(*db_model.mutable_transport_data()));
         FillSettings(std::move(*db_model.mutable_settings()));
